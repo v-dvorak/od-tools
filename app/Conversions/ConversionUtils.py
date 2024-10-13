@@ -125,6 +125,7 @@ def format_dataset(
                 image_format=image_format,
                 resize=resize,
             )
+
         elif output_format == "yolo":
             # train
             MungToYOLO.process_mung_batch_to_yolo(
@@ -177,7 +178,7 @@ def find_convex_hull(binary_array: np.ndarray, show_plot: bool = False) -> list:
     contours, _ = cv2.findContours(binary_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     if len(contours) == 0:
-        print("No contours found.")
+        warnings.warn("No contours found.")
         return []
     # take first contour
     contour = contours[0]
