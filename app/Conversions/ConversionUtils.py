@@ -24,11 +24,14 @@ def format_dataset(
         split_ratio: float = 0.9,
         resize: int = None,
         seed: int = 42,
-        image_format: str = "jpg"
+        image_format: str = "jpg",
+        window_size: tuple[int, int] = (640, 640),
+        overlap_ratio: float = 0.25,
+        image_splitting: bool = False,
 ) -> None:
     """
     Finds all images and subpages inside given files
-    and processes them according to the split ratio and output format.
+    and processes them according to the split ratio and output output_format.
 
     :param images_path: path to directory with images
     :param annotations_path: path to directory with labels
@@ -37,17 +40,21 @@ def format_dataset(
     :param class_reference_table: dictionary, a function that assigns class id by class name
     :param class_output_names: list of class names
 
-    :param output_format: "coco" or "yolo", defines output format
+    :param output_format: "coco" or "yolo", defines output output_format
     :param mode: detection or segmentation
     :param split_ratio: train/test split ratio
 
     :param resize: resizes images so that the longer side is this many pixels long
     :param seed: seed for dataset shuffling
-    :param image_format: format in which the images are saved
+    :param image_format: output_format in which the images are saved
+
+    :param window_size: size of the sliding window applied to image in case of image splitting
+    :param overlap_ratio: overlap ratio between two tiles in case of image splitting
+    :param image_splitting: whether to split images according to the split ratio and sliding window
     """
     # check parameters
     if mode is not None and output_format == "coco":
-        warnings.warn("COCO format exports in both modes (\"detection\", \"segmentation\")at the same time.")
+        warnings.warn("COCO output_format exports in both modes (\"detection\", \"segmentation\")at the same time.")
     if mode is not None and mode not in ["detection", "segmentation"]:
         raise ValueError("mode must be either \"detection\" or \"segmentation\"")
     if mode is None:
@@ -61,6 +68,7 @@ def format_dataset(
     annotations = sorted(list(annotations_path.rglob(f"*.xml")))
     data = list(zip(images, annotations))
 
+    image_splitting = True
     # dump everything into one directory
     if split_ratio == 1.0:
         # set up folders
@@ -70,16 +78,19 @@ def format_dataset(
         images_dir.mkdir(exist_ok=True, parents=True)
         annot_dir.mkdir(exist_ok=True, parents=True)
 
-        if output_format == "coco":
-            MungToCOCO.process_mung_batch_to_coco_with_splitting(
+        if image_splitting:
+            MungToCOCO.process_split_batch(
                 data,
                 (images_dir, annot_dir),
-                class_reference_table=class_reference_table,
-                class_output_names=class_output_names,
+                class_reference_table,
+                class_output_names,
                 image_format=image_format,
-                resize=resize,
+                window_size=window_size,
+                overlap_ratio=overlap_ratio,
+                mode=mode,
+                output_format=output_format
             )
-        elif output_format == "yolo":
+        else:
             MungToYOLO.process_mung_batch_to_yolo(
                 data,
                 (images_dir, annot_dir),
@@ -172,7 +183,7 @@ def find_convex_hull(binary_array: np.ndarray, show_plot: bool = False) -> list:
     :param show_plot: whether to show the convex hull
     """
 
-    # binary array -> uint8 image
+    # binary array -> uint8 path_to_image
     binary_image = (binary_array * 255).astype(np.uint8)
     # find contours
     contours, _ = cv2.findContours(binary_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -205,9 +216,9 @@ def find_convex_hull(binary_array: np.ndarray, show_plot: bool = False) -> list:
 
 def draw_shapes_on_image(image_path: str | Path, coordinates_list: list[tuple[int, int]]):
     """
-    Draws multiple 2D shapes from lists of relative coordinates onto a given image.
+    Draws multiple 2D shapes from lists of relative coordinates onto a given path_to_image.
 
-    :param image_path: path to image
+    :param image_path: path to path_to_image
     :param coordinates_list: list of relative coordinates
     """
 
@@ -235,7 +246,7 @@ def draw_shapes_on_image(image_path: str | Path, coordinates_list: list[tuple[in
         x, y = absolute_coordinates[0]
         cv2.circle(img, (x, y), radius=5, color=(255, 0, 0), thickness=-1)
 
-    # show image
+    # show path_to_image
     cv2.namedWindow("Segmentation masks visualization", cv2.WINDOW_NORMAL)
     cv2.imshow("Segmentation masks visualization", img)
     # resize to fit
@@ -277,12 +288,12 @@ def mung_segmentation_to_absolute_coordinates(node: Node) -> list[tuple[int, int
 
 def copy_and_resize_image(image_path: Path | str, output_path: Path | str, max_size: int = None) -> None:
     """
-    Resizes an image so that its larger side equals max_size while maintaining aspect ratio.
+    Resizes an path_to_image so that its larger side equals max_size while maintaining aspect ratio.
     Uses bilinear interpolation for resizing.
 
-    :param image_path: path to image
-    :param output_path: path to output image
-    :param max_size: maximum size of image
+    :param image_path: path to path_to_image
+    :param output_path: path to output path_to_image
+    :param max_size: maximum size of path_to_image
     """
 
     if max_size is None:
@@ -301,8 +312,8 @@ def copy_and_resize_image(image_path: Path | str, output_path: Path | str, max_s
             new_height = max_size
             new_width = int((max_size / height) * width)
 
-        # Resize the image using bilinear interpolation
+        # Resize the path_to_image using bilinear interpolation
         img_resized = img.resize((new_width, new_height), Image.BILINEAR)
 
-        # Save the resized image back to the same path
+        # Save the resized path_to_image back to the same path
         img_resized.save(output_path)

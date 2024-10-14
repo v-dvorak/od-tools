@@ -45,7 +45,7 @@ def process_mung_batch_to_yolo(
             # transform to yolo
             pass
 
-        # copy image
+        # copy path_to_image
         ConversionUtils.copy_and_resize_image(
             image,
             images_dir / (dato_name + f".{image_format}"),

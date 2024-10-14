@@ -1,4 +1,5 @@
 from typing import Self
+# from ...Splitting.SplitUtils import IRectangle
 
 
 class ICOCOAnnotation:
@@ -26,11 +27,11 @@ class ICOCOFullPage:
             class_names: list[str]
     ):
         """
-        Stores all subpages inside a single page (image).
+        Stores all subpages inside a single page (path_to_image).
         The subpages are stored in a list of lists
         where each list corresponds to single class id.
 
-        :param image_size: image size, (width, height)
+        :param image_size: path_to_image size, (width, height)
         :param annotations: list of COCOAnnotation
         :param class_names: list of class names
         """
@@ -47,8 +48,10 @@ class ICOCOSplitPage:
             self,
             image_size: tuple[int, int],
             subpages: list[list[ICOCOFullPage]],
-            class_names: list[str]
+            class_names: list[str],
+            splits
     ):
         self.size = image_size
         self.subpages = subpages
         self.class_names = class_names
+        self.splits = splits

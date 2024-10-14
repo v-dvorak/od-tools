@@ -18,7 +18,8 @@ if __name__ == "__main__":
     parser.add_argument("-m", "--mode", default=None,
                         help="Output dataset mode, detection or segmentation, default is \"detection\".")
     parser.add_argument("-s", "--split", type=float, default=1.0, help="Train/test split ratio.")
-    parser.add_argument("-f", "--format", type=str, default="coco", help="Output format, coco/yolo, default is coco.")
+    parser.add_argument("-f", "--format", type=str, default="coco",
+                        help="Output output_format, coco/yolo, default is coco.")
     parser.add_argument("--seed", type=int, default=42, help="Seed for dataset shuffling.")
     parser.add_argument("--settings", default=None,
                         help="Path to definitions \"class name -> class id\".")

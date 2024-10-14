@@ -92,18 +92,18 @@ def draw_rectangles_on_image(
         loaded: bool = False
 ) -> None:
     """
-    Draws a list of rectangles on the given image.
+    Draws a list of rectangles on the given path_to_image.
 
-    :param image_path: path to image
+    :param image_path: path to path_to_image
     :param rectangles: list of Rectangle objects to display
     :param thickness: drawn rectangle thickness
     :param color: if not None, this color is applied to every rectangle,
     otherwise each rectangle is assigned a unique color
     :param shift_based_on_thickness: whether the shift outline by "thickness" numer of pixels, better visualization
-    :param output_path: path to store the image at
-    :param loaded: if true, passed image is already loaded as cv2 image
+    :param output_path: path to store the path_to_image at
+    :param loaded: if true, passed path_to_image is already loaded as cv2 path_to_image
     """
-    # Load the image using OpenCV
+    # Load the path_to_image using OpenCV
     if loaded:
         img = image_path
     else:
@@ -128,7 +128,7 @@ def draw_rectangles_on_image(
     # convert BGR to RGB
     img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
-    # show image
+    # show path_to_image
     plt.figure(figsize=(10, 6))
     plt.imshow(img_rgb)
     plt.axis('off')  # hide axis
@@ -147,7 +147,7 @@ def create_split_box_matrix(
     Based on the `split_section_to_starts` creates Rectangle subpages that have `window_size` dimensions
     and neighbouring rectangles overlap by minimum of `overlap_ratio`.
 
-    :param image_size: (width, height) of image
+    :param image_size: (width, height) of path_to_image
     :param window_size: (width, height) of sliding window, output rectangles
     :param overlap_ratio:
     :return: Rectangle subpages
@@ -247,17 +247,17 @@ def visualize_cutouts(
         output_path: str = None
 ):
     """
-    Shows image as tiles based on the given list of rectangles and visualizes it with gray spaces in between.
+    Shows path_to_image as tiles based on the given list of rectangles and visualizes it with gray spaces in between.
     Shows non-overlapping areas.
 
-    :param image_path: path to image
+    :param image_path: path to path_to_image
     :param rectangles: list of subpages
     :param masks: non-overlapping parts of subpages
     :param spacing: gray spacing around subpages
     :param opacity: opacity of overlapping parts
-    :param output_path: path to store the image at
+    :param output_path: path to store the path_to_image at
     """
-    # Load the image
+    # Load the path_to_image
     img = cv2.imread(image_path)
 
     # define gray
@@ -272,17 +272,17 @@ def visualize_cutouts(
     # blank canvas
     grid_img = np.full((grid_height, grid_width, 3), gray_color, dtype=np.uint8)
 
-    # loop through the tiles and add them to the grid image
+    # loop through the tiles and add them to the grid path_to_image
     for row in range(rows):
         for col in range(columns):
             (x1, y1, x2, y2) = rectangles[row][col].coordinates()
 
-            # take tile from original image
+            # take tile from original path_to_image
             tile = img[y1:y2, x1:x2]
 
             tile_height, tile_width = tile.shape[:2]
 
-            # Create a gray background tile the same size as the cropped image tile
+            # Create a gray background tile the same size as the cropped path_to_image tile
             gray_tile = np.full((tile_height, tile_width, 3), gray_color, dtype=np.uint8)
 
             # Blend the tile with the gray background to achieve reduced opacity
@@ -298,7 +298,7 @@ def visualize_cutouts(
                 (m1, n1, m2, n2) = masks[row][col].coordinates()
                 mask = img[n1:n2, m1:m2]
 
-                # if image is corner piece, shift it accordingly
+                # if path_to_image is corner piece, shift it accordingly
                 if col == 0:
                     left_offset = 0
                 elif col == columns - 1:
@@ -319,7 +319,7 @@ def visualize_cutouts(
     # convert for display
     grid_img_rgb = cv2.cvtColor(grid_img, cv2.COLOR_BGR2RGB)
 
-    # show image
+    # show path_to_image
     plt.figure(figsize=(10, 6))
     plt.imshow(grid_img_rgb)
     plt.axis('off')

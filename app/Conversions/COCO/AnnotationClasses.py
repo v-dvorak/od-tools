@@ -106,23 +106,25 @@ class COCOSplitPage(ICOCOSplitPage):
             self,
             image_size: tuple[int, int],
             subpages: list[list[COCOFullPage]],
-            class_names: list[str]
+            class_names: list[str],
+            splits: list[list[Rectangle]]
     ):
         super().__init__(
             image_size,
             subpages,
-            class_names
+            class_names,
+            splits
         )
 
     @classmethod
     def from_coco_full_page(
             cls,
             full_page: COCOFullPage,
-            split_box_matrix: list[list[Rectangle]],
+            splits: list[list[Rectangle]],
             inside_threshold: float = 1.0
     ) -> Self:
         cutouts = []
-        for row in split_box_matrix:
+        for row in splits:
             cutout_row = []
             for cutout in row:
                 intersecting_annotations = []
@@ -157,5 +159,6 @@ class COCOSplitPage(ICOCOSplitPage):
         return cls(
             full_page.size,
             cutouts,
-            full_page.class_names
+            full_page.class_names,
+            splits
         )

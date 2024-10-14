@@ -4,13 +4,15 @@ from .SplitUtils import create_split_box_matrix, draw_rectangles_on_image, find_
 from ..Splitting.SplitUtils import Rectangle
 
 rec1 = Rectangle(0, 0, 4, 4)
-rec2 = Rectangle(4, 4, 5, 5)
+rec2 = Rectangle(3, 3, 5, 5)
 
 print(rec1.intersection_area(rec2))
-print(rec2.intersection_area(rec1))
 
+rec2 = Rectangle(0, 0, 3, 3)
+print(rec2.area())
+print((rec2.top - rec2.bottom) * (rec2.right - rec2.left))
 
-quit()
+# quit()
 
 
 image_path = "app/Splitting/30d6c780-c8fe-11e7-9c14-005056827e51_375c6850-f593-11e7-b30f-5ef3fc9ae867.jpg"
