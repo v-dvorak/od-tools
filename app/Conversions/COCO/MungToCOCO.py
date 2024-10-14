@@ -9,7 +9,7 @@ from .AnnotationClasses import COCOAnnotation, COCOFullPage, COCOFullPageEncoder
 from .. import ConversionUtils
 from ..COCO.AnnotationClasses import COCOSplitPage
 from ..COCO.Interfaces import ICOCOFullPage
-from ..YOLO.AnnotationClasses import YOLOFullPageDetection
+from ..YOLO.AnnotationClasses import YOLOFullPageDetection, YOLOFullPageSegmentation
 from ...Splitting import SplitUtils
 from ...Splitting.SplitUtils import Rectangle
 
@@ -94,7 +94,7 @@ def process_split_batch(
 ) -> None:
     image_output_dir, annotation_output_dir = output_paths
 
-    for path_to_image, path_to_annotations in tqdm(data):
+    for path_to_image, path_to_annotations in tqdm(data, position=0):
         # load and proces page to classes
         split_page = process_mung_page_to_coco_with_split(
             path_to_image,
@@ -208,12 +208,14 @@ def save_full_page_yolo_annotation_from_coco_full_page(
 ) -> None:
     if mode == "detection":
         yolo_fp = YOLOFullPageDetection.from_coco_page(full_page)
-
-        with open(output_dir / f"{dato_name}.txt", "w") as f:
-            for annotation in yolo_fp.annotations:
-                f.write(annotation.__str__() + "\n")
     elif mode == "segmentation":
-        raise NotImplementedError()
+        yolo_fp = YOLOFullPageSegmentation.from_coco_page(full_page)
+    else:
+        raise ValueError(f"Unsupported mode: {mode}")
+
+    with open(output_dir / f"{dato_name}.txt", "w") as f:
+        for annotation in yolo_fp.annotations:
+            f.write(annotation.__str__() + "\n")
 
 
 def process_mung_page_to_coco_with_split(

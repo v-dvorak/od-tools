@@ -21,34 +21,41 @@ if __name__ == "__main__":
     parser.add_argument("-f", "--format", type=str, default="coco",
                         help="Output format, coco/yolo, default is coco.")
     parser.add_argument("--seed", type=int, default=42, help="Seed for dataset shuffling.")
-    parser.add_argument("--settings", default=None,
-                        help="Path to definitions \"class name -> class id\".")
+    parser.add_argument("--config", default=None,
+                        help="Path to config, see \"default_config.json\" for example.")
     parser.add_argument("--resize", type=int, default=None,
                         help="Resizes images so that the longer side is this many pixels long.")
+    parser.add_argument("--image_splitting", action="store_true", help="Split images into smaller ones.")
 
     args = parser.parse_args()
 
-    # load settings
-    if args.settings is None:
-        inp_file = impresources.files(data) / "default_settings.json"
+    # load config
+    if args.config is None:
+        inp_file = impresources.files(data) / "default_config.json"
         with inp_file.open("rt") as f:
-            loaded_settings = json.load(f)
+            loaded_config = json.load(f)
     else:
         with open(args.settings, "r", encoding="utf8") as f:
-            loaded_settings = json.load(f)
+            loaded_config = json.load(f)
 
     ConversionUtils.format_dataset(
+        # directories
         Path(args.images_path),
         Path(args.annot_path),
         Path(args.output),
-
-        class_reference_table=loaded_settings["class_id_reference_table"],
-        class_output_names=loaded_settings["class_output_names"],
-
+        # class ids etc.
+        class_reference_table=loaded_config["class_id_reference_table"],
+        class_output_names=loaded_config["class_output_names"],
+        # formatting
         output_format=args.format,
         mode=args.mode,
         split_ratio=args.split,
-
         resize=args.resize,
+        # image splitting settings
+        window_size=tuple(loaded_config["window_size"]),
+        overlap_ratio=loaded_config["overlap_ratio"],
+        image_splitting=args.image_splitting,
+        # others
         seed=args.seed,
+        verbose=args.verbose
     )
