@@ -32,14 +32,14 @@ class COCOAnnotation(ICOCOAnnotation):
         :param top_shift: pixel shift to the top
         :return: new COCOAnnotation object with adjusted coordinates
         """
-        # TODO: adjust segmentation!!
+        new_segmentation = [(x + left_shift, y + top_shift) for x, y in self.segmentation]
         return COCOAnnotation(
             self.class_id,
             self.left + left_shift,
             self.top + top_shift,
             self.width,
             self.height,
-            self.segmentation
+            new_segmentation
         )
 
 
