@@ -1,6 +1,8 @@
 import warnings
 from pathlib import Path
 
+import yaml
+
 from . import ConversionUtils
 from . import MungToCOCO
 
@@ -96,6 +98,14 @@ def format_dataset(
                 resize=resize
             )
 
+        if output_format == "yolo":
+            _create_yaml_config_for_yolo(
+                dataset_path,
+                images_dir,
+                class_output_names,
+                verbose=verbose
+            )
+
     # split to train/test
     else:
         # set up folders
@@ -158,3 +168,50 @@ def format_dataset(
                 output_format=output_format,
                 resize=resize
             )
+
+        if output_format == "yolo":
+            _create_yaml_config_for_yolo(
+                dataset_path,
+                train_image_dir,
+                class_output_names,
+                verbose=verbose,
+                val_path=val_image_dir
+            )
+
+
+def _create_yaml_config_for_yolo(
+        dataset_path: Path,
+        train_path: Path,
+        class_output_names: list[str],
+        val_path: Path = None,
+        config_name: str = "config",
+        verbose: bool = False,
+):
+    """
+    Creates .yaml file in YOLO format necessary for model training.
+
+    :param dataset_path: path to dataset directory
+    :param train_path: path to train directory
+    :param class_output_names: names of classes
+    :param val_path: path to validation directory, optional, if not provided, defaults to `train_path`
+    :param config_name: name of config file, default is "config"
+    """
+    if val_path is None:
+        val_path = train_path
+
+    names = {}
+    for i, class_name in enumerate(class_output_names):
+        names[i] = class_name
+
+    data = {
+        "path": str(dataset_path.absolute().resolve()),
+        "train": str(train_path.absolute().resolve()),
+        "val": str(val_path.absolute().resolve()),
+        "names": names,
+    }
+
+    with open(dataset_path / f"{config_name}.yaml", "w") as f:
+        yaml.dump(data, f, sort_keys=False, indent=4)
+
+    if verbose:
+        print(f"Created {config_name}.yaml in {dataset_path.absolute().resolve()}.")
