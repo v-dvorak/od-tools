@@ -56,11 +56,12 @@ class Rectangle(IRectangle):
         """
         dx = min(self.right, other.right) - max(self.left, other.left)
         dy = min(self.bottom, other.bottom) - max(self.top, other.top)
-        if (dx >= 0) and (dy >= 0):
+        if dx >= 0 and dy >= 0:
             return dx * dy
+        return 0
 
     def area(self) -> int:
-        return (self.bottom - self.top) * (self.right - self.bottom)
+        return (self.bottom - self.top) * (self.right - self.left)
 
     def size(self):
         """
@@ -82,11 +83,13 @@ class Rectangle(IRectangle):
 
 
 def draw_rectangles_on_image(
-        image_path: str,
+        image_path: str | cv2.Mat,
         rectangles: list[Rectangle],
         thickness: int = 5,
+        color: tuple[int, int, int] = None,
         shift_based_on_thickness: bool = False,
         output_path: str = None,
+        loaded: bool = False
 ) -> None:
     """
     Draws a list of rectangles on the given image.
@@ -94,21 +97,33 @@ def draw_rectangles_on_image(
     :param image_path: path to image
     :param rectangles: list of Rectangle objects to display
     :param thickness: drawn rectangle thickness
+    :param color: if not None, this color is applied to every rectangle,
+    otherwise each rectangle is assigned a unique color
     :param shift_based_on_thickness: whether the shift outline by "thickness" numer of pixels, better visualization
     :param output_path: path to store the image at
+    :param loaded: if true, passed image is already loaded as cv2 image
     """
     # Load the image using OpenCV
-    img = cv2.imread(image_path)
-
+    if loaded:
+        img = image_path
+    else:
+        img = cv2.imread(image_path)
     # draw rectangles
     for i, rectangle in enumerate(rectangles):
         (x1, y1, x2, y2) = rectangle.coordinates()
+
+        # set or unique color
+        if color is not None:
+            c_color = color
+        else:
+            c_color = hex_to_rgb(colors[i])
+
         # draw rectangle with predefined color
         if shift_based_on_thickness:
             cv2.rectangle(img, (x1 + thickness, y1 + thickness), (x2 - thickness, y2 - thickness),
-                          color=hex_to_rgb(colors[i]), thickness=thickness)
+                          color=c_color, thickness=thickness)
         else:
-            cv2.rectangle(img, (x1, y1), (x2, y2), color=hex_to_rgb(colors[i]), thickness=thickness)
+            cv2.rectangle(img, (x1, y1), (x2, y2), color=c_color, thickness=thickness)
 
     # convert BGR to RGB
     img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)

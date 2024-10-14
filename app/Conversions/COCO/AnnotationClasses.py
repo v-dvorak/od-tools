@@ -32,6 +32,7 @@ class COCOAnnotation(ICOCOAnnotation):
         :param top_shift: pixel shift to the top
         :return: new COCOAnnotation object with adjusted coordinates
         """
+        # TODO: adjust segmentation!!
         return COCOAnnotation(
             self.class_id,
             self.left + left_shift,
@@ -132,7 +133,16 @@ class COCOSplitPage(ICOCOSplitPage):
                     for annotation in annotation_class:
                         rec = Rectangle.from_coco_annotation(annotation)
                         # TODO: resolve "outside cutout", make bbox smaller
-                        if rec.intersects(cutout) and rec.area() / rec.intersection_area(cutout) > inside_threshold:
+
+                        # DEBUG
+                        # print(f"AoI is: {rec.intersection_area(cutout) / rec.area():.4f}", end=" ")
+                        # if rec.intersection_area(cutout) / rec.area() >= inside_threshold:
+                        #     print("ACCEPT")
+                        # else:
+                        #     print("reject")
+
+                        if (rec.intersects(cutout) and
+                                rec.intersection_area(cutout) / rec.area() >= inside_threshold):
                             class_annots.append(annotation.adjust_position(- cutout.left, - cutout.top))
                     intersecting_annotations.append(class_annots)
 
