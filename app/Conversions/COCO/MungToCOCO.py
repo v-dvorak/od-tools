@@ -21,7 +21,7 @@ def process_mung_batch_to_coco(
     for image, annot_file in tqdm(data):
         dato_name = image.stem
         image_size = ConversionUtils.get_num_pixels(image)
-        # use mung to retrieve annotations from xml
+        # use mung to retrieve subpages from xml
         nodes = read_nodes_from_file(annot_file.__str__())
 
         annots = []
@@ -30,9 +30,9 @@ def process_mung_batch_to_coco(
             if node.class_name in class_reference_table:
                 annots.append(COCOAnnotation.from_mung_node(class_reference_table[node.class_name], node))
         # create page class for single input data
-        full_page = COCOFullPage(image_size, annots, class_output_names)
+        full_page = COCOFullPage.from_list_of_coco_annotations(image_size, annots, class_output_names)
 
-        # save annotations
+        # save subpages
         with open(annot_dir / (dato_name + ".json"), "w") as f:
             json.dump(full_page, f, indent=4, cls=COCOFullPageEncoder)
 

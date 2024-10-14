@@ -2,12 +2,15 @@ import json
 import math
 import warnings
 from importlib import resources as impresources
+from typing import Self
 
 import cv2
 import numpy as np
 from matplotlib import pyplot as plt
 
 from .. import data
+from ..Conversions.COCO.Interfaces import ICOCOAnnotation
+from .Interfaces import IRectangle
 
 inp_file = impresources.files(data) / "colors.json"
 with inp_file.open("rt") as f:
@@ -19,21 +22,63 @@ def hex_to_rgb(hex_color: str):
     return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
 
 
-class Rectangle:
+class Rectangle(IRectangle):
     """
     Stores coordinates of a rectangle as absolute values.
     """
+
     def __init__(self, left, top, right, bottom):
-        self.left = left
-        self.top = top
-        self.right = right
-        self.bottom = bottom
+        super().__init__(left, top, right, bottom)
 
     def coordinates(self) -> tuple[int, int, int, int]:
         return self.left, self.top, self.right, self.bottom
 
+    def intersects(self, other: Self) -> bool:
+        """
+        Returns true if rectangles intersect.
+
+        :param other: other rectangle to check intersection with
+        :return: True if rectangles intersect
+        """
+        # check if the rectangles overlap both horizontally and vertically
+        return (
+                self.left <= other.right
+                and self.right >= other.left
+                and self.top <= other.bottom
+                and self.bottom >= other.top
+        )
+
+    def intersection_area(self, other: Self) -> int:
+        """
+        via: https://stackoverflow.com/a/27162334
+        :param other: other rectangle to check intersection with
+        :return: True if rectangles intersect
+        """
+        dx = min(self.right, other.right) - max(self.left, other.left)
+        dy = min(self.bottom, other.bottom) - max(self.top, other.top)
+        if (dx >= 0) and (dy >= 0):
+            return dx * dy
+
+    def area(self) -> int:
+        return (self.bottom - self.top) * (self.right - self.bottom)
+
+    def size(self):
+        """
+        :return: (width, height)
+        """
+        return self.right - self.left, self.bottom - self.top
+
     def __str__(self):
         return f"Rectangle({self.left}, {self.top}, {self.right}, {self.bottom})"
+
+    @classmethod
+    def from_coco_annotation(cls, annot: ICOCOAnnotation) -> Self:
+        return Rectangle(
+            annot.left,
+            annot.top,
+            annot.left + annot.width,
+            annot.top + annot.height
+        )
 
 
 def draw_rectangles_on_image(
@@ -84,13 +129,13 @@ def create_split_box_matrix(
         overlap_ratio: float = 0.25,
 ) -> list[list[Rectangle]]:
     """
-    Based on the `split_section_to_starts` creates Rectangle cutouts that have `window_size` dimensions
+    Based on the `split_section_to_starts` creates Rectangle subpages that have `window_size` dimensions
     and neighbouring rectangles overlap by minimum of `overlap_ratio`.
 
     :param image_size: (width, height) of image
     :param window_size: (width, height) of sliding window, output rectangles
     :param overlap_ratio:
-    :return: Rectangle cutouts
+    :return: Rectangle subpages
     """
     img_width, img_height = image_size
     win_width, win_height = window_size
@@ -110,7 +155,7 @@ def create_split_box_matrix(
 
 def find_overlaps(box_matrix: list[list[Rectangle]]) -> list[list[Rectangle]]:
     """
-    Given a matrix of overlapping boxes returns cutouts that do not overlap.
+    Given a matrix of overlapping boxes returns subpages that do not overlap.
 
     :param box_matrix: overlapping Rectangles
     :return: non-overlapping Rectangles
@@ -191,9 +236,9 @@ def visualize_cutouts(
     Shows non-overlapping areas.
 
     :param image_path: path to image
-    :param rectangles: list of cutouts
-    :param masks: non-overlapping parts of cutouts
-    :param spacing: gray spacing around cutouts
+    :param rectangles: list of subpages
+    :param masks: non-overlapping parts of subpages
+    :param spacing: gray spacing around subpages
     :param opacity: opacity of overlapping parts
     :param output_path: path to store the image at
     """
@@ -253,10 +298,8 @@ def visualize_cutouts(
                 else:
                     top_offset = ((y2 - y1) - (n2 - n1)) // 2
 
-                grid_img[
-                    y_offset + top_offset:y_offset + (n2 - n1) + top_offset,
-                    x_offset + left_offset:x_offset + (m2 - m1) + left_offset
-                ] = mask
+                grid_img[y_offset + top_offset:y_offset + (n2 - n1) + top_offset,
+                x_offset + left_offset:x_offset + (m2 - m1) + left_offset] = mask
 
     # convert for display
     grid_img_rgb = cv2.cvtColor(grid_img, cv2.COLOR_BGR2RGB)

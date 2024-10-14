@@ -12,7 +12,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("output", help="Transformed dataset destination.")
     parser.add_argument("images_path", help="Path to images.")
-    parser.add_argument("annot_path", help="Path to annotations.")
+    parser.add_argument("annot_path", help="Path to subpages.")
 
     parser.add_argument("-v", "--verbose", action="store_true", help="Make script verbose")
     parser.add_argument("-m", "--mode", default=None,

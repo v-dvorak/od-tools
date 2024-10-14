@@ -23,7 +23,7 @@ def process_mung_batch_to_yolo(
     for image, annot_file in tqdm(data):
         dato_name = image.stem
         image_size = ConversionUtils.get_num_pixels(image)
-        # use mung to retrieve annotations from xml
+        # use mung to retrieve subpages from xml
         nodes = read_nodes_from_file(annot_file.__str__())
 
         annots = []

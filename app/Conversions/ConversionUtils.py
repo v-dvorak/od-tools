@@ -27,7 +27,7 @@ def format_dataset(
         image_format: str = "jpg"
 ) -> None:
     """
-    Finds all images and annotations inside given files
+    Finds all images and subpages inside given files
     and processes them according to the split ratio and output format.
 
     :param images_path: path to directory with images
