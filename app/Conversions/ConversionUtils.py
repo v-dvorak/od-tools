@@ -10,7 +10,6 @@ from PIL import Image
 from mung.node import Node
 
 from .COCO import MungToCOCO
-from .YOLO import MungToYOLO
 
 
 def format_dataset(
@@ -28,10 +27,11 @@ def format_dataset(
         window_size: tuple[int, int] = (640, 640),
         overlap_ratio: float = 0.25,
         image_splitting: bool = False,
+        verbose: bool = False,
 ) -> None:
     """
     Finds all images and subpages inside given files
-    and processes them according to the split ratio and output output_format.
+    and processes them according to the split ratio and output annot_format.
 
     :param images_path: path to directory with images
     :param annotations_path: path to directory with labels
@@ -40,35 +40,36 @@ def format_dataset(
     :param class_reference_table: dictionary, a function that assigns class id by class name
     :param class_output_names: list of class names
 
-    :param output_format: "coco" or "yolo", defines output output_format
+    :param output_format: "coco" or "yolo", defines output annot_format
     :param mode: detection or segmentation
     :param split_ratio: train/test split ratio
 
     :param resize: resizes images so that the longer side is this many pixels long
     :param seed: seed for dataset shuffling
-    :param image_format: output_format in which the images are saved
+    :param image_format: annot_format in which the images are saved
 
     :param window_size: size of the sliding window applied to image in case of image splitting
     :param overlap_ratio: overlap ratio between two tiles in case of image splitting
     :param image_splitting: whether to split images according to the split ratio and sliding window
+
+    :param verbose: make script verbose
     """
     # check parameters
     if mode is not None and output_format == "coco":
-        warnings.warn("COCO output_format exports in both modes (\"detection\", \"segmentation\")at the same time.")
+        warnings.warn("COCO annot_format exports in both modes (\"detection\", \"segmentation\")at the same time.")
     if mode is not None and mode not in ["detection", "segmentation"]:
         raise ValueError("mode must be either \"detection\" or \"segmentation\"")
     if mode is None:
         mode = "detection"
 
     if output_format not in ["coco", "yolo"]:
-        raise ValueError("output_format must be either \"coco\" or \"yolo\"")
+        raise ValueError("annot_format must be either \"coco\" or \"yolo\"")
 
     # load data from given paths
     images = sorted(list(images_path.rglob(f"*.{image_format}")))
     annotations = sorted(list(annotations_path.rglob(f"*.xml")))
     data = list(zip(images, annotations))
 
-    image_splitting = True
     # dump everything into one directory
     if split_ratio == 1.0:
         # set up folders
@@ -88,75 +89,81 @@ def format_dataset(
                 window_size=window_size,
                 overlap_ratio=overlap_ratio,
                 mode=mode,
-                output_format=output_format
+                annot_format=output_format
             )
         else:
-            MungToYOLO.process_mung_batch_to_yolo(
+            MungToCOCO.process_normal_batch(
                 data,
                 (images_dir, annot_dir),
-                class_reference_table=class_reference_table,
-                class_output_names=class_output_names,
-                image_format=image_format,
-                resize=resize,
+                class_reference_table,
+                class_output_names,
+                annot_format=image_format,
                 mode=mode,
+                output_format=output_format,
+                resize=resize
             )
 
     # split to train/test
     else:
         # set up folders
-        train_images_dir = dataset_path / "images" / "train"
-        val_images_dir = dataset_path / "images" / "val"
-        train_annot_dir = dataset_path / "labels" / "train"
-        val_labels_dir = dataset_path / "labels" / "val"
+        train_image_dir = dataset_path / "images" / "train"
+        val_image_dir = dataset_path / "images" / "val"
+        train_annotation_dir = dataset_path / "labels" / "train"
+        val_annotation_dir = dataset_path / "labels" / "val"
 
-        train_images_dir.mkdir(exist_ok=True, parents=True)
-        val_images_dir.mkdir(exist_ok=True, parents=True)
-        train_annot_dir.mkdir(exist_ok=True, parents=True)
-        val_labels_dir.mkdir(exist_ok=True, parents=True)
+        train_image_dir.mkdir(exist_ok=True, parents=True)
+        val_image_dir.mkdir(exist_ok=True, parents=True)
+        train_annotation_dir.mkdir(exist_ok=True, parents=True)
+        val_annotation_dir.mkdir(exist_ok=True, parents=True)
 
         # split
         train_data, val_data = split_dataset(data, split_ratio=split_ratio, seed=seed)
 
-        if output_format == "coco":
-            # train
-            MungToCOCO.process_mung_batch_to_coco(
+        if image_splitting:
+            MungToCOCO.process_split_batch(
                 train_data,
-                (train_images_dir, train_annot_dir),
-                class_reference_table=class_reference_table,
-                class_output_names=class_output_names,
+                (train_image_dir, train_annotation_dir),
+                class_reference_table,
+                class_output_names,
                 image_format=image_format,
-                resize=resize,
-            )
-            # val
-            MungToCOCO.process_mung_batch_to_coco(
-                val_data,
-                (val_images_dir, val_labels_dir),
-                class_reference_table=class_reference_table,
-                class_output_names=class_output_names,
-                image_format=image_format,
-                resize=resize,
+                window_size=window_size,
+                overlap_ratio=overlap_ratio,
+                mode=mode,
+                annot_format=output_format
             )
 
-        elif output_format == "yolo":
-            # train
-            MungToYOLO.process_mung_batch_to_yolo(
-                train_data,
-                (train_images_dir, train_annot_dir),
-                class_reference_table=class_reference_table,
-                class_output_names=class_output_names,
-                image_format=image_format,
-                resize=resize,
-                mode=mode,
-            )
-            # val
-            MungToYOLO.process_mung_batch_to_yolo(
+            MungToCOCO.process_split_batch(
                 val_data,
-                (val_images_dir, val_labels_dir),
-                class_reference_table=class_reference_table,
-                class_output_names=class_output_names,
+                (val_image_dir, val_annotation_dir),
+                class_reference_table,
+                class_output_names,
                 image_format=image_format,
-                resize=resize,
+                window_size=window_size,
+                overlap_ratio=overlap_ratio,
                 mode=mode,
+                annot_format=output_format
+            )
+        else:
+            MungToCOCO.process_normal_batch(
+                train_data,
+                (train_image_dir, train_annotation_dir),
+                class_reference_table,
+                class_output_names,
+                annot_format=image_format,
+                mode=mode,
+                output_format=output_format,
+                resize=resize
+            )
+
+            MungToCOCO.process_normal_batch(
+                val_data,
+                (val_image_dir, val_annotation_dir),
+                class_reference_table,
+                class_output_names,
+                annot_format=image_format,
+                mode=mode,
+                output_format=output_format,
+                resize=resize
             )
 
 
@@ -288,7 +295,7 @@ def mung_segmentation_to_absolute_coordinates(node: Node) -> list[tuple[int, int
 
 def copy_and_resize_image(image_path: Path | str, output_path: Path | str, max_size: int = None) -> None:
     """
-    Resizes an path_to_image so that its larger side equals max_size while maintaining aspect ratio.
+    Resizes path_to_image so that its larger side equals max_size while maintaining aspect ratio.
     Uses bilinear interpolation for resizing.
 
     :param image_path: path to path_to_image
