@@ -1,4 +1,4 @@
-from .Interfaces import IYOLODetection, IYOLOSegmentation, IYOLOFullPageDetection
+from .Interfaces import IYOLODetection, IYOLOSegmentation, IYOLOFullPageDetection, IYOLOFullPageSegmentation
 from ..COCO.Interfaces import ICOCOFullPage, ICOCOAnnotation
 
 
@@ -35,5 +35,29 @@ class YOLOFullPageDetection(IYOLOFullPageDetection):
 
 
 class YOLOSegmentation(IYOLOSegmentation):
-    def __init__(self, coordinates: list[tuple[float, float]]):
-        super().__init__(coordinates)
+    def __init__(self, class_id: int, coordinates: list[tuple[float, float]]):
+        super().__init__(class_id, coordinates)
+
+    @classmethod
+    def from_coco_annotation(cls, annot: ICOCOAnnotation, image_size: tuple[int, int]):
+        width, height = image_size
+        return cls(
+            annot.class_id,
+            [(x / width, y / height) for (x, y) in annot.segmentation],
+        )
+
+
+class YOLOFullPageSegmentation(IYOLOFullPageSegmentation):
+    def __init__(self, image_size: tuple[int, int], annotations: list[YOLOSegmentation]):
+        super().__init__(image_size, annotations)
+
+    @classmethod
+    def from_coco_page(cls, page: ICOCOFullPage):
+        return cls(
+            page.size,
+            [
+                YOLOSegmentation.from_coco_annotation(annot, page.size)
+                for annot_class in page.annotations
+                for annot in annot_class
+            ]
+        )

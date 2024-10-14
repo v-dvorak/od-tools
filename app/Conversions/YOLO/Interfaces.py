@@ -39,3 +39,13 @@ class IYOLOSegmentation:
     def __str__(self):
         coords = " ".join([f"{point[0]:.6f} {point[1]:.6f}" for point in self.coordinates])
         return f"{self.class_id} {coords}"
+
+
+class IYOLOFullPageSegmentation:
+    def __init__(
+            self,
+            image_size: tuple[int, int],
+            annotations: list[IYOLOSegmentation],
+    ):
+        self.image_size = image_size
+        self.annotations = annotations
