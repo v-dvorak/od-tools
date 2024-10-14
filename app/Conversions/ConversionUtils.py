@@ -71,7 +71,7 @@ def format_dataset(
         annot_dir.mkdir(exist_ok=True, parents=True)
 
         if output_format == "coco":
-            MungToCOCO.process_mung_batch_to_coco(
+            MungToCOCO.process_mung_batch_to_coco_with_splitting(
                 data,
                 (images_dir, annot_dir),
                 class_reference_table=class_reference_table,
