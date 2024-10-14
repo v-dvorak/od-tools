@@ -4,7 +4,7 @@ from importlib import resources as impresources
 from pathlib import Path
 
 from . import data
-from .Conversions import ConversionUtils
+from .Conversions import Formatter
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -38,7 +38,7 @@ if __name__ == "__main__":
         with open(args.settings, "r", encoding="utf8") as f:
             loaded_config = json.load(f)
 
-    ConversionUtils.format_dataset(
+    Formatter.format_dataset(
         # directories
         Path(args.images_path),
         Path(args.annot_path),
