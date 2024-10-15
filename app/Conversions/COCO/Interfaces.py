@@ -1,21 +1,30 @@
 from typing import Self
 
+from mung.node import Node
+from ultralytics.engine.results import Results
+
+from ..IBoundingBox import IBoundingBox
+
 
 class ICOCOAnnotation:
     def __init__(self, class_id: int, left: int, top: int, width: int, height: int,
                  segmentation: list[tuple[int, int]], confidence: float = 1.0):
         self.class_id = class_id
-        self.left = left
-        self.top = top
-        self.width = width
-        self.height = height
+        self.bbox = IBoundingBox.from_ltwh(left, top, width, height)
         self.segmentation = segmentation
         self.confidence = confidence
 
     def __str__(self):
-        return f"({self.class_id=}, {self.left}, {self.top}, {self.width}, {self.height}, {self.segmentation})"
+        return f"({self.class_id=}, {self.bbox.left}, {self.bbox.top}, {self.bbox.width}, {self.bbox.height}, {self.bbox.segmentation})"
 
     def adjust_position_copy(self, left_shift: int, top_shift: int) -> Self:
+        raise NotImplementedError()
+
+    @classmethod
+    def from_mung_node(cls, clss: int, node: Node) -> Self:
+        raise NotImplementedError()
+
+    def intersect(self, other: Self) -> bool:
         raise NotImplementedError()
 
 
@@ -43,12 +52,14 @@ class ICOCOFullPage:
         return f"({self.class_names=}, {self.size=}, {self.annotations})"
 
     def all_annotations(self) -> list[ICOCOAnnotation]:
-        for row in self.annotations:
-            for annotation in row:
-                yield annotation
+        raise NotImplementedError()
 
     def annotation_count(self) -> int:
-        return sum([len(self.annotations[i]) for i in range(len(self.annotations))])
+        raise NotImplementedError()
+
+    @classmethod
+    def from_yolo_result(cls, result: Results) -> Self:
+        raise NotImplementedError()
 
 
 class ICOCOSplitPage:

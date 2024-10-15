@@ -1,7 +1,5 @@
 from typing import Self
 
-from ..Conversions.COCO.Interfaces import ICOCOAnnotation
-
 
 class IBoundingBox:
     """
@@ -9,10 +7,13 @@ class IBoundingBox:
     """
 
     def __init__(self, left, top, right, bottom):
+        self.segmentation = None
         self.left = left
         self.top = top
         self.right = right
         self.bottom = bottom
+        self.width = self.right - self.left
+        self.height = self.bottom - self.top
 
     def coordinates(self) -> tuple[int, int, int, int]:
         """
@@ -58,5 +59,11 @@ class IBoundingBox:
         return f"Rectangle({self.left}, {self.top}, {self.right}, {self.bottom})"
 
     @classmethod
-    def from_coco_annotation(cls, annot: ICOCOAnnotation) -> Self:
+    def from_ltwh(cls, left, top, width, height) -> Self:
+        raise NotImplementedError()
+
+    def shift(self, left_shift: int = 0, top_shift: int = 0) -> None:
+        raise NotImplementedError()
+
+    def shift_copy(self, left_shift: int = 0, top_shift: int = 0) -> Self:
         raise NotImplementedError()

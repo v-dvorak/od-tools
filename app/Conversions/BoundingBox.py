@@ -1,6 +1,5 @@
 from typing import Self
 
-from .COCO.Interfaces import ICOCOAnnotation
 from .IBoundingBox import IBoundingBox
 
 
@@ -40,14 +39,18 @@ class BoundingBox(IBoundingBox):
         """
         return self.right - self.left, self.bottom - self.top
 
+    def shift(self, left_shift: int = 0, top_shift: int = 0) -> None:
+        self.left += left_shift
+        self.right += left_shift
+        self.top += top_shift
+        self.bottom += top_shift
+
+    def shift_copy(self, left_shift: int = 0, top_shift: int = 0) -> Self:
+        return BoundingBox(self.left + left_shift, self.top + top_shift, self.width, self.height)
+
     @classmethod
-    def from_coco_annotation(cls, annot: ICOCOAnnotation) -> Self:
-        return BoundingBox(
-            annot.left,
-            annot.top,
-            annot.left + annot.width,
-            annot.top + annot.height
-        )
+    def from_ltwh(cls, left, top, width, height) -> Self:
+        return BoundingBox(left, top, left + width, top + height)
 
     def is_fully_inside(self, other: Self) -> bool:
         fully_inside = (

@@ -24,15 +24,7 @@ class COCOAnnotation(ICOCOAnnotation):
 
     def intersect(self, other: Self) -> bool:
         other: COCOAnnotation
-        return (
-                self.left <= other.left + self.width
-                and self.left + self.width >= other.left
-                and self.top <= other.top + self.height
-                and self.top + self.height >= other.top
-        )
-
-    def to_rectangle(self):
-        return BoundingBox(self.left, self.top, self.left + self.width, self.top + self.height)
+        return self.bbox.intersect(other.bbox)
 
     def adjust_position(self, left_shift: int = 0, top_shift: int = 0) -> None:
         """
@@ -41,8 +33,7 @@ class COCOAnnotation(ICOCOAnnotation):
         :param left_shift: pixel shift to the left
         :param top_shift: pixel shift to the top
         """
-        self.left += left_shift
-        self.top += top_shift
+        self.bbox.shift(left_shift, top_shift)
 
     def adjust_position_copy(self, left_shift: int, top_shift: int) -> Self:
         """
@@ -59,10 +50,12 @@ class COCOAnnotation(ICOCOAnnotation):
 
         return COCOAnnotation(
             self.class_id,
-            self.left + left_shift,
-            self.top + top_shift,
-            self.width,
-            self.height,
+
+            self.bbox.left,
+            self.bbox.right,
+            self.bbox.width,
+            self.bbox.height,
+
             new_segmentation,
             confidence=self.confidence
         )
@@ -92,6 +85,14 @@ class COCOFullPage(ICOCOFullPage):
             cls._sort_annotations_by_class(annotations, len(class_names)),
             class_names
         )
+
+    def all_annotations(self) -> list[ICOCOAnnotation]:
+        for row in self.annotations:
+            for annotation in row:
+                yield annotation
+
+    def annotation_count(self) -> int:
+        return sum([len(self.annotations[i]) for i in range(len(self.annotations))])
 
     @classmethod
     def from_yolo_result(cls, result: Results) -> Self:
@@ -143,10 +144,10 @@ class COCOAnnotationEncoder(JSONEncoder):
                 segm.append(y)
 
             return {
-                "left": obj.left,
-                "top": obj.top,
-                "width": obj.width,
-                "height": obj.height,
+                "left": obj.bbox.left,
+                "top": obj.bbox.top,
+                "width": obj.bbox.width,
+                "height": obj.bbox.height,
                 "segmentation": [segm],
             }
         return super().default(obj)
@@ -184,7 +185,6 @@ class COCOSplitPage(ICOCOSplitPage):
                     class_annots = []
 
                     for annotation in annotation_class:
-                        rec = BoundingBox.from_coco_annotation(annotation)
                         # TODO: resolve "outside cutout", make bbox smaller
 
                         # DEBUG
@@ -194,8 +194,8 @@ class COCOSplitPage(ICOCOSplitPage):
                         # else:
                         #     print("reject")
 
-                        if (rec.intersects(cutout) and
-                                rec.intersection_area(cutout) / rec.area() >= inside_threshold):
+                        if (annotation.bbox.intersects(cutout) and
+                                annotation.bbox.intersection_area(cutout) / annotation.bbox.area() >= inside_threshold):
                             class_annots.append(annotation.adjust_position_copy(- cutout.left, - cutout.top))
                     intersecting_annotations.append(class_annots)
 

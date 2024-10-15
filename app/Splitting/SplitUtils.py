@@ -6,7 +6,6 @@ from importlib import resources as impresources
 import cv2
 import numpy as np
 from PIL import Image
-from matplotlib import pyplot as plt
 
 from .. import data
 from ..Conversions.BoundingBox import BoundingBox
@@ -29,7 +28,7 @@ def draw_rectangles_on_image(
         shift_based_on_thickness: bool = False,
         output_path: str = None,
         loaded: bool = False
-) -> None:
+):
     """
     Draws a list of annotations on the given path_to_image.
 
@@ -66,19 +65,13 @@ def draw_rectangles_on_image(
 
     # convert BGR to RGB
     img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-
-    # TODO: implement PIL Image for all
-
+    # display
     Image.fromarray(img_rgb).show()
-    # cv2.imshow(img)
-    # show path_to_image
-    plt.figure(figsize=(10, 6))
-    plt.imshow(img_rgb)
-    plt.axis('off')  # hide axis
-    plt.show()
-
+    # optional save
     if output_path is not None:
         cv2.imwrite(output_path, img)
+
+    return img
 
 
 def create_split_box_matrix(
@@ -126,23 +119,23 @@ def find_overlaps(box_matrix: list[list[BoundingBox]]) -> list[list[BoundingBox]
         for col in range(width):
             cx1, cy1, cx2, cy2 = box_matrix[row][col].coordinates()
             # if not found, leave coordinates the same
-            l, t, r, b = cx1, cy1, cx2, cy2
+            lim_left, lim_bottom, lim_right, lim_top = cx1, cy1, cx2, cy2
             # find limitations imposed by boxes around,
             # split the space in between the limits between the two boxes
             if col - 1 >= 0:
-                l = box_matrix[row][col - 1].right
+                lim_left = box_matrix[row][col - 1].right
             if col + 1 < width:
-                r = box_matrix[row][col + 1].left
+                lim_right = box_matrix[row][col + 1].left
             if row - 1 >= 0:
-                t = box_matrix[row - 1][col].bottom
+                lim_bottom = box_matrix[row - 1][col].bottom
             if row + 1 < height:
-                b = box_matrix[row + 1][col].top
+                lim_top = box_matrix[row + 1][col].top
             new_row.append(
                 BoundingBox(
-                    cx1 + (abs(cx1 - l) // 2),
-                    cy1 + (abs(cy1 - t) // 2),
-                    cx2 - (abs(cx2 - r) // 2),
-                    cy2 - (abs(cy2 - b) // 2))
+                    cx1 + (abs(cx1 - lim_left) // 2),
+                    cy1 + (abs(cy1 - lim_bottom) // 2),
+                    cx2 - (abs(cx2 - lim_right) // 2),
+                    cy2 - (abs(cy2 - lim_top) // 2))
             )
         new_boxes.append(new_row)
     return new_boxes
@@ -261,12 +254,8 @@ def visualize_cutouts(
 
     # convert for display
     grid_img_rgb = cv2.cvtColor(grid_img, cv2.COLOR_BGR2RGB)
-
-    # show path_to_image
-    plt.figure(figsize=(10, 6))
-    plt.imshow(grid_img_rgb)
-    plt.axis('off')
-    plt.show()
-
+    # display
+    Image.fromarray(grid_img_rgb).show()
+    # optional save
     if output_path is not None:
         cv2.imwrite(output_path, grid_img)
