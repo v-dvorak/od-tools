@@ -7,13 +7,13 @@ from .COCO.AnnotationClasses import COCOFullPageEncoder
 from .COCO.AnnotationClasses import COCOSplitPage
 from .COCO.Interfaces import ICOCOFullPage
 from .YOLO.AnnotationClasses import YOLOFullPageDetection, YOLOFullPageSegmentation
-from ..Splitting.SplitUtils import Rectangle
+from ..Splitting.SplitUtils import BoundingBox
 
 
 def _save_split_page_image(
         path_to_image: Path,
         output_dir: Path,
-        splits: list[list[Rectangle]],
+        splits: list[list[BoundingBox]],
         image_format: str = "jpg",
 ) -> None:
     """
@@ -22,7 +22,7 @@ def _save_split_page_image(
 
     :param path_to_image: image to process
     :param output_dir: directory to save all split images to
-    :param splits: list of rectangles that define splits to save
+    :param splits: list of bounding boxes that define splits to save
     :param image_format: format of image to save to
     """
     img = cv2.imread(path_to_image.__str__())
@@ -38,7 +38,7 @@ def _save_split_page_image(
             # DEBUG viz
             # SplitUtils.draw_rectangles_on_image(
             #     sub_img,
-            #     [SplitUtils.Rectangle.from_coco_annotation(a) for a in full_page.subpages[row][col].annotations[0]],
+            #     [SplitUtils.BoundingBox.from_coco_annotation(a) for a in full_page.subpages[row][col].annotations[0]],
             #     thickness=2,
             #     loaded=True,
             #     color=(255, 0, 0),

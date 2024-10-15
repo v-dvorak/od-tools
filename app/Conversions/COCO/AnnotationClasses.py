@@ -6,7 +6,7 @@ from ultralytics.engine.results import Results
 
 from .Interfaces import ICOCOAnnotation, ICOCOFullPage, ICOCOSplitPage
 from .. import ConversionUtils
-from ...Splitting.SplitUtils import Rectangle
+from ...Splitting.SplitUtils import BoundingBox
 
 
 class COCOAnnotation(ICOCOAnnotation):
@@ -32,7 +32,7 @@ class COCOAnnotation(ICOCOAnnotation):
         )
 
     def to_rectangle(self):
-        return Rectangle(self.left, self.top, self.left + self.width, self.top + self.height)
+        return BoundingBox(self.left, self.top, self.left + self.width, self.top + self.height)
 
     def adjust_position(self, left_shift: int = 0, top_shift: int = 0) -> None:
         """
@@ -72,7 +72,7 @@ class COCOFullPage(ICOCOFullPage):
     def __init__(self, image_size: tuple[int, int], annotations: list[list[ICOCOAnnotation]], class_names: list[str]):
         super().__init__(image_size, annotations, class_names)
 
-    # TODO: change annotation implementation from (left, top, width, height) to Rectangle
+    # TODO: change annotation implementation from (left, top, width, height) to BoundingBox
     # -> reuse rectangle functions, single attribute inside class
     # -> maybe rename it to BoundingBox
 
@@ -158,7 +158,7 @@ class COCOSplitPage(ICOCOSplitPage):
             image_size: tuple[int, int],
             subpages: list[list[COCOFullPage]],
             class_names: list[str],
-            splits: list[list[Rectangle]]
+            splits: list[list[BoundingBox]]
     ):
         super().__init__(
             image_size,
@@ -171,7 +171,7 @@ class COCOSplitPage(ICOCOSplitPage):
     def from_coco_full_page(
             cls,
             full_page: COCOFullPage,
-            splits: list[list[Rectangle]],
+            splits: list[list[BoundingBox]],
             inside_threshold: float = 1.0
     ) -> Self:
         cutouts = []
@@ -184,7 +184,7 @@ class COCOSplitPage(ICOCOSplitPage):
                     class_annots = []
 
                     for annotation in annotation_class:
-                        rec = Rectangle.from_coco_annotation(annotation)
+                        rec = BoundingBox.from_coco_annotation(annotation)
                         # TODO: resolve "outside cutout", make bbox smaller
 
                         # DEBUG

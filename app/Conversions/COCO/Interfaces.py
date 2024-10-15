@@ -1,9 +1,6 @@
 from typing import Self
 
 
-# from ...Splitting.SplitUtils import IRectangle
-
-
 class ICOCOAnnotation:
     def __init__(self, class_id: int, left: int, top: int, width: int, height: int,
                  segmentation: list[tuple[int, int]], confidence: float = 1.0):
