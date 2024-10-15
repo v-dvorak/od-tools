@@ -2,6 +2,7 @@ from json import JSONEncoder
 from typing import Self
 
 from mung.node import Node
+from ultralytics.engine.results import Results
 
 from .Interfaces import ICOCOAnnotation, ICOCOFullPage, ICOCOSplitPage
 from .. import ConversionUtils
@@ -10,8 +11,8 @@ from ...Splitting.SplitUtils import Rectangle
 
 class COCOAnnotation(ICOCOAnnotation):
     def __init__(self, class_id: int, left: int, top: int, width: int, height: int,
-                 segmentation: list[tuple[int, int]]):
-        super().__init__(class_id, left, top, width, height, segmentation)
+                 segmentation: list[tuple[int, int]], confidence: float = 1.0):
+        super().__init__(class_id, left, top, width, height, segmentation, confidence=confidence)
 
     @classmethod
     def from_mung_node(cls, clss: int, node: Node) -> Self:
@@ -21,10 +22,29 @@ class COCOAnnotation(ICOCOAnnotation):
             ConversionUtils.mung_segmentation_to_absolute_coordinates(node)
         )
 
+    def intersect(self, other: Self) -> bool:
+        other: COCOAnnotation
+        return (
+                self.left <= other.left + self.width
+                and self.left + self.width >= other.left
+                and self.top <= other.top + self.height
+                and self.top + self.height >= other.top
+        )
+
     def to_rectangle(self):
         return Rectangle(self.left, self.top, self.left + self.width, self.top + self.height)
 
-    def adjust_position(self, left_shift: int, top_shift: int) -> Self:
+    def adjust_position(self, left_shift: int = 0, top_shift: int = 0) -> None:
+        """
+        Adjusts classes position in place.
+
+        :param left_shift: pixel shift to the left
+        :param top_shift: pixel shift to the top
+        """
+        self.left += left_shift
+        self.top += top_shift
+
+    def adjust_position_copy(self, left_shift: int, top_shift: int) -> Self:
         """
         Creates a new COCOAnnotation object with adjusted position.
 
@@ -32,20 +52,29 @@ class COCOAnnotation(ICOCOAnnotation):
         :param top_shift: pixel shift to the top
         :return: new COCOAnnotation object with adjusted coordinates
         """
-        new_segmentation = [(x + left_shift, y + top_shift) for x, y in self.segmentation]
+        if self.segmentation is not None:
+            new_segmentation = [(x + left_shift, y + top_shift) for x, y in self.segmentation]
+        else:
+            new_segmentation = None
+
         return COCOAnnotation(
             self.class_id,
             self.left + left_shift,
             self.top + top_shift,
             self.width,
             self.height,
-            new_segmentation
+            new_segmentation,
+            confidence=self.confidence
         )
 
 
 class COCOFullPage(ICOCOFullPage):
     def __init__(self, image_size: tuple[int, int], annotations: list[list[ICOCOAnnotation]], class_names: list[str]):
         super().__init__(image_size, annotations, class_names)
+
+    # TODO: change annotation implementation from (left, top, width, height) to Rectangle
+    # -> reuse rectangle functions, single attribute inside class
+    # -> maybe rename it to BoundingBox
 
     @staticmethod
     def _sort_annotations_by_class(annotations: list[COCOAnnotation], class_count: int) -> list[list[COCOAnnotation]]:
@@ -63,6 +92,28 @@ class COCOFullPage(ICOCOFullPage):
             cls._sort_annotations_by_class(annotations, len(class_names)),
             class_names
         )
+
+    @classmethod
+    def from_yolo_result(cls, result: Results) -> Self:
+        class_count = len(result.names)
+        predictions = [[] for _ in range(class_count)]
+        class_names = [result.names[i] for i in range(class_count)]
+        for i in range(len(result.boxes.xywh)):
+            x_center, y_center, width, height = (int(result.boxes.xywh[i, 0]), int(result.boxes.xywh[i, 1]),
+                                                 int(result.boxes.xywh[i, 2]), int(result.boxes.xywh[i, 3]))
+            predictions[int(result.boxes.cls[i])].append(
+                COCOAnnotation(
+                    int(result.boxes.cls[i]),
+                    x_center - width // 2,
+                    y_center - height // 2,
+                    width,
+                    height,
+                    # TODO: what to do with segmentation?
+                    segmentation=None,
+                    confidence=float(result.boxes.conf[i])
+                )
+            )
+        return cls(result.orig_shape, predictions, class_names)
 
 
 class COCOFullPageEncoder(JSONEncoder):
@@ -145,7 +196,7 @@ class COCOSplitPage(ICOCOSplitPage):
 
                         if (rec.intersects(cutout) and
                                 rec.intersection_area(cutout) / rec.area() >= inside_threshold):
-                            class_annots.append(annotation.adjust_position(- cutout.left, - cutout.top))
+                            class_annots.append(annotation.adjust_position_copy(- cutout.left, - cutout.top))
                     intersecting_annotations.append(class_annots)
 
                 cutout_row.append(COCOFullPage(
