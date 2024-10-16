@@ -3,14 +3,12 @@ from typing import Self
 from mung.node import Node
 from ultralytics.engine.results import Results
 
-from ..IBoundingBox import IBoundingBox
-
 
 class ICOCOAnnotation:
     def __init__(self, class_id: int, left: int, top: int, width: int, height: int,
                  segmentation: list[tuple[int, int]], confidence: float = 1.0):
         self.class_id = class_id
-        self.bbox = IBoundingBox.from_ltwh(left, top, width, height)
+        self.bbox = None  # Python shenanigans
         self.segmentation = segmentation
         self.confidence = confidence
 
@@ -20,11 +18,17 @@ class ICOCOAnnotation:
     def adjust_position_copy(self, left_shift: int, top_shift: int) -> Self:
         raise NotImplementedError()
 
+    def adjust_position(self, left_shift: int, top_shift: int) -> None:
+        raise NotImplementedError()
+
     @classmethod
     def from_mung_node(cls, clss: int, node: Node) -> Self:
         raise NotImplementedError()
 
-    def intersect(self, other: Self) -> bool:
+    def intersects(self, other: Self) -> bool:
+        raise NotImplementedError()
+
+    def to_eval_format(self) -> tuple[list[int], float, int]:
         raise NotImplementedError()
 
 
@@ -59,6 +63,9 @@ class ICOCOFullPage:
 
     @classmethod
     def from_yolo_result(cls, result: Results) -> Self:
+        raise NotImplementedError()
+
+    def to_eval_format(self) -> list[tuple[list[int], float, int]]:
         raise NotImplementedError()
 
 

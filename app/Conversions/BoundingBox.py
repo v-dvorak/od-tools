@@ -67,3 +67,10 @@ class BoundingBox(IBoundingBox):
         #     rectangle1.bottom <= rectangle2.top or
         #     rectangle1.top >= rectangle2.bottom
         # )
+
+    def intersection_over_union(self, other: Self) -> float:
+        int_area = self.intersection_area(other)
+        area1 = self.area()
+        area2 = other.area()
+
+        return int_area / (area1 + area2 - int_area)

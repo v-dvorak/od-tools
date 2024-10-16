@@ -11,10 +11,10 @@ class YOLODetection(IYOLODetection):
         img_width, img_height = image_size
         return YOLODetection(
             annot.class_id,
-            (annot.left + annot.width / 2) / img_width,
-            (annot.top + annot.height / 2) / img_height,
-            annot.width / img_width,
-            annot.height / img_height,
+            (annot.bbox.left + annot.bbox.width / 2) / img_width,
+            (annot.bbox.top + annot.bbox.height / 2) / img_height,
+            annot.bbox.width / img_width,
+            annot.bbox.height / img_height,
         )
 
 

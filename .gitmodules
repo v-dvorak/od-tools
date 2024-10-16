@@ -1,0 +1,3 @@
+[submodule "object-detection-metrics"]
+	path = object-detection-metrics
+	url = git@github.com:v-dvorak/object-detection-metrics.git
