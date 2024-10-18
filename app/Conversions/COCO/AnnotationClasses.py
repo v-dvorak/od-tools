@@ -2,6 +2,7 @@ from json import JSONEncoder
 from typing import Generator
 from typing import Self
 
+import numpy as np
 from mung.node import Node
 from ultralytics.engine.results import Results
 
@@ -221,6 +222,111 @@ class COCOFullPage(ICOCOFullPage):
 
         return cleared_annotations
 
+    def resolve_overlaps_with_other_page(
+            self,
+            other: Self,
+            inside_threshold: float = 0.0,
+            iou_threshold: float = 0.25,
+            verbose: bool = False
+    ) -> None:
+        other: COCOFullPage
+        for class_id in range(len(self.annotations)):
+            resolved1, resolved2 = COCOFullPage._resolve_overlaps_smart(
+                self.annotations[class_id],
+                other.annotations[class_id],
+                inside_threshold=inside_threshold,
+                iou_threshold=iou_threshold,
+                verbose=verbose,
+            )
+            self.annotations[class_id] = resolved1
+            other.annotations[class_id] = resolved2
+
+    @staticmethod
+    def resolve_matrix_of_pages(
+            subpages=list[list[Self]],
+            inside_threshold: float = 0.0,
+            iou_threshold: float = 0.25,
+            verbose: bool = False,
+    ) -> None:
+        subpages: list[list[COCOFullPage]]
+
+        vectors = [(1, 0), (1, 1), (0, 1)]
+        for row in range(len(subpages)):
+            for col in range(len(subpages[0])):
+                for dx, dy in vectors:
+                    if row + dx < len(subpages) and col + dy < len(subpages[0]):
+                        subpages[row][col].resolve_overlaps_with_other_page(
+                            subpages[row + dx][col + dy],
+                            inside_threshold=inside_threshold,
+                            iou_threshold=iou_threshold,
+                            verbose=verbose,
+                        )
+
+    @staticmethod
+    def _resolve_overlaps_smart(
+            first: list[COCOAnnotation],
+            second: list[COCOAnnotation],
+
+            inside_threshold: float = 0.0,
+            iou_threshold: float = 0.25,
+            verbose: bool = False,
+    ) -> tuple[list[COCOAnnotation], list[COCOAnnotation]]:
+        if len(first) == 0 or len(second) == 0:
+            return first, second
+
+        # create vector of indexes
+        look_up = np.vstack((np.column_stack((np.zeros(len(first), dtype=int), np.arange(len(first)))),
+                             np.column_stack((np.ones(len(second), dtype=int), np.arange(len(second))))))
+
+        sorted_indexes = np.argsort([-annot.confidence for annot in (first + second)])
+
+        look_up = look_up[sorted_indexes]
+
+        cleared_annotations1 = []
+        cleared_annotations2 = []
+
+        for index in look_up:
+            box_id, annot_id = index[0], index[1]
+
+            intersects = False
+            if box_id == 0:
+                to_compare = cleared_annotations2
+                to_save = cleared_annotations1
+                current_annot = first[annot_id]
+            else:
+                to_compare = cleared_annotations1
+                to_save = cleared_annotations2
+                current_annot = second[annot_id]
+
+            for other_annot in to_compare:
+                if current_annot.bbox.intersects(other_annot.bbox) and (
+                        (
+                                # detects if IoU of two bboxes is greater than limit
+                                # eliminates duplicated bboxes
+                                0 < iou_threshold < current_annot.bbox.intersection_over_union(other_annot.bbox)
+                        ) or (
+                                # detects if currently investigated bbox is mostly inside other annotation
+                                # eliminates splitting of bbox into multiple smaller ones
+                                0 < inside_threshold <
+                                current_annot.bbox.intersection_area(other_annot.bbox) / current_annot.bbox.area()
+                        )
+                ):
+                    intersects = True
+                    if verbose:
+                        print("------INTERSECTION---------")
+                        print(current_annot.bbox)
+                        print(other_annot.bbox)
+                        print(f"{current_annot.confidence} vs {other_annot.confidence}")
+
+                    break
+            if not intersects:
+                to_save.append(current_annot)
+                # if box_id == 0:
+                #     cleared_annotations1.append(current_annot)
+                # else:
+                #     cleared_annotations2.append(current_annot)
+        return cleared_annotations1, cleared_annotations2
+
     @classmethod
     def combine_multiple_pages_and_resolve(
             cls,
@@ -248,15 +354,19 @@ class COCOFullPage(ICOCOFullPage):
         # we can retrieve image image_size from here,
         last_split: BoundingBox = splits[-1][-1]
 
+        # resolve overlaps
+        matrix = list(np.reshape(subpages, (len(splits), len(splits[0]))))
+        COCOFullPage.resolve_matrix_of_pages(matrix, inside_threshold=0, iou_threshold=0.25, verbose=verbose)
+
         # dump all annotations into a single matrix
         completed_annotations = [[] for _ in range(len(class_names))]
         for subpage in subpages:
             for annotation in subpage.all_annotations():
                 completed_annotations[annotation.class_id].append(annotation)
-
-        # resolve overlaps etc.
-        completed_annotations = [COCOFullPage.resolve_overlaps_for_list_of_annotations(class_annotations) for
-                                 class_annotations in completed_annotations]
+        # #
+        # # resolve overlaps etc.
+        # completed_annotations = [COCOFullPage.resolve_overlaps_for_list_of_annotations(class_annotations) for
+        #                          class_annotations in completed_annotations]
 
         return COCOFullPage((last_split.left, last_split.bottom), completed_annotations, class_names)
 
