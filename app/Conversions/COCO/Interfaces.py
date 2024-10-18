@@ -3,6 +3,8 @@ from typing import Self
 from mung.node import Node
 from ultralytics.engine.results import Results
 
+from odmetrics.bounding_box import ValBoundingBox
+
 
 class ICOCOAnnotation:
     def __init__(self, class_id: int, left: int, top: int, width: int, height: int,
@@ -28,7 +30,7 @@ class ICOCOAnnotation:
     def intersects(self, other: Self) -> bool:
         raise NotImplementedError()
 
-    def to_eval_format(self) -> tuple[list[int], float, int]:
+    def to_val_box(self, image_id: str, ground_truth: bool = False) -> ValBoundingBox:
         raise NotImplementedError()
 
 
@@ -44,7 +46,7 @@ class ICOCOFullPage:
         The subpages are stored in a list of lists
         where each list corresponds to single class id.
 
-        :param image_size: path_to_image size, (width, height)
+        :param image_size: path_to_image image_size, (width, height)
         :param annotations: list of COCOAnnotation
         :param class_names: list of class names
         """

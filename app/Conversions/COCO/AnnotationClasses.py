@@ -5,6 +5,8 @@ from typing import Self
 from mung.node import Node
 from ultralytics.engine.results import Results
 
+from odmetrics.bounding_box import ValBoundingBox
+from odmetrics.utils.enumerators import (BBFormat, BBType, CoordinatesType)
 from .Interfaces import ICOCOAnnotation, ICOCOFullPage, ICOCOSplitPage
 from .. import ConversionUtils
 from ...Splitting.SplitUtils import BoundingBox
@@ -16,16 +18,21 @@ class COCOAnnotation(ICOCOAnnotation):
         super().__init__(class_id, left, top, width, height, segmentation, confidence=confidence)
         self.bbox = BoundingBox.from_ltwh(left, top, width, height)  # Python shenanigans
 
-    def to_eval_format(self) -> tuple[list[int], float, int]:
+    def to_val_box(self, image_id: str, ground_truth: bool = False) -> ValBoundingBox:
         """
         Converts the annotation to a format suitable for evaluation with `pycocotools`.
 
         :return:
         """
-        return (
-            [self.bbox.left, self.bbox.top, self.bbox.width, self.bbox.height],
-            self.confidence,
-            self.class_id + 1,
+        return ValBoundingBox(
+            image_id,
+            self.class_id,
+            self.bbox.coordinates(),
+            type_coordinates=CoordinatesType.ABSOLUTE,
+            img_size=None,
+            bb_type=BBType.GROUND_TRUTH if ground_truth else BBType.DETECTED,
+            confidence=None if ground_truth else self.confidence,
+            format=BBFormat.XYX2Y2
         )
 
     @classmethod
@@ -79,10 +86,6 @@ class COCOFullPage(ICOCOFullPage):
     def __init__(self, image_size: tuple[int, int], annotations: list[list[ICOCOAnnotation]], class_names: list[str]):
         super().__init__(image_size, annotations, class_names)
 
-    # TODO: change annotation implementation from (left, top, width, height) to BoundingBox
-    # -> reuse rectangle functions, single attribute inside class
-    # -> maybe rename it to BoundingBox
-
     @staticmethod
     def _sort_annotations_by_class(annotations: list[COCOAnnotation], class_count: int) -> list[list[COCOAnnotation]]:
         output = [[] for _ in range(class_count)]
@@ -103,7 +106,7 @@ class COCOFullPage(ICOCOFullPage):
     def to_eval_format(self) -> list[tuple[list[int], float, int]]:
         output = []
         for annotation in self.all_annotations():
-            output.append(annotation.to_eval_format())
+            output.append(annotation.to_val_box())
         return output
 
     def all_annotations(self) -> Generator[COCOAnnotation, None, None]:
@@ -242,7 +245,7 @@ class COCOFullPage(ICOCOFullPage):
         # class names from first class
         class_names = subpages[0].class_names
         # the last split is also de facto the bottom right corner of the image,
-        # we can retrieve image size from here,
+        # we can retrieve image image_size from here,
         last_split: BoundingBox = splits[-1][-1]
 
         # dump all annotations into a single matrix
