@@ -196,7 +196,7 @@ class COCOFullPage(ICOCOFullPage):
         for current_annot in annotations:
             intersects = False
             for selected_annot in cleared_annotations:
-                if current_annot.bbox.intersection_area(selected_annot.bbox) and (
+                if current_annot.bbox.intersects(selected_annot.bbox) and (
                         (
                                 # detects if IoU of two bboxes is greater than limit
                                 # eliminates duplicated bboxes
