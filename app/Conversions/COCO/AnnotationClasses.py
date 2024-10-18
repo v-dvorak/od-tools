@@ -72,8 +72,8 @@ class COCOAnnotation(ICOCOAnnotation):
         return COCOAnnotation(
             self.class_id,
 
-            self.bbox.left,
-            self.bbox.right,
+            self.bbox.left + left_shift,
+            self.bbox.top + top_shift,
             self.bbox.width,
             self.bbox.height,
 
