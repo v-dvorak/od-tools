@@ -55,7 +55,7 @@ def process_normal_batch(
         # save image
         ConversionUtils.copy_and_resize_image(
             path_to_image,
-            image_output_dir / (path_to_image.name + f".{annot_format}"),
+            image_output_dir / (path_to_image.stem + f".{annot_format}"),
             max_size=resize
         )
 
