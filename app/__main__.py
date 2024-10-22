@@ -15,10 +15,10 @@ if __name__ == "__main__":
     parser.add_argument("annot_path", help="Path to subpages.")
 
     parser.add_argument("-v", "--verbose", action="store_true", help="Make script verbose")
-    parser.add_argument("-m", "--mode", default=None,
+    parser.add_argument("-m", "--mode", default="detection", choices=["detection", "segmentation"],
                         help="Output dataset mode, detection or segmentation, default is \"detection\".")
     parser.add_argument("-s", "--split", type=float, default=1.0, help="Train/test split ratio.")
-    parser.add_argument("-f", "--format", type=str, default="coco",
+    parser.add_argument("-f", "--format", type=str, default="coco", choices=["coco", "yolo"],
                         help="Output format, coco/yolo, default is coco.")
     parser.add_argument("--seed", type=int, default=42, help="Seed for dataset shuffling.")
     parser.add_argument("--config", default=None,
