@@ -57,6 +57,26 @@ class ICOCOFullPage:
     def __str__(self):
         return f"({self.class_names=}, {self.size=}, {self.annotations})"
 
+    @classmethod
+    def from_list_of_coco_annotations(cls, image_size: tuple[int, int], annotations: list[ICOCOAnnotation],
+                                      class_names: list[str]) -> Self:
+        raise NotImplementedError()
+
+    def cut_off_predictions_too_close_to_edge(self, edge_offset: int = 20, verbose: bool = False) -> None:
+        raise NotImplementedError()
+
+    def adjust_position_for_all_annotations(self, shift_left: int = 0, shift_top: int = 0) -> None:
+        raise NotImplementedError()
+
+    @staticmethod
+    def resolve_overlaps_for_list_of_annotations(
+            annotations: list[ICOCOAnnotation],
+            iou_threshold: float = 0.25,
+            inside_threshold: float = 0.0,
+            verbose: bool = False,
+    ) -> list[ICOCOAnnotation]:
+        raise NotImplementedError()
+
     def all_annotations(self) -> list[ICOCOAnnotation]:
         raise NotImplementedError()
 
@@ -68,6 +88,24 @@ class ICOCOFullPage:
         raise NotImplementedError()
 
     def to_eval_format(self) -> list[tuple[list[int], float, int]]:
+        raise NotImplementedError()
+
+    def resolve_overlaps_with_other_page(
+            self,
+            other: Self,
+            inside_threshold: float = 0.0,
+            iou_threshold: float = 0.25,
+            verbose: bool = False
+    ) -> None:
+        raise NotImplementedError()
+
+    @staticmethod
+    def resolve_matrix_of_pages(
+            subpages=list[list[Self]],
+            inside_threshold: float = 0.0,
+            iou_threshold: float = 0.25,
+            verbose: bool = False,
+    ) -> None:
         raise NotImplementedError()
 
 
