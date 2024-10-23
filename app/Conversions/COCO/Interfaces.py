@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Self
 
 from mung.node import Node
@@ -106,6 +107,61 @@ class ICOCOFullPage:
             iou_threshold: float = 0.25,
             verbose: bool = False,
     ) -> None:
+        raise NotImplementedError()
+
+    @classmethod
+    def from_mung_file(
+            cls,
+            file_path: Path,
+            image_size: tuple[int, int],
+            class_reference_table: dict[str, int],
+            class_output_names: list[str]
+    ) -> Self:
+        """
+        Loads a page of annotations from a MuNG file.
+
+        :param file_path: path to mung file
+        :param image_size: image size (width, height)
+        :param class_reference_table: class reference table
+        :param class_output_names: class output names
+
+        :return: ICOCOFullPage
+        """
+        raise NotImplementedError()
+
+    @classmethod
+    def from_coco_file(
+            cls,
+            file_path: Path,
+            class_reference_table: dict[str, int],
+            class_output_names: list[str]
+    ) -> Self:
+        """
+        Loads a page of annotations from a COCO annotation file.
+
+        :param file_path: path to COCO annotation file
+        :param class_reference_table: class reference table
+        :param class_output_names: class output names
+        :return: ICOCOFullPage
+        """
+
+    @classmethod
+    def from_yolo_file(
+            cls,
+            file_path: Path,
+            image_size: tuple[int, int],
+            class_output_names: list[str],
+            mode: str = "detection"
+    ) -> Self:
+        """
+        From YOLO detection or segmentation format to `COCOAnnotation`.
+
+        :param file_path: path to file
+        :param mode: detection or segmentation
+        :param image_size: image width and height
+        :param class_output_names: list of class names
+        :return: COCOAnnotation
+        """
         raise NotImplementedError()
 
 

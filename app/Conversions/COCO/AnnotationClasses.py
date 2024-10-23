@@ -1,8 +1,11 @@
+import json
 from json import JSONEncoder
+from pathlib import Path
 from typing import Generator
 from typing import Self
 
 import numpy as np
+from mung.io import read_nodes_from_file
 from mung.node import Node
 from ultralytics.engine.results import Results
 
@@ -117,6 +120,135 @@ class COCOFullPage(ICOCOFullPage):
 
     def annotation_count(self) -> int:
         return sum([len(self.annotations[i]) for i in range(len(self.annotations))])
+
+    @classmethod
+    def from_mung_file(
+            cls,
+            file_path: Path,
+            image_size: tuple[int, int],
+            class_reference_table: dict[str, int],
+            class_output_names: list[str]
+    ) -> Self:
+        nodes = read_nodes_from_file(file_path.__str__())
+
+        annots = []
+        # process each node
+        for node in nodes:
+            if node.class_name in class_reference_table:
+                annots.append(COCOAnnotation.from_mung_node(class_reference_table[node.class_name], node))
+
+        # create single page
+        full_page = COCOFullPage.from_list_of_coco_annotations(image_size, annots, class_output_names)
+        return full_page
+
+    @classmethod
+    def from_coco_file(
+            cls,
+            file_path: Path,
+            class_reference_table: dict[str, int],
+            class_output_names: list[str]
+    ) -> Self:
+        with (file_path, "r") as file:
+            data = json.load(file)
+        image_width, image_height = data["width"], data["height"]
+        annots = [[] for _ in range(len(class_output_names))]
+        for class_name in class_reference_table.keys():
+            for annot in data[class_name]:
+                # process coordinates
+                left = annot["left"]
+                top = annot["top"]
+                width = annot["width"]
+                height = annot["height"]
+
+                # process segmentation
+                if data["segmentation"] is None:
+                    segm = None
+                else:
+                    i = 0
+                    segm = []
+                    while i + 1 < len(data["segmentation"][0]):
+                        segm.append((int(data["segmentation"][0][i]), int(data["segmentation"][0][i + 1])))
+
+                # save parsed annotation
+                annots[class_reference_table[class_name]].append(
+                    COCOAnnotation(class_reference_table[class_name], left, top, width, height, segm)
+                )
+
+        return cls((image_width, image_height), annots, class_output_names)
+
+    @staticmethod
+    def _parse_single_line_yolo_detection(line: str, image_width: int, image_height: int) -> COCOAnnotation:
+        """
+        From YOLO detection format to `COCOAnnotation`.
+
+        :param line: single line of detection in YOLO format
+        :param image_width: image width
+        :param image_height: image height
+        :return: COCOAnnotation
+        """
+        # parse data
+        parts = line.strip().split()
+        class_id = int(parts[0])
+        center_x = float(parts[1])
+        center_y = float(parts[2])
+        width = float(parts[3])
+        height = float(parts[4])
+
+        # Convert normalized coordinates to pixel values
+        left = (center_x * image_width) - (width * image_width) / 2
+        top = (center_y * image_height) - (height * image_height) / 2
+        width_pixels = width * image_width
+        height_pixels = height * image_height
+
+        return COCOAnnotation(class_id, int(left), int(top), int(width_pixels), int(height_pixels), None)
+
+    @staticmethod
+    def _parse_single_line_yolo_segmentation(
+            line: str,
+            image_width: int,
+            image_height: int
+    ) -> COCOAnnotation:
+        parts = line.strip().split()
+        assert len(parts) > 2 and len(parts) % 2 == 1
+
+        class_id = int(parts[0])
+
+        segm = []
+        i = 0
+        # process every point of segmentation
+        while i + 1 < len(parts[1:]):
+            x, y = int(float(parts[i]) * image_width), int(float(parts[i + 1]) * image_height)
+            segm.append((x, y))
+            i += 2
+
+        left = min(segm, key=lambda x: x[0])[0]
+        top = min(segm, key=lambda x: x[1])[1]
+        right = max(segm, key=lambda x: x[0])[0]
+        bottom = max(segm, key=lambda x: x[1])[1]
+
+        return COCOAnnotation(class_id, left, top, (right - left), (bottom - top), segm)
+
+    @classmethod
+    def from_yolo_file(
+            cls,
+            file_path: Path,
+            image_size: tuple[int, int],
+            class_output_names: list[str],
+            mode: str = "detection"
+    ) -> Self:
+        # TODO: future proof, fix issues with "i want different class id", "only some ids" etc.
+        image_width, image_height = image_size
+        annots = []
+
+        # read file
+        with open(file_path, "r") as file:
+            for line in file:
+                if mode == "detection":
+                    annots.append(COCOFullPage._parse_single_line_yolo_detection(line, image_width, image_height))
+                elif mode == "segmentation":
+                    annots.append(COCOFullPage._parse_single_line_yolo_segmentation(line, image_width, image_height))
+
+        return COCOFullPage.from_list_of_coco_annotations(image_size, annots, class_output_names)
 
     @classmethod
     def from_yolo_result(cls, result: Results) -> Self:
