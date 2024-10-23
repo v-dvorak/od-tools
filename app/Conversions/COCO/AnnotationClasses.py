@@ -272,10 +272,19 @@ class COCOFullPage(ICOCOFullPage):
             )
         return cls(result.orig_shape, predictions, class_names)
 
-    def cut_off_predictions_too_close_to_edge(self, edge_offset: int = 20, verbose: bool = False) -> None:
+    def cut_off_predictions_too_close_to_edge(
+            self, edge_offset: int = 20,
+            edge_tile: tuple[bool, bool, bool, bool] = (True, True, True, True),
+            verbose: bool = False
+    ) -> None:
         width, height = self.size
 
-        border = BoundingBox(0 + edge_offset, 0 + edge_offset, width - edge_offset, height - edge_offset)
+        border = BoundingBox(
+            0 + edge_offset if edge_tile[0] else 0,
+            0 + edge_offset if edge_tile[1] else 0,
+            width - edge_offset if edge_tile[2] else width,
+            height - edge_offset if edge_tile[3] else height
+        )
 
         new_annotations = []
         for class_annotations in self.annotations:
@@ -467,14 +476,23 @@ class COCOFullPage(ICOCOFullPage):
             edge_offset: int = 20,
             verbose: bool = False,
     ) -> Self:
-
-        for subpage, split in zip(subpages, [x for xs in splits for x in xs]):
+        for i, (subpage, split) in enumerate(zip(subpages, [x for xs in splits for x in xs])):
             subpage: COCOFullPage
             split: BoundingBox
 
             # cut predictions on edges
             if edge_offset > 0:
-                subpage.cut_off_predictions_too_close_to_edge(edge_offset=edge_offset, verbose=verbose)
+                x, y = i % len(splits[0]), i // len(splits[0])
+                subpage.cut_off_predictions_too_close_to_edge(
+                    edge_offset=edge_offset,
+                    edge_tile=(
+                        x != 0,
+                        y != 0,
+                        x != len(splits[0]) - 1,
+                        y != len(splits) - 1,
+                    ),
+                    verbose=verbose
+                )
 
             # shift annotations based in their absolute position in image
             subpage.adjust_position_for_all_annotations(split.left, split.top)

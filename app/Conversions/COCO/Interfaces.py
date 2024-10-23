@@ -63,7 +63,19 @@ class ICOCOFullPage:
                                       class_names: list[str]) -> Self:
         raise NotImplementedError()
 
-    def cut_off_predictions_too_close_to_edge(self, edge_offset: int = 20, verbose: bool = False) -> None:
+    def cut_off_predictions_too_close_to_edge(
+            self,
+            edge_offset: int = 20,
+            edge_tile: tuple[bool, bool, bool, bool] = (True, True, True, True),
+            verbose: bool = False
+    ) -> None:
+        """
+        Removes page's annotations that are to close to the edge.
+
+        :param edge_offset: offset of the edge in pixels
+        :param edge_tile: boolean indicating if the edge should be removed, (left, top, right, bottom) edges
+        :param verbose: boolean indicating if the edge should be removed
+        """
         raise NotImplementedError()
 
     def adjust_position_for_all_annotations(self, shift_left: int = 0, shift_top: int = 0) -> None:
