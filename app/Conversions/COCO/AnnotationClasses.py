@@ -13,6 +13,7 @@ from odmetrics.bounding_box import ValBoundingBox
 from odmetrics.utils.enumerators import (BBFormat, BBType, CoordinatesType)
 from .Interfaces import ICOCOAnnotation, ICOCOFullPage, ICOCOSplitPage
 from .. import ConversionUtils
+from ..Formats import InputFormat, OutputFormat
 from ...Splitting.SplitUtils import BoundingBox
 
 
@@ -24,7 +25,7 @@ class COCOAnnotation(ICOCOAnnotation):
 
     def to_val_box(self, image_id: str, ground_truth: bool = False) -> ValBoundingBox:
         """
-        Converts the annotation to a format suitable for evaluation with `pycocotools`.
+        Converts the annotation to a output_format suitable for evaluation with `pycocotools`.
 
         :return:
         """
@@ -46,6 +47,16 @@ class COCOAnnotation(ICOCOAnnotation):
             node.left, node.top, node.width, node.height,
             ConversionUtils.mung_segmentation_to_absolute_coordinates(node)
         )
+
+    @staticmethod
+    def _bounding_box_from_segmentation(
+            segm: list[tuple[int, int]]
+    ):
+        left = min(segm, key=lambda x: x[0])[0]
+        top = min(segm, key=lambda x: x[1])[1]
+        right = max(segm, key=lambda x: x[0])[0]
+        bottom = max(segm, key=lambda x: x[1])[1]
+        return (left, top, right, bottom)
 
     def intersects(self, other: Self) -> bool:
         other: COCOAnnotation
@@ -105,6 +116,100 @@ class COCOFullPage(ICOCOFullPage):
             image_size,
             cls._sort_annotations_by_class(annotations, len(class_names)),
             class_names
+        )
+
+    @classmethod
+    def load_from_file(
+            cls,
+            annot_path: Path,
+            image_path: Path,
+            class_reference_table: dict[str, int],
+            class_output_names: list[str],
+            input_format: InputFormat
+    ) -> Self:
+        if input_format == InputFormat.COCO:
+            return cls.from_coco_file(
+                annot_path,
+                class_reference_table,
+                class_output_names
+            )
+        elif input_format == InputFormat.MUNG:
+            return cls.from_mung(
+                annot_path,
+                image_path,
+                class_reference_table,
+                class_output_names
+            )
+        elif input_format == InputFormat.YOLO_DETECTION:
+            return cls.from_yolo_detection(
+                annot_path,
+                image_path,
+                class_reference_table,
+                class_output_names
+            )
+        elif input_format == InputFormat.YOLO_SEGMENTATION:
+            return cls.from_yolo_segmentation(
+                annot_path,
+                image_path,
+                class_reference_table,
+                class_output_names
+            )
+        else:
+            raise ValueError()
+
+    def save_to_file(
+            self,
+            output_dir: Path,
+            dato_name: Path | str,
+            output_format: OutputFormat,
+    ):
+        if output_format == OutputFormat.COCO:
+            with open(output_dir / (dato_name + f".{output_format.to_annotation_extension()}"), "w") as f:
+                json.dump(self, f, indent=4, cls=COCOFullPageEncoder)
+        else:
+            raise NotImplementedError()
+
+    @classmethod
+    def from_yolo_detection(
+            cls,
+            annot_path: Path,
+            image_path: Path,
+            class_reference_table: dict[str, int],
+            class_output_names: list[str]
+    ) -> Self:
+        # TODO: manage class filtering
+        image_width, image_height = ConversionUtils.get_num_pixels(image_path)
+        annots = []
+
+        with open(annot_path, "r") as file:
+            for line in file:
+                annots.append(cls._parse_single_line_yolo_detection(line, image_width, image_height))
+
+        return cls.from_list_of_coco_annotations(
+            (image_width, image_width),
+            annots,
+            class_output_names
+        )
+
+    @classmethod
+    def from_yolo_segmentation(
+            cls,
+            annot_path: Path,
+            image_path: Path,
+            class_reference_table: dict[str, int],
+            class_output_names: list[str]
+    ) -> Self:
+        image_width, image_height = ConversionUtils.get_num_pixels(image_path)
+        annots = []
+
+        with open(annot_path, "r") as file:
+            for line in file:
+                annots.append(cls._parse_single_line_yolo_segmentation(line, image_width, image_height))
+
+        return cls.from_list_of_coco_annotations(
+            (image_width, image_width),
+            annots,
+            class_output_names
         )
 
     def to_eval_format(self) -> list[tuple[list[int], float, int]]:
@@ -195,9 +300,9 @@ class COCOFullPage(ICOCOFullPage):
     @staticmethod
     def _parse_single_line_yolo_detection(line: str, image_width: int, image_height: int) -> COCOAnnotation:
         """
-        From YOLO detection format to `COCOAnnotation`.
+        From YOLO detection output_format to `COCOAnnotation`.
 
-        :param line: single line of detection in YOLO format
+        :param line: single line of detection in YOLO output_format
         :param image_width: image width
         :param image_height: image height
         :return: COCOAnnotation
@@ -237,12 +342,9 @@ class COCOFullPage(ICOCOFullPage):
             segm.append((x, y))
             i += 2
 
-        left = min(segm, key=lambda x: x[0])[0]
-        top = min(segm, key=lambda x: x[1])[1]
-        right = max(segm, key=lambda x: x[0])[0]
-        bottom = max(segm, key=lambda x: x[1])[1]
+        l, t, w, h = COCOAnnotation._bounding_box_from_segmentation(segm)
 
-        return COCOAnnotation(class_id, left, top, (right - left), (bottom - top), segm)
+        return COCOAnnotation(class_id, l, t, w, h, segm)
 
     @classmethod
     def from_yolo_file(

@@ -186,7 +186,7 @@ class ICOCOFullPage:
             mode: str = "detection"
     ) -> Self:
         """
-        From YOLO detection or segmentation format to `COCOAnnotation`.
+        From YOLO detection or segmentation output_format to `COCOAnnotation`.
 
         :param file_path: path to file
         :param mode: detection or segmentation

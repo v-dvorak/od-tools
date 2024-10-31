@@ -24,11 +24,12 @@ if __name__ == "__main__":
     proc_parser.add_argument("images_path", help="Path to images.")
     proc_parser.add_argument("annot_path", help="Path to subpages.")
 
-    proc_parser.add_argument("-m", "--mode", default="detection", choices=["detection", "segmentation"],
-                             help="Output dataset mode, detection or segmentation, default is \"detection\".")
+    proc_parser.add_argument("-i", "--input_format", default="mung", choices=["mung", "coco", "yolod", "yolos"])
+    proc_parser.add_argument("-o", "--output_format", default="coco", choices=["mung", "coco", "yolod", "yolos"])
+    proc_parser.add_argument("--image_format", default="jpg", help="Input image format.")
+
     proc_parser.add_argument("-s", "--split", type=float, default=1.0, help="Train/test split ratio.")
-    proc_parser.add_argument("-f", "--format", type=str, default="coco", choices=["coco", "yolo"],
-                             help="Output format, coco/yolo, default is coco.")
+
     proc_parser.add_argument("--seed", type=int, default=42, help="Seed for dataset shuffling.")
     proc_parser.add_argument("--config", default=None,
                              help="Path to config, see \"default_config.json\" for example.")
@@ -55,6 +56,13 @@ if __name__ == "__main__":
             loaded_config = json.load(f)
 
     if args.command == "proc":
+        input_f = Formatter.InputFormat.from_string(args.input_format)
+        output_f = Formatter.OutputFormat.from_string(args.output_format)
+
+        print(input_f.name, output_f.name)
+        print(input_f.to_annotation_extension())
+        # quit()
+
         Formatter.format_dataset(
             # directories
             Path(args.images_path),
@@ -64,10 +72,11 @@ if __name__ == "__main__":
             class_reference_table=loaded_config["class_id_reference_table"],
             class_output_names=loaded_config["class_output_names"],
             # formatting
-            output_format=args.format,
-            mode=args.mode,
+            input_format=input_f,
+            output_format=output_f,
             split_ratio=args.split,
             resize=args.resize,
+            image_format=args.image_format,
             # image splitting settings
             window_size=tuple(loaded_config["window_size"]),
             overlap_ratio=loaded_config["overlap_ratio"],

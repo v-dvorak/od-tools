@@ -18,12 +18,12 @@ def _save_split_page_image(
 ) -> None:
     """
     Loads and splits image given by path and saves it to output_dir.
-    Images are stored in format `"name"-"row"-"column"."image_format"`.
+    Images are stored in output_format `"name"-"row"-"column"."image_format"`.
 
     :param path_to_image: image to process
     :param output_dir: directory to save all split images to
     :param splits: list of bounding boxes that define splits to save
-    :param image_format: format of image to save to
+    :param image_format: output_format of image to save to
     """
     img = cv2.imread(path_to_image.__str__())
     dato_name = path_to_image.stem
@@ -54,8 +54,8 @@ def _save_split_page_coco_annotation(
         split_page: COCOSplitPage
 ) -> None:
     """
-    Processes already split COCO annotations (stored in `COCOSplitPage`) and saves them to output_dir in COCO format.
-    Annotations are stored in format `"dato_name"-"row"-"column".json`.
+    Processes already split COCO annotations (stored in `COCOSplitPage`) and saves them to output_dir in COCO output_format.
+    Annotations are stored in output_format `"dato_name"-"row"-"column".json`.
 
     :param dato_name: name of the piece of data, defines names of output files
     :param output_dir: directory to save all split images to
@@ -77,8 +77,8 @@ def _save_full_page_coco_annotation(
         full_page: ICOCOFullPage
 ) -> None:
     """
-    Processes COCO full page annotations and saves them to output_dir in COCO format.
-    Annotations are stored in format `"dato_name"-"row"-"column".json`.
+    Processes COCO full page annotations and saves them to output_dir in COCO output_format.
+    Annotations are stored in output_format `"dato_name"-"row"-"column".json`.
 
     :param dato_name: name of the piece of data, defines names of output files
     :param output_dir: directory to save all split images to
@@ -95,8 +95,8 @@ def _save_split_page_yolo_annotation_from_coco_split_page(
         mode: str = "detection",
 ) -> None:
     """
-    Processes already split COCO annotations (stored in `COCOSplitPage`) and saves them to output_dir in YOLO format.
-    Annotations are stored in format `"dato_name"-"row"-"column".txt`.
+    Processes already split COCO annotations (stored in `COCOSplitPage`) and saves them to output_dir in YOLO output_format.
+    Annotations are stored in output_format `"dato_name"-"row"-"column".txt`.
 
     :param dato_name: name of the piece of data, defines names of output files
     :param output_dir: directory to save all split images to
@@ -120,8 +120,8 @@ def _save_full_page_yolo_annotation_from_coco_full_page(
         mode: str = "detection",
 ) -> None:
     """
-    Processes COCO annotations (stored in `COCOFullPage`) and saves them to output_dir in YOLO format.
-    Annotations are stored in format `"dato_name"-"row"-"column".txt`.
+    Processes COCO annotations (stored in `COCOFullPage`) and saves them to output_dir in YOLO output_format.
+    Annotations are stored in output_format `"dato_name"-"row"-"column".txt`.
 
     :param dato_name: name of the piece of data, defines names of output files
     :param output_dir: directory to save all split images to

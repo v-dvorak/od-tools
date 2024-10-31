@@ -2,11 +2,12 @@ from pathlib import Path
 
 from tqdm import tqdm
 
-from app.Conversions import ConversionUtils
-from app.Conversions.COCO.AnnotationClasses import COCOFullPage
-from app.Conversions.COCO.AnnotationClasses import COCOSplitPage
-from app.Splitting import SplitUtils
 from . import DataSaving
+from .Formats import InputFormat, OutputFormat
+from ..Conversions import ConversionUtils
+from ..Conversions.COCO.AnnotationClasses import COCOFullPage
+from ..Conversions.COCO.AnnotationClasses import COCOSplitPage
+from ..Splitting import SplitUtils
 
 
 def process_normal_batch(
@@ -14,44 +15,35 @@ def process_normal_batch(
         output_paths: tuple[Path, Path],
         class_reference_table: dict[str, int],
         class_output_names: list[str],
-        annot_format: str = "jpg",
-        mode: str = "detection",
-        output_format: str = "coco",
+        input_format: InputFormat,
+        output_format: OutputFormat,
+        image_format: str = "jpg",
         resize: int = None
 ) -> None:
     image_output_dir, annotation_output_dir = output_paths
 
-    for path_to_image, path_to_annotations in tqdm(data):
+    for path_to_image, path_to_annotation in tqdm(data):
         # load and process page to classes
-        page = COCOFullPage.from_mung(
+        page = COCOFullPage.load_from_file(
+            path_to_annotation,
             path_to_image,
-            path_to_annotations,
             class_reference_table,
-            class_output_names
+            class_output_names,
+            input_format
         )
         # save image
         ConversionUtils.copy_and_resize_image(
             path_to_image,
-            image_output_dir / (path_to_image.stem + f".{annot_format}"),
+            image_output_dir / (path_to_image.stem + f".{image_format}"),
             max_size=resize
         )
 
         # save annotations
-        if output_format == "coco":
-            DataSaving._save_full_page_coco_annotation(
-                path_to_image.stem,
-                annotation_output_dir,
-                page
-            )
-        elif output_format == "yolo":
-            DataSaving._save_full_page_yolo_annotation_from_coco_full_page(
-                path_to_image.stem,
-                annotation_output_dir,
-                page,
-                mode=mode
-            )
-        else:
-            raise ValueError(f"Unsupported output format: {output_format}")
+        page.save_to_file(
+            annotation_output_dir,
+            path_to_image.stem,
+            output_format,
+        )
 
 
 def process_split_batch(
