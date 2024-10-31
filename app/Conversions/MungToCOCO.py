@@ -1,35 +1,12 @@
 from pathlib import Path
 
-from mung.io import read_nodes_from_file
 from tqdm import tqdm
 
 from app.Conversions import ConversionUtils
-from app.Conversions.COCO.AnnotationClasses import COCOAnnotation, COCOFullPage
+from app.Conversions.COCO.AnnotationClasses import COCOFullPage
 from app.Conversions.COCO.AnnotationClasses import COCOSplitPage
 from app.Splitting import SplitUtils
 from . import DataSaving
-
-
-def process_mung_page_to_coco(
-        path_to_image: Path,
-        path_to_annotation: Path,
-        class_reference_table: dict[str, int],
-        class_output_names: list[str],
-) -> COCOFullPage:
-    # get image size (width, height)
-    image_size = ConversionUtils.get_num_pixels(path_to_image)
-    # use mung to retrieve subpages from xml
-    nodes = read_nodes_from_file(path_to_annotation.__str__())
-
-    annots = []
-    # process each node
-    for node in nodes:
-        if node.class_name in class_reference_table:
-            annots.append(COCOAnnotation.from_mung_node(class_reference_table[node.class_name], node))
-
-    # create single page
-    full_page = COCOFullPage.from_list_of_coco_annotations(image_size, annots, class_output_names)
-    return full_page
 
 
 def process_normal_batch(
@@ -45,8 +22,8 @@ def process_normal_batch(
     image_output_dir, annotation_output_dir = output_paths
 
     for path_to_image, path_to_annotations in tqdm(data):
-        # load and proces page to classes
-        page = process_mung_page_to_coco(
+        # load and process page to classes
+        page = COCOFullPage.from_mung(
             path_to_image,
             path_to_annotations,
             class_reference_table,
@@ -134,7 +111,7 @@ def process_mung_page_to_coco_with_split(
         overlap_ratio: float = 0.25,
 ) -> COCOSplitPage:
     # create single page
-    full_page = process_mung_page_to_coco(
+    full_page = COCOFullPage.from_mung(
         path_to_image,
         path_to_annotation,
         class_reference_table,

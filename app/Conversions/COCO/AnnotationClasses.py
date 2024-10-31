@@ -124,12 +124,12 @@ class COCOFullPage(ICOCOFullPage):
     @classmethod
     def from_mung_file(
             cls,
-            file_path: Path,
+            annot_path: Path,
             image_size: tuple[int, int],
             class_reference_table: dict[str, int],
             class_output_names: list[str]
     ) -> Self:
-        nodes = read_nodes_from_file(file_path.__str__())
+        nodes = read_nodes_from_file(annot_path.__str__())
 
         annots = []
         # process each node
@@ -140,6 +140,22 @@ class COCOFullPage(ICOCOFullPage):
         # create single page
         full_page = COCOFullPage.from_list_of_coco_annotations(image_size, annots, class_output_names)
         return full_page
+
+    @classmethod
+    def from_mung(
+            cls,
+            annot_path: Path,
+            image_path: Path,
+            class_reference_table: dict[str, int],
+            class_output_names: list[str]
+    ):
+        image_size = ConversionUtils.get_num_pixels(image_path)
+        return COCOFullPage.from_mung_file(
+            annot_path,
+            image_size,
+            class_reference_table,
+            class_output_names
+        )
 
     @classmethod
     def from_coco_file(

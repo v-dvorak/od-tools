@@ -124,16 +124,36 @@ class ICOCOFullPage:
     @classmethod
     def from_mung_file(
             cls,
-            file_path: Path,
+            annot_path: Path,
             image_size: tuple[int, int],
             class_reference_table: dict[str, int],
             class_output_names: list[str]
     ) -> Self:
         """
-        Loads a page of annotations from a MuNG file.
+        Loads a page of annotations from a MuNG annotation file.
 
-        :param file_path: path to mung file
+        :param annot_path: path to mung file
         :param image_size: image size (width, height)
+        :param class_reference_table: class reference table
+        :param class_output_names: class output names
+
+        :return: ICOCOFullPage
+        """
+        raise NotImplementedError()
+
+    @classmethod
+    def from_mung(
+            cls,
+            annot_path: Path,
+            image_path: Path,
+            class_reference_table: dict[str, int],
+            class_output_names: list[str]
+    ) -> Self:
+        """
+        Loads a page of annotations from an image and a MuNG annotation file.
+
+        :param annot_path: path to mung file
+        :param image_path: path to image
         :param class_reference_table: class reference table
         :param class_output_names: class output names
 
