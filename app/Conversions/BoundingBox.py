@@ -60,13 +60,6 @@ class BoundingBox(IBoundingBox):
                 self.bottom <= other.bottom
         )
         return fully_inside
-        # this might be useful later
-        # fully_outside = (
-        #     rectangle1.right <= rectangle2.left or
-        #     rectangle1.left >= rectangle2.right or
-        #     rectangle1.bottom <= rectangle2.top or
-        #     rectangle1.top >= rectangle2.bottom
-        # )
 
     def intersection_over_union(self, other: Self) -> float:
         int_area = self.intersection_area(other)
