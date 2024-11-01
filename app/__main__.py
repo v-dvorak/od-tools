@@ -56,6 +56,8 @@ if __name__ == "__main__":
                         help="Path to config, see \"default_config.json\" for example.")
     val_parser.add_argument("-c", "--count", type=int, help="How many images the model will be tested on.")
     val_parser.add_argument("-s", "--seed", type=int, default=42, help="Seed for dataset shuffling.")
+    val_parser.add_argument("-v", "--verbose", action="store_true", help="Make script verbose")
+
 
     args = parser.parse_args()
 
@@ -65,7 +67,7 @@ if __name__ == "__main__":
         with inp_file.open("rt") as f:
             loaded_config = json.load(f)
     else:
-        with open(args.settings, "r", encoding="utf8") as f:
+        with open(args.config, "r", encoding="utf8") as f:
             loaded_config = json.load(f)
 
     if args.command == "proc":

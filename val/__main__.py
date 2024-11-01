@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import argparse
+import json
+from importlib import resources as impresources
 from pathlib import Path
 
+from app import data
 from odmetrics.bounding_box import ValBoundingBox
 from . import EvalJob
 from . import FScores
@@ -23,6 +26,14 @@ if __name__ == "__main__":
     parser.add_argument("-s", "--seed", type=int, default=42, help="Seed for dataset shuffling.")
     parser.add_argument("-v", "--verbose", action="store_true", help="Make script verbose")
     args = parser.parse_args()
+
+    if args.config is None:
+        inp_file = impresources.files(data) / "default_config.json"
+        with inp_file.open("rt") as f:
+            loaded_config = json.load(f)
+    else:
+        with open(args.settings, "r", encoding="utf8") as f:
+            loaded_config = json.load(f)
 
     GROUND_TRUTH, PREDICTIONS = EvalJob.yolo_val(
         Path(args.model_path),
