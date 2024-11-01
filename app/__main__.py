@@ -43,6 +43,19 @@ if __name__ == "__main__":
 
     stats_parser.add_argument("-o", "--output", type=str, default=None, help="If used, plots will be saved here.")
 
+    # MODEL VALIDATION
+    val_parser = subparsers.add_parser("val")
+
+    val_parser.add_argument("model_path", type=str, help="Path to model.")
+    val_parser.add_argument("images_path", help="Path to images.")
+    val_parser.add_argument("annot_path", help="Path to subpages.")
+
+    val_parser.add_argument("-o", "--overlap", type=int, help="Overlap ratio for image splits.")
+    val_parser.add_argument("--config", default=None,
+                        help="Path to config, see \"default_config.json\" for example.")
+    val_parser.add_argument("-c", "--count", type=int, help="How many images the model will be tested on.")
+    val_parser.add_argument("-s", "--seed", type=int, default=42, help="Seed for dataset shuffling.")
+
     args = parser.parse_args()
 
     # load config
@@ -89,3 +102,31 @@ if __name__ == "__main__":
             output_path=Path(args.output) if args.output is not None else None,
             verbose=args.verbose
         )
+
+    elif args.command == "val":
+        from val import EvalJob, FScores
+        from val.EvalJob import ValBoundingBox
+        CLASSES = loaded_config["class_output_names"]
+
+        GROUND_TRUTH, PREDICTIONS = EvalJob.yolo_val(
+            Path(args.model_path),
+            Path(args.images_path),
+            Path(args.annot_path),
+            args.count,
+            seed=int(args.seed),
+            verbose=args.verbose,
+        )
+
+        GROUND_TRUTH: list[ValBoundingBox]
+        PREDICTIONS: list[ValBoundingBox]
+        global_thresholds = [0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95]
+
+        scores = FScores.collect_f_scores(
+            GROUND_TRUTH,
+            PREDICTIONS,
+            CLASSES,
+            iou_thresholds=global_thresholds,
+            verbose=args.verbose,
+        )
+
+        FScores.plot_f_scores(global_thresholds, scores, CLASSES + ["all"])
