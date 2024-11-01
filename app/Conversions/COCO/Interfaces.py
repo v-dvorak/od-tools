@@ -5,6 +5,7 @@ from mung.node import Node
 from ultralytics.engine.results import Results
 
 from odmetrics.bounding_box import ValBoundingBox
+from ..Formats import OutputFormat
 
 
 class ICOCOAnnotation:
@@ -57,6 +58,9 @@ class ICOCOFullPage:
 
     def __str__(self):
         return f"({self.class_names=}, {self.size=}, {self.annotations})"
+
+    def save_to_file(self, output_dir: Path, dato_name: Path | str, output_format: OutputFormat):
+        raise NotImplementedError()
 
     @classmethod
     def from_list_of_coco_annotations(cls, image_size: tuple[int, int], annotations: list[ICOCOAnnotation],

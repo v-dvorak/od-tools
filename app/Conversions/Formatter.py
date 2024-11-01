@@ -70,11 +70,11 @@ def format_dataset(
                 (images_dir, annot_dir),
                 class_reference_table,
                 class_output_names,
+                input_format,
+                output_format,
                 image_format=image_format,
                 window_size=window_size,
-                overlap_ratio=overlap_ratio,
-                mode=mode,
-                annot_format=output_format
+                overlap_ratio=overlap_ratio
             )
         else:
             MungToCOCO.process_normal_batch(
@@ -88,7 +88,7 @@ def format_dataset(
                 resize=resize
             )
 
-        if output_format == "yolo":
+        if output_format == InputFormat.YOLO_DETECTION or output_format == InputFormat.YOLO_SEGMENTATION:
             _create_yaml_config_for_yolo(
                 dataset_path,
                 images_dir,
@@ -118,11 +118,11 @@ def format_dataset(
                 (train_image_dir, train_annotation_dir),
                 class_reference_table,
                 class_output_names,
+                input_format,
+                output_format,
                 image_format=image_format,
                 window_size=window_size,
-                overlap_ratio=overlap_ratio,
-                mode=mode,
-                annot_format=output_format
+                overlap_ratio=overlap_ratio
             )
 
             MungToCOCO.process_split_batch(
@@ -130,11 +130,11 @@ def format_dataset(
                 (val_image_dir, val_annotation_dir),
                 class_reference_table,
                 class_output_names,
+                input_format,
+                output_format,
                 image_format=image_format,
                 window_size=window_size,
-                overlap_ratio=overlap_ratio,
-                mode=mode,
-                annot_format=output_format
+                overlap_ratio=overlap_ratio
             )
         else:
             MungToCOCO.process_normal_batch(
@@ -142,9 +142,9 @@ def format_dataset(
                 (train_image_dir, train_annotation_dir),
                 class_reference_table,
                 class_output_names,
+                input_format,
+                output_format,
                 image_format=image_format,
-                mode=mode,
-                output_format=output_format,
                 resize=resize
             )
 
@@ -153,13 +153,13 @@ def format_dataset(
                 (val_image_dir, val_annotation_dir),
                 class_reference_table,
                 class_output_names,
+                input_format,
+                output_format,
                 image_format=image_format,
-                mode=mode,
-                output_format=output_format,
                 resize=resize
             )
 
-        if output_format == "yolo":
+        if output_format == OutputFormat.YOLO_DETECTION or output_format == OutputFormat.YOLO_SEGMENTATION:
             _create_yaml_config_for_yolo(
                 dataset_path,
                 train_image_dir,

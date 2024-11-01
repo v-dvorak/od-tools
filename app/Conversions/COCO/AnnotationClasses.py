@@ -690,6 +690,20 @@ class COCOSplitPage(ICOCOSplitPage):
             splits
         )
 
+    def save_to_file(
+            self,
+            output_dir: Path,
+            dato_name: Path | str,
+            output_format: OutputFormat,
+    ) -> None:
+        for row in range(len(self.subpages)):
+            for col in range(len(self.subpages[0])):
+                self.subpages[row][col].save_to_file(
+                    output_dir,
+                    dato_name + f"-{row}-{col}",
+                    output_format
+                )
+
     @classmethod
     def from_coco_full_page(
             cls,
