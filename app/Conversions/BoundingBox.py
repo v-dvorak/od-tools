@@ -14,6 +14,9 @@ class BoundingBox(IBoundingBox):
     def coordinates(self) -> tuple[int, int, int, int]:
         return self.left, self.top, self.right, self.bottom
 
+    def xyxy(self) -> tuple[int, int, int, int]:
+        return self.left, self.top, self.right, self.bottom
+
     def intersects(self, other: Self) -> bool:
         # check if the annotations overlap both horizontally and vertically
         return (

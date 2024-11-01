@@ -11,7 +11,7 @@ from odmetrics.evaluators import coco_evaluator
 
 font_path = os.path.join(cv2.__path__[0], "qt", "fonts", "DejaVuSans.ttf")
 
-
+from . import COCOEvaluator
 def calculate_f1_score(tp: int, fp: int, fn: int) -> float:
     if tp == 0 and fp == 0 and fn == 0:
         return 0
@@ -85,7 +85,7 @@ def collect_f_scores(
             print(f'IoU threshold: {threshold}')
 
         all_tp, all_fp, all_fn = 0, 0, 0
-        res = coco_evaluator.get_coco_metrics(ground_truth, predictions, max_dets=500, iou_threshold=threshold)
+        res = COCOEvaluator.get_coco_metrics(ground_truth, predictions, max_detections=500, iou_threshold=threshold)
 
         # collect classes
         for class_id in range(total_classes):

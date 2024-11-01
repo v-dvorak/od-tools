@@ -22,6 +22,16 @@ class COCOAnnotation(ICOCOAnnotation):
                  segmentation: list[tuple[int, int]], confidence: float = 1.0):
         super().__init__(class_id, left, top, width, height, segmentation, confidence=confidence)
         self.bbox = BoundingBox.from_ltwh(left, top, width, height)  # Python shenanigans
+        self.image_name: str = None
+
+    def set_image_name(self, image_name: str):
+        self.image_name = image_name
+
+    def get_image_name(self) -> str:
+        return self.image_name
+
+    def get_class_id(self) -> int:
+        return self.class_id
 
     def to_val_box(self, image_id: str, ground_truth: bool = False) -> ValBoundingBox:
         """

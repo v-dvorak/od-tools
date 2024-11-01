@@ -5,11 +5,10 @@ from pathlib import Path
 from tqdm import tqdm
 from ultralytics import YOLO
 
-from odmetrics.bounding_box import ValBoundingBox
 from . import Utils
 from ..Conversions import ConversionUtils
 from ..Conversions.BoundingBox import BoundingBox
-from ..Conversions.COCO.AnnotationClasses import COCOFullPage
+from ..Conversions.COCO.AnnotationClasses import COCOFullPage, COCOAnnotation
 from ..Conversions.Formats import InputFormat
 from ..Splitting import SplitUtils
 
@@ -28,10 +27,9 @@ def retrieve_ground_truth(
         index: int,
         debug: bool = False,
 
-) -> list[ValBoundingBox]:
-    ground_truths: list[ValBoundingBox] = []
+) -> list[COCOAnnotation]:
 
-    gts = COCOFullPage.load_from_file(
+    ground_truth = COCOFullPage.load_from_file(
         annotation_path,
         image_path,
         class_reference_table,
@@ -39,19 +37,21 @@ def retrieve_ground_truth(
         input_format
     )
 
-    for gt in gts.all_annotations():
-        ground_truths.append(gt.to_val_box(str(index), ground_truth=True))
-
     if debug:
         SplitUtils.draw_rectangles_on_image(
             image_path.__str__(),
-            [BoundingBox(int(box._x), int(box._y), int(box._x2), int(box._y2)) for box in ground_truths],
+            [annot.bbox for annot in ground_truth.annotations()],
             color=(0, 255, 0),
             thickness=2,
             # output_path=f"pred1-{index}.jpg"
         )
         input("..")
-    return ground_truths
+
+    # force image id upon gts
+    for annot in ground_truth.all_annotations():
+        annot.set_image_name(str(index))
+
+    return list(ground_truth.all_annotations())
 
 
 def predict_yolo_split(
@@ -60,8 +60,7 @@ def predict_yolo_split(
         index: int,
         overlap: float = 0.25,
         debug: bool = False,
-) -> list[ValBoundingBox]:
-    predictions: list[ValBoundingBox] = []
+) -> list[COCOAnnotation]:
     width, height = ConversionUtils.get_num_pixels(image_path)
 
     # prepare images for inference
@@ -79,20 +78,20 @@ def predict_yolo_split(
 
     resolved = COCOFullPage.combine_multiple_pages_and_resolve(subpages, splits)
 
-    for pred in resolved.all_annotations():
-        predictions.append(pred.to_val_box(str(index), ground_truth=False))
-
     if debug:
         SplitUtils.draw_rectangles_on_image(
             image_path.__str__(),
-            [BoundingBox(int(box._x), int(box._y), int(box._x2), int(box._y2)) for box in predictions],
+            [annot.bbox for annot in resolved.all_annotations()],
             color=(0, 255, 0),
             thickness=2,
             # output_path=f"pred1-{index}.jpg"
         )
         input("..")
 
-    return predictions
+    for annot in resolved.all_annotations():
+        annot.set_image_name(str(index))
+
+    return list(resolved.all_annotations())
 
 
 def validate_model(
@@ -110,7 +109,7 @@ def validate_model(
         overlap: float = 0.25,
         image_splitting: bool = False,
         debug: bool = False,
-):
+) -> tuple[list[COCOAnnotation], list[COCOAnnotation]]:
     # load validation data
     images = sorted(list(images_path.rglob(f"*.{image_format}")))
     annotations = sorted(list(annotations_path.rglob(f"*.{input_format.to_annotation_extension()}")))
@@ -134,8 +133,8 @@ def validate_model(
         random.Random(seed).shuffle(images)
         data = data[:count]
 
-    ground_truths: list[ValBoundingBox] = []
-    predictions: list[ValBoundingBox] = []
+    ground_truths: list[COCOAnnotation] = []
+    predictions: list[COCOAnnotation] = []
 
     # predict for every single image
     index = 0
