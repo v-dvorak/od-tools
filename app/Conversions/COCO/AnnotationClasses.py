@@ -9,8 +9,6 @@ from mung.io import read_nodes_from_file
 from mung.node import Node
 from ultralytics.engine.results import Results
 
-from odmetrics.bounding_box import ValBoundingBox
-from odmetrics.utils.enumerators import (BBFormat, BBType, CoordinatesType)
 from .Interfaces import ICOCOAnnotation, ICOCOFullPage, ICOCOSplitPage
 from .. import ConversionUtils
 from ..Formats import InputFormat, OutputFormat
@@ -32,23 +30,6 @@ class COCOAnnotation(ICOCOAnnotation):
 
     def get_class_id(self) -> int:
         return self.class_id
-
-    def to_val_box(self, image_id: str, ground_truth: bool = False) -> ValBoundingBox:
-        """
-        Converts the annotation to a output_format suitable for evaluation with `pycocotools`.
-
-        :return:
-        """
-        return ValBoundingBox(
-            image_id,
-            self.class_id,
-            self.bbox.coordinates(),
-            type_coordinates=CoordinatesType.ABSOLUTE,
-            img_size=None,
-            bb_type=BBType.GROUND_TRUTH if ground_truth else BBType.DETECTED,
-            confidence=None if ground_truth else self.confidence,
-            format=BBFormat.XYX2Y2
-        )
 
     @classmethod
     def from_mung_node(cls, clss: int, node: Node) -> Self:

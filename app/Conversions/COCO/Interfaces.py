@@ -4,7 +4,6 @@ from typing import Self
 from mung.node import Node
 from ultralytics.engine.results import Results
 
-from odmetrics.bounding_box import ValBoundingBox
 from ..Formats import OutputFormat
 
 
@@ -30,9 +29,6 @@ class ICOCOAnnotation:
         raise NotImplementedError()
 
     def intersects(self, other: Self) -> bool:
-        raise NotImplementedError()
-
-    def to_val_box(self, image_id: str, ground_truth: bool = False) -> ValBoundingBox:
         raise NotImplementedError()
 
 

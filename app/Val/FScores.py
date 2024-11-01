@@ -6,19 +6,18 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 
-from odmetrics.bounding_box import ValBoundingBox
-from odmetrics.evaluators import coco_evaluator
-
 font_path = os.path.join(cv2.__path__[0], "qt", "fonts", "DejaVuSans.ttf")
 
 from . import COCOEvaluator
+from ..Conversions.COCO.AnnotationClasses import COCOAnnotation
+
 def calculate_f1_score(tp: int, fp: int, fn: int) -> float:
     if tp == 0 and fp == 0 and fn == 0:
         return 0
     return 2 * tp / (2 * tp + fp + fn)
 
 
-def plot_f_scores(iou_thresholds, f1_scores_per_class, class_labels):
+def plot_f_scores(iou_thresholds: list[float], f1_scores_per_class: list[list[float]], class_labels: list[str | int]):
     """
     Plots F1 score for different IoU thresholds for multiple classes.
 
@@ -52,8 +51,8 @@ def plot_f_scores(iou_thresholds, f1_scores_per_class, class_labels):
 
 
 def collect_f_scores(
-        ground_truth: list[ValBoundingBox],
-        predictions: list[ValBoundingBox],
+        ground_truth: list[COCOAnnotation],
+        predictions: list[COCOAnnotation],
         class_names: list[str],
         iou_thresholds: list[float] = None,
         summation: bool = True,

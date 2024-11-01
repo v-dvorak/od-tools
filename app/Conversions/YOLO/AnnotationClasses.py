@@ -1,5 +1,3 @@
-from odmetrics.bounding_box import ValBoundingBox
-from odmetrics.utils.enumerators import (BBFormat, BBType, CoordinatesType)
 from .Interfaces import IYOLODetection, IYOLOSegmentation, IYOLOFullPageDetection, IYOLOFullPageSegmentation
 from ..COCO.Interfaces import ICOCOFullPage, ICOCOAnnotation
 
@@ -18,19 +16,6 @@ class YOLODetection(IYOLODetection):
             (annot.bbox.top + annot.bbox.height / 2) / img_height,
             annot.bbox.width / img_width,
             annot.bbox.height / img_height,
-        )
-
-    def to_val_box(self, image_id: int | str, image_size: tuple[int, int],
-                   ground_truth: bool = False) -> ValBoundingBox:
-        return ValBoundingBox(
-            image_id,
-            self.class_id,
-            (self.x_center, self.y_center, self.width, self.height),
-            type_coordinates=CoordinatesType.RELATIVE,
-            img_size=image_size,
-            bb_type=BBType.GROUND_TRUTH if ground_truth else BBType.DETECTED,
-            confidence=None if ground_truth else self.confidence,
-            format=BBFormat.YOLO
         )
 
 
