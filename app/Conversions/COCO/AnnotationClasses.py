@@ -269,7 +269,7 @@ class COCOFullPage(ICOCOFullPage):
             class_reference_table: dict[str, int],
             class_output_names: list[str]
     ) -> Self:
-        with (file_path, "r") as file:
+        with open(file_path.__str__(), "r") as file:
             data = json.load(file)
         image_width, image_height = data["width"], data["height"]
         annots = [[] for _ in range(len(class_output_names))]
@@ -282,13 +282,14 @@ class COCOFullPage(ICOCOFullPage):
                 height = annot["height"]
 
                 # process segmentation
-                if data["segmentation"] is None:
+                if annot["segmentation"] is None:
                     segm = None
                 else:
                     i = 0
                     segm = []
-                    while i + 1 < len(data["segmentation"][0]):
-                        segm.append((int(data["segmentation"][0][i]), int(data["segmentation"][0][i + 1])))
+                    while i + 1 < len(annot["segmentation"][0]):
+                        segm.append((int(annot["segmentation"][0][i]), int(annot["segmentation"][0][i + 1])))
+                        i += 2
 
                 # save parsed annotation
                 annots[class_reference_table[class_name]].append(
@@ -345,28 +346,6 @@ class COCOFullPage(ICOCOFullPage):
         l, t, w, h = COCOAnnotation._bounding_box_from_segmentation(segm)
 
         return COCOAnnotation(class_id, l, t, w, h, segm)
-
-    @classmethod
-    def from_yolo_file(
-            cls,
-            file_path: Path,
-            image_size: tuple[int, int],
-            class_output_names: list[str],
-            mode: str = "detection"
-    ) -> Self:
-        # TODO: future proof, fix issues with "i want different class id", "only some ids" etc.
-        image_width, image_height = image_size
-        annots = []
-
-        # read file
-        with open(file_path, "r") as file:
-            for line in file:
-                if mode == "detection":
-                    annots.append(COCOFullPage._parse_single_line_yolo_detection(line, image_width, image_height))
-                elif mode == "segmentation":
-                    annots.append(COCOFullPage._parse_single_line_yolo_segmentation(line, image_width, image_height))
-
-        return COCOFullPage.from_list_of_coco_annotations(image_size, annots, class_output_names)
 
     @classmethod
     def from_yolo_result(cls, result: Results) -> Self:

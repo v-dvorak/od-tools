@@ -38,6 +38,8 @@ def plot_f_scores(iou_thresholds, f1_scores_per_class, class_labels):
     plt.title('F1 Scores for Different IoU Thresholds')
     plt.xlabel('IoU Thresholds')
     plt.ylabel('F1 Score')
+    plt.xlim(min(iou_thresholds), 1)
+    plt.ylim(0, 1.05)
 
     # Show legend for the classes
     plt.legend(title="Classes")
@@ -72,10 +74,12 @@ def collect_f_scores(
     if iou_thresholds is None:
         iou_thresholds = [0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
 
+    total_classes = len(class_names)
+
     if summation:
         class_names.append("all")
 
-    all_scores = [[] for _ in range(len(class_names))]
+    collected_scores = [[] for _ in range(len(class_names))]
     for threshold in iou_thresholds:
         if verbose:
             print(f'IoU threshold: {threshold}')
@@ -84,21 +88,26 @@ def collect_f_scores(
         res = coco_evaluator.get_coco_metrics(ground_truth, predictions, max_dets=500, iou_threshold=threshold)
 
         # collect classes
-        for class_id in res.keys():
-            if verbose:
-                print(
-                    f"{class_id}: F1 score {calculate_f1_score(res[class_id]['TP'], res[class_id]['FP'], res[class_id]['FN'])}")
+        for class_id in range(total_classes):
+            if class_id not in res.keys():
+                if verbose:
+                    print(f"{class_id}: F1 score 0")
+                collected_scores[class_id].append(0)
+            else:
+                if verbose:
+                    print(
+                        f"{class_id}: F1 score {calculate_f1_score(res[class_id]['TP'], res[class_id]['FP'], res[class_id]['FN'])}")
 
-            all_tp += res[class_id]['TP']
-            all_fp += res[class_id]['FP']
-            all_fn += res[class_id]['FN']
-            all_scores[class_id].append(
-                calculate_f1_score(res[class_id]['TP'], res[class_id]['FP'], res[class_id]['FN']))
+                all_tp += res[class_id]['TP']
+                all_fp += res[class_id]['FP']
+                all_fn += res[class_id]['FN']
+                collected_scores[class_id].append(
+                    calculate_f1_score(res[class_id]['TP'], res[class_id]['FP'], res[class_id]['FN']))
 
         if summation:
             if verbose:
                 print(f"All: F1 score {calculate_f1_score(all_tp, all_fp, all_fn)}")
 
-            all_scores[-1].append(calculate_f1_score(all_tp, all_fp, all_fn))
+            collected_scores[-1].append(calculate_f1_score(all_tp, all_fp, all_fn))
 
-    return all_scores
+    return collected_scores

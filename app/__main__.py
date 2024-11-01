@@ -26,8 +26,6 @@ if __name__ == "__main__":
     form_parser.add_argument("-s", "--split", type=float, default=1.0, help="Train/test split ratio.")
 
     form_parser.add_argument("--seed", type=int, default=42, help="Seed for dataset shuffling.")
-    form_parser.add_argument("--config", default=None,
-                             help="Path to config, see \"default_config.json\" for example.")
     form_parser.add_argument("--resize", type=int, default=None,
                              help="Resizes images so that the longer side is this many pixels long.")
     form_parser.add_argument("--image_splitting", action="store_true", help="Split images into smaller ones.")
@@ -132,19 +130,27 @@ if __name__ == "__main__":
         from .Val.EvalJob import ValBoundingBox
 
         CLASSES = loaded_config["class_output_names"]
+        # this is just to force this into loader methods without changing anything about / merging the loaded classes
+        class_reference_table = {}
+        for i, class_name in enumerate(CLASSES):
+            class_reference_table[class_name] = i
 
-        GROUND_TRUTH, PREDICTIONS = EvalJob.yolo_val(
+        GROUND_TRUTH, PREDICTIONS = EvalJob.validate_model(
             Path(args.model_path),
             Path(args.images_path),
             Path(args.annot_path),
-            args.count,
-            seed=int(args.seed),
+            Formatter.InputFormat.from_string(args.input_format),
+            EvalJob.ModelType.YOLO_DETECTION,
+            CLASSES,
+            class_reference_table,
+            count=args.count,
             verbose=args.verbose,
+            debug=False,
         )
 
         GROUND_TRUTH: list[ValBoundingBox]
         PREDICTIONS: list[ValBoundingBox]
-        global_thresholds = [0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95]
+        global_thresholds = [0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0]
 
         scores = FScores.collect_f_scores(
             GROUND_TRUTH,

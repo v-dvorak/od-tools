@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 
 import cv2
 from PIL import Image
@@ -11,7 +12,7 @@ from app.Conversions.BoundingBox import BoundingBox
 font_path = os.path.join(cv2.__path__[0], "qt", "fonts", "DejaVuSans.ttf")
 
 
-def create_split_images(image_path, splits: list[list[BoundingBox]]):
+def create_split_images(image_path: str | Path, splits: list[list[BoundingBox]]):
     output = []
     img = cv2.imread(image_path)
     for split in [x for xs in splits for x in xs]:
@@ -22,10 +23,10 @@ def create_split_images(image_path, splits: list[list[BoundingBox]]):
     return output
 
 
-def load_model(model_path: str):
+def load_model(model_path: str | Path):
     return YOLO(model_path)
 
 
-def prepare_image(image_path: str):
+def prepare_image(image_path: str | Path):
     image = Image.open(image_path)
     return image, image.size

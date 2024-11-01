@@ -181,25 +181,6 @@ class ICOCOFullPage:
         :return: ICOCOFullPage
         """
 
-    @classmethod
-    def from_yolo_file(
-            cls,
-            file_path: Path,
-            image_size: tuple[int, int],
-            class_output_names: list[str],
-            mode: str = "detection"
-    ) -> Self:
-        """
-        From YOLO detection or segmentation output_format to `COCOAnnotation`.
-
-        :param file_path: path to file
-        :param mode: detection or segmentation
-        :param image_size: image width and height
-        :param class_output_names: list of class names
-        :return: COCOAnnotation
-        """
-        raise NotImplementedError()
-
 
 class ICOCOSplitPage:
     def __init__(
