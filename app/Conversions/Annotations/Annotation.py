@@ -9,7 +9,7 @@ from ..BoundingBox import BoundingBox
 
 class Annotation(IAnnotation):
     def __init__(self, class_id: int, left: int, top: int, width: int, height: int,
-                 segmentation: list[tuple[int, int]], confidence: float = 1.0):
+                 segmentation: list[tuple[int, int]] | None, confidence: float = 1.0):
         super().__init__(class_id, left, top, width, height, segmentation, confidence=confidence)
         self.bbox = BoundingBox.from_ltwh(left, top, width, height)  # Python shenanigans
 

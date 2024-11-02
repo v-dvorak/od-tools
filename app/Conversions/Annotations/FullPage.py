@@ -44,7 +44,10 @@ class FullPage(IFullPage):
     def annotation_count(self) -> int:
         return sum([len(self.annotations[i]) for i in range(len(self.annotations))])
 
-    # region Loading from files
+    def adjust_position_for_all_annotations(self, shift_left: int = 0, shift_top: int = 0) -> None:
+        for annotation in self.all_annotations():
+            annotation.adjust_position(shift_left, shift_top)
+
     @classmethod
     def load_from_file(
             cls,
@@ -55,112 +58,41 @@ class FullPage(IFullPage):
             input_format: InputFormat
     ) -> Self:
         if input_format == InputFormat.COCO:
-            return cls.from_coco_file(
+            return _COCOHelper.from_coco_file(
                 annot_path,
                 class_reference_table,
                 class_output_names
             )
         elif input_format == InputFormat.MUNG:
-            return cls.from_mung(
+            return _MuNGHelper.from_mung(
                 annot_path,
                 image_path,
                 class_reference_table,
                 class_output_names
             )
         elif input_format == InputFormat.YOLO_DETECTION:
-            return cls.from_yolo_detection(
+            return _YOLOHelper.from_yolo_detection(
                 annot_path,
                 image_path,
                 class_reference_table,
                 class_output_names
             )
         elif input_format == InputFormat.YOLO_SEGMENTATION:
-            return cls.from_yolo_segmentation(
+            return _YOLOHelper.from_yolo_segmentation(
                 annot_path,
                 image_path,
                 class_reference_table,
                 class_output_names
             )
         else:
-            raise ValueError()
-
-    @classmethod
-    def from_yolo_detection(
-            cls,
-            annot_path: Path,
-            image_path: Path,
-            class_reference_table: dict[str, int],
-            class_output_names: list[str]
-    ) -> Self:
-        return _YOLOHelper.from_yolo_detection(
-            annot_path,
-            image_path,
-            class_reference_table,
-            class_output_names
-        )
-
-    @staticmethod
-    def from_yolo_segmentation(
-            annot_path: Path,
-            image_path: Path,
-            class_reference_table: dict[str, int],
-            class_output_names: list[str]
-    ) -> "FullPage":
-        return _YOLOHelper.from_yolo_segmentation(
-            annot_path,
-            image_path,
-            class_reference_table,
-            class_output_names
-        )
-
-    @staticmethod
-    def from_mung_file(
-            annot_path: Path,
-            image_size: tuple[int, int],
-            class_reference_table: dict[str, int],
-            class_output_names: list[str]
-    ) -> "FullPage":
-        return _MuNGHelper.from_mung_file(
-            annot_path,
-            image_size,
-            class_reference_table,
-            class_output_names
-        )
-
-    @staticmethod
-    def from_mung(
-            annot_path: Path,
-            image_path: Path,
-            class_reference_table: dict[str, int],
-            class_output_names: list[str]
-    ) -> "FullPage":
-        return _MuNGHelper.from_mung(
-            annot_path,
-            image_path,
-            class_reference_table,
-            class_output_names
-        )
-
-    @staticmethod
-    def from_coco_file(
-            file_path: Path,
-            class_reference_table: dict[str, int],
-            class_output_names: list[str]
-    ) -> "FullPage":
-        return _COCOHelper.from_coco_file(
-            file_path,
-            class_reference_table,
-            class_output_names
-        )
-
-    # endregion
+            raise ValueError(f"Unsupported input format: {input_format}")
 
     def save_to_file(
             self,
             output_dir: Path,
             dato_name: Path | str,
             output_format: OutputFormat,
-    ):
+    ) -> None:
         if output_format == OutputFormat.COCO:
             _COCOHelper.save_annotation(
                 self,
@@ -196,6 +128,7 @@ class FullPage(IFullPage):
             )
         return cls(result.orig_shape, predictions, class_names)
 
+    # region Resolve overlaps
     def cut_off_predictions_too_close_to_edge(
             self, edge_offset: int = 20,
             edge_tile: tuple[bool, bool, bool, bool] = (True, True, True, True),
@@ -229,10 +162,6 @@ class FullPage(IFullPage):
         if verbose:
             print(f"Cut off {old_count - self.annotation_count()} out of {old_count}")
 
-    def adjust_position_for_all_annotations(self, shift_left: int = 0, shift_top: int = 0) -> None:
-        for annotation in self.all_annotations():
-            annotation.adjust_position(shift_left, shift_top)
-
     def resolve_overlaps_with_other_page(
             self,
             other: Self,
@@ -254,7 +183,7 @@ class FullPage(IFullPage):
 
     @staticmethod
     def resolve_matrix_of_pages(
-            subpages=list[list[Self]],
+            subpages=list[list["FullPage"]],
             inside_threshold: float = 0.0,
             iou_threshold: float = 0.25,
             verbose: bool = False,
@@ -330,12 +259,10 @@ class FullPage(IFullPage):
                         print(f"{current_annot.confidence} vs {other_annot.confidence}")
 
                     break
+
             if not intersects:
                 to_save.append(current_annot)
-                # if box_id == 0:
-                #     cleared_annotations1.append(current_annot)
-                # else:
-                #     cleared_annotations2.append(current_annot)
+
         return cleared_annotations1, cleared_annotations2
 
     @classmethod
@@ -383,12 +310,10 @@ class FullPage(IFullPage):
         for subpage in subpages:
             for annotation in subpage.all_annotations():
                 completed_annotations[annotation.class_id].append(annotation)
-        # #
-        # # resolve overlaps etc.
-        # completed_annotations = [FullPage.resolve_overlaps_for_list_of_annotations(class_annotations) for
-        #                          class_annotations in completed_annotations]
 
         return FullPage((last_split.left, last_split.bottom), completed_annotations, class_names)
+
+    # endregion
 
 
 class COCOFullPageEncoder(JSONEncoder):
@@ -426,6 +351,8 @@ class COCOAnnotationEncoder(JSONEncoder):
             }
         return super().default(obj)
 
+
+# region Helpers
 
 class _COCOHelper:
     @staticmethod
@@ -481,7 +408,7 @@ class _MuNGHelper:
             class_output_names: list[str]
     ) -> FullPage:
         image_size = ConversionUtils.get_num_pixels(image_path)
-        return FullPage.from_mung_file(
+        return _MuNGHelper.from_mung_file(
             annot_path,
             image_size,
             class_reference_table,
@@ -622,3 +549,4 @@ class _YOLOHelper:
         xc, yc, w, h = annotation.bbox.xcycwh()
         return f"{annotation.class_id} {xc / im_width:.6f} {yc / im_height:.6f} {w / im_width:.6f} {h / im_height:.6f}"
 
+# endregion

@@ -10,7 +10,7 @@ from ..IBoundingBox import IBoundingBox
 
 class IAnnotation:
     def __init__(self, class_id: int, left: int, top: int, width: int, height: int,
-                 segmentation: list[tuple[int, int]], confidence: float = 1.0):
+                 segmentation: list[tuple[int, int]] | None, confidence: float = 1.0):
         self.class_id = class_id
         self.bbox = None  # Python shenanigans
         self.segmentation = segmentation
