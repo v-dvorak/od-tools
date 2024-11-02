@@ -4,8 +4,8 @@ from typing import Self
 from mung.node import Node
 from ultralytics.engine.results import Results
 
-from ..Formats import OutputFormat
-
+from ..Formats import OutputFormat, InputFormat
+from ..IBoundingBox import IBoundingBox
 
 class IAnnotation:
     def __init__(self, class_id: int, left: int, top: int, width: int, height: int,
@@ -14,6 +14,7 @@ class IAnnotation:
         self.bbox = None  # Python shenanigans
         self.segmentation = segmentation
         self.confidence = confidence
+        self.image_name: str = None
 
     def __str__(self):
         return f"({self.class_id=}, {self.bbox.left}, {self.bbox.top}, {self.bbox.width}, {self.bbox.height}, {self.bbox.segmentation})"
@@ -25,10 +26,34 @@ class IAnnotation:
         raise NotImplementedError()
 
     @classmethod
-    def from_mung_node(cls, clss: int, node: Node) -> Self:
+    def from_mung_node(cls, class_id: int, node: Node) -> Self:
         raise NotImplementedError()
 
     def intersects(self, other: Self) -> bool:
+        raise NotImplementedError()
+
+    def set_image_name(self, image_name: str):
+        """
+        Sets the image name.
+
+        :param image_name: unique image name
+        """
+        raise NotImplementedError()
+
+    def get_image_name(self) -> str:
+        """
+        Gets the image name.
+
+        :return: image name
+        """
+        raise NotImplementedError()
+
+    def get_class_id(self) -> int:
+        """
+        Gets the class id.
+
+        :return: class id
+        """
         raise NotImplementedError()
 
 
@@ -176,7 +201,84 @@ class IFullPage:
         :param class_output_names: class output names
         :return: IFullPage
         """
+        raise NotImplementedError()
 
+    @classmethod
+    def load_from_file(
+            cls,
+            annot_path: Path,
+            image_path: Path,
+            class_reference_table: dict[str, int],
+            class_output_names: list[str],
+            input_format: InputFormat
+    ) -> Self:
+        """
+        Loads a single page of annotations from given file in specified format.
+
+        :param annot_path: path to file
+        :param image_path: path to image
+        :param class_reference_table: class reference table
+        :param class_output_names: class output names
+        :param input_format: input format
+        :return: IFullPage
+        """
+        raise NotImplementedError()
+
+    @classmethod
+    def from_yolo_detection(
+            cls,
+            annot_path: Path,
+            image_path: Path,
+            class_reference_table: dict[str, int],
+            class_output_names: list[str]
+    ) -> Self:
+        """
+        Loads a single page of annotations from a YOLO detection annotation file.
+
+        :param annot_path: path to file
+        :param image_path: path to image
+        :param class_reference_table: class reference table
+        :param class_output_names: class output names
+        :return: IFullPage
+        """
+        raise NotImplementedError()
+
+    @classmethod
+    def from_yolo_segmentation(
+            cls,
+            annot_path: Path,
+            image_path: Path,
+            class_reference_table: dict[str, int],
+            class_output_names: list[str]
+    ) -> Self:
+        """
+        Loads a single page of annotations from a YOLO segmentation annotation file.
+
+        :param annot_path: path to file
+        :param image_path: path to image
+        :param class_reference_table: class reference table
+        :param class_output_names: class output names
+        :return: IFullPage
+        """
+        raise NotImplementedError()
+
+    @classmethod
+    def combine_multiple_pages_and_resolve(
+            cls,
+            subpages: list[Self],
+            splits: list[list[IBoundingBox]],
+            edge_offset: int = 20,
+            verbose: bool = False,
+    ) -> Self:
+        """
+        Combines multiple pages into a single page.
+
+        :param subpages: list of subpages
+        :param splits: matrix of splits
+        :param edge_offset: offset from edges, anything outside the edge will be dropped from final page
+        :param verbose: make script verbose
+        :return: IFullPage
+        """
 
 class ISplitPage:
     def __init__(

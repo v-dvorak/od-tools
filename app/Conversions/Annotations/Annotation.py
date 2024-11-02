@@ -12,7 +12,6 @@ class Annotation(IAnnotation):
                  segmentation: list[tuple[int, int]], confidence: float = 1.0):
         super().__init__(class_id, left, top, width, height, segmentation, confidence=confidence)
         self.bbox = BoundingBox.from_ltwh(left, top, width, height)  # Python shenanigans
-        self.image_name: str = None
 
     def set_image_name(self, image_name: str):
         self.image_name = image_name

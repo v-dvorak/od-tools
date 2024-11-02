@@ -36,6 +36,9 @@ class FullPage(IFullPage):
             class_names
         )
 
+    # ---------------
+    # LOAD FROM FILES
+    # ---------------
     @classmethod
     def load_from_file(
             cls,
@@ -75,18 +78,6 @@ class FullPage(IFullPage):
         else:
             raise ValueError()
 
-    def save_to_file(
-            self,
-            output_dir: Path,
-            dato_name: Path | str,
-            output_format: OutputFormat,
-    ):
-        if output_format == OutputFormat.COCO:
-            with open(output_dir / (dato_name + f".{output_format.to_annotation_extension()}"), "w") as f:
-                json.dump(self, f, indent=4, cls=COCOFullPageEncoder)
-        else:
-            raise NotImplementedError()
-
     @classmethod
     def from_yolo_detection(
             cls,
@@ -109,6 +100,55 @@ class FullPage(IFullPage):
             class_output_names
         )
 
+    @staticmethod
+    def _parse_single_line_yolo_detection(line: str, image_width: int, image_height: int) -> Annotation:
+        """
+        From YOLO detection output_format to `Annotation`.
+
+        :param line: single line of detection in YOLO output_format
+        :param image_width: image width
+        :param image_height: image height
+        :return: Annotation
+        """
+        # parse data
+        parts = line.strip().split()
+        class_id = int(parts[0])
+        center_x = float(parts[1])
+        center_y = float(parts[2])
+        width = float(parts[3])
+        height = float(parts[4])
+
+        # Convert normalized coordinates to pixel values
+        left = (center_x * image_width) - (width * image_width) / 2
+        top = (center_y * image_height) - (height * image_height) / 2
+        width_pixels = width * image_width
+        height_pixels = height * image_height
+
+        return Annotation(class_id, int(left), int(top), int(width_pixels), int(height_pixels), None)
+
+    @staticmethod
+    def _parse_single_line_yolo_segmentation(
+            line: str,
+            image_width: int,
+            image_height: int
+    ) -> Annotation:
+        parts = line.strip().split()
+        assert len(parts) > 2 and len(parts) % 2 == 1
+
+        class_id = int(parts[0])
+
+        segm = []
+        i = 0
+        # process every point of segmentation
+        while i + 1 < len(parts[1:]):
+            x, y = int(float(parts[i]) * image_width), int(float(parts[i + 1]) * image_height)
+            segm.append((x, y))
+            i += 2
+
+        l, t, w, h = Annotation._bounding_box_from_segmentation(segm)
+
+        return Annotation(class_id, l, t, w, h, segm)
+
     @classmethod
     def from_yolo_segmentation(
             cls,
@@ -129,20 +169,6 @@ class FullPage(IFullPage):
             annots,
             class_output_names
         )
-
-    def to_eval_format(self) -> list[tuple[list[int], float, int]]:
-        output = []
-        for annotation in self.all_annotations():
-            output.append(annotation.to_val_box())
-        return output
-
-    def all_annotations(self) -> Generator[Annotation, None, None]:
-        for row in self.annotations:
-            for annotation in row:
-                yield annotation
-
-    def annotation_count(self) -> int:
-        return sum([len(self.annotations[i]) for i in range(len(self.annotations))])
 
     @classmethod
     def from_mung_file(
@@ -216,54 +242,31 @@ class FullPage(IFullPage):
 
         return cls((image_width, image_height), annots, class_output_names)
 
-    @staticmethod
-    def _parse_single_line_yolo_detection(line: str, image_width: int, image_height: int) -> Annotation:
-        """
-        From YOLO detection output_format to `Annotation`.
+    def save_to_file(
+            self,
+            output_dir: Path,
+            dato_name: Path | str,
+            output_format: OutputFormat,
+    ):
+        if output_format == OutputFormat.COCO:
+            with open(output_dir / (dato_name + f".{output_format.to_annotation_extension()}"), "w") as f:
+                json.dump(self, f, indent=4, cls=COCOFullPageEncoder)
+        else:
+            raise NotImplementedError()
 
-        :param line: single line of detection in YOLO output_format
-        :param image_width: image width
-        :param image_height: image height
-        :return: Annotation
-        """
-        # parse data
-        parts = line.strip().split()
-        class_id = int(parts[0])
-        center_x = float(parts[1])
-        center_y = float(parts[2])
-        width = float(parts[3])
-        height = float(parts[4])
+    def to_eval_format(self) -> list[tuple[list[int], float, int]]:
+        output = []
+        for annotation in self.all_annotations():
+            output.append(annotation.to_val_box())
+        return output
 
-        # Convert normalized coordinates to pixel values
-        left = (center_x * image_width) - (width * image_width) / 2
-        top = (center_y * image_height) - (height * image_height) / 2
-        width_pixels = width * image_width
-        height_pixels = height * image_height
+    def all_annotations(self) -> Generator[Annotation, None, None]:
+        for row in self.annotations:
+            for annotation in row:
+                yield annotation
 
-        return Annotation(class_id, int(left), int(top), int(width_pixels), int(height_pixels), None)
-
-    @staticmethod
-    def _parse_single_line_yolo_segmentation(
-            line: str,
-            image_width: int,
-            image_height: int
-    ) -> Annotation:
-        parts = line.strip().split()
-        assert len(parts) > 2 and len(parts) % 2 == 1
-
-        class_id = int(parts[0])
-
-        segm = []
-        i = 0
-        # process every point of segmentation
-        while i + 1 < len(parts[1:]):
-            x, y = int(float(parts[i]) * image_width), int(float(parts[i + 1]) * image_height)
-            segm.append((x, y))
-            i += 2
-
-        l, t, w, h = Annotation._bounding_box_from_segmentation(segm)
-
-        return Annotation(class_id, l, t, w, h, segm)
+    def annotation_count(self) -> int:
+        return sum([len(self.annotations[i]) for i in range(len(self.annotations))])
 
     @classmethod
     def from_yolo_result(cls, result: Results) -> Self:
