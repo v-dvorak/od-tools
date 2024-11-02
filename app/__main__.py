@@ -1,11 +1,10 @@
 import argparse
 import json
-from importlib import resources as impresources
 from pathlib import Path
 
-from . import data
 from .Conversions import Formatter
 from .Stats import Plots
+from .Val import EvalJob
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -41,11 +40,12 @@ if __name__ == "__main__":
     stats_parser.add_argument("annot_path", help="Path to subpages.")
 
     stats_parser.add_argument("-o", "--output", type=str, default=None, help="If used, plots will be saved here.")
+    # parser.add_argument('-j', '--jobs', nargs='+', help="Specify jobs to run.", choices=)
 
     # global arguments
     stats_parser.add_argument("-v", "--verbose", action="store_true", help="Make script verbose")
     stats_parser.add_argument("--config", default=None,
-                             help="Path to config, see \"default.config\" for example.")
+                              help="Path to config, see \"default.config\" for example.")
 
     # MODEL VALIDATION
     val_parser = subparsers.add_parser("val")
@@ -59,16 +59,20 @@ if __name__ == "__main__":
     val_parser.add_argument("-m", "--model_type", default="yolod", choices=["yolod", "yolos"],
                             help="Type of model.")
 
+    val_parser.add_argument("-o", "--output_path", type=str, default=None,
+                            help="Path to output directory, if not specified, plot will be shown.")
+
     val_parser.add_argument("--image_format", default="jpg", help="Input image format.")
 
-    val_parser.add_argument("-o", "--overlap", type=int, help="Overlap ratio for image splits.")
+    val_parser.add_argument("--overlap", type=int, help="Overlap ratio for image splits.")
     val_parser.add_argument("-c", "--count", type=int, help="How many images the model will be tested on.")
     val_parser.add_argument("-s", "--seed", type=int, default=42, help="Seed for dataset shuffling.")
+    val_parser.add_argument("--sum", action="store_true", help="Adds \"All\" category to evaluation.")
 
     # global arguments
     val_parser.add_argument("-v", "--verbose", action="store_true", help="Make script verbose")
     val_parser.add_argument("--config", default=None,
-                             help="Path to config, see \"default.config\" for example.")
+                            help="Path to config, see \"default.config\" for example.")
 
     args = parser.parse_args()
 
@@ -121,38 +125,18 @@ if __name__ == "__main__":
         )
 
     elif args.command == "val":
-        from .Val import EvalJob, FScores
-        from .Val.EvalJob import ValBoundingBox
-
-        CLASSES = loaded_config["class_output_names"]
-        # this is just to force this into loader methods without changing anything about / merging the loaded classes
-        class_reference_table = {}
-        for i, class_name in enumerate(CLASSES):
-            class_reference_table[class_name] = i
-
-        GROUND_TRUTH, PREDICTIONS = EvalJob.validate_model(
+        EvalJob.run_f1_scores_vs_iou(
+            # input paths
             Path(args.model_path),
             Path(args.images_path),
             Path(args.annot_path),
+            # formatting
             Formatter.InputFormat.from_string(args.input_format),
-            EvalJob.ModelType.YOLO_DETECTION,
-            CLASSES,
-            class_reference_table,
+            EvalJob.ModelType.from_string(args.model_type),
+            loaded_config["class_output_names"],
+            # optional graph saving
+            output_dir=Path(args.output_path) if args.output_path is not None else None,
+            summation=args.sum,
             count=args.count,
-            verbose=args.verbose,
-            debug=False,
+            verbose=args.verbose
         )
-
-        GROUND_TRUTH: list[ValBoundingBox]
-        PREDICTIONS: list[ValBoundingBox]
-        global_thresholds = [0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0]
-
-        scores = FScores.collect_f_scores(
-            GROUND_TRUTH,
-            PREDICTIONS,
-            CLASSES,
-            iou_thresholds=global_thresholds,
-            verbose=args.verbose,
-        )
-
-        FScores.plot_f_scores(global_thresholds, scores, CLASSES + ["all"])

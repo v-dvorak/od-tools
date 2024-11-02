@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 
 import cv2
 import matplotlib.pyplot as plt
@@ -18,13 +19,19 @@ def calculate_f1_score(tp: int, fp: int, fn: int) -> float:
     return 2 * tp / (2 * tp + fp + fn)
 
 
-def plot_f_scores(iou_thresholds: list[float], f1_scores_per_class: list[list[float]], class_labels: list[str | int]):
+def plot_f_scores(
+        iou_thresholds: list[float],
+        f1_scores_per_class: list[list[float]],
+        class_labels: list[str | int],
+        output_path: str | Path = None,
+):
     """
     Plots F1 score for different IoU thresholds for multiple classes.
 
-    :param iou_thresholds: List of IoU thresholds.
-    :param f1_scores_per_class: List of lists containing F1 score for each class.
-    :param class_labels: List of class labels.
+    :param iou_thresholds: list of IoU thresholds
+    :param f1_scores_per_class: list of lists containing F1 score for each class
+    :param class_labels: list of class labels
+    :param output_path: path to save plot, if not specified, plot will be showed
     """
     plt.figure(figsize=(10, 6))
 
@@ -48,7 +55,10 @@ def plot_f_scores(iou_thresholds: list[float], f1_scores_per_class: list[list[fl
     plt.grid(True)
 
     # Display plot
-    plt.show()
+    if output_path is None:
+        plt.show()
+    else:
+        plt.savefig(output_path)
 
 
 def collect_f_scores(
