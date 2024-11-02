@@ -21,6 +21,18 @@ class IBoundingBox:
         """
         raise NotImplementedError()
 
+    def xyxy(self) -> tuple[int, int, int, int]:
+        """
+        Returns the coordinates of a rectangle as a tuple (left, top, right, bottom).
+        """
+        raise NotImplementedError()
+
+    def xcycwh(self) -> tuple[int, int, int, int]:
+        """
+        Returns the coordinates of a rectangle as a tuple (x_center, y_center, width, height).
+        """
+        raise NotImplementedError()
+
     def intersects(self, other: Self) -> bool:
         """
         Returns true if annotations intersect.

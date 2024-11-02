@@ -17,6 +17,9 @@ class BoundingBox(IBoundingBox):
     def xyxy(self) -> tuple[int, int, int, int]:
         return self.left, self.top, self.right, self.bottom
 
+    def xcycwh(self) -> tuple[int, int, int, int]:
+        return self.left + self.width // 2, self.top + self.height // 2, self.width, self.height
+
     def intersects(self, other: Self) -> bool:
         # check if the annotations overlap both horizontally and vertically
         return (

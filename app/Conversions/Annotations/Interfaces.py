@@ -7,6 +7,7 @@ from ultralytics.engine.results import Results
 from ..Formats import OutputFormat, InputFormat
 from ..IBoundingBox import IBoundingBox
 
+
 class IAnnotation:
     def __init__(self, class_id: int, left: int, top: int, width: int, height: int,
                  segmentation: list[tuple[int, int]], confidence: float = 1.0):
@@ -104,15 +105,12 @@ class IFullPage:
         raise NotImplementedError()
 
     def adjust_position_for_all_annotations(self, shift_left: int = 0, shift_top: int = 0) -> None:
-        raise NotImplementedError()
+        """
+        Adjusts the position of all annotations by given left and top shift.
 
-    @staticmethod
-    def resolve_overlaps_for_list_of_annotations(
-            annotations: list[IAnnotation],
-            iou_threshold: float = 0.25,
-            inside_threshold: float = 0.0,
-            verbose: bool = False,
-    ) -> list[IAnnotation]:
+        :param shift_left: left shift of the annotations
+        :param shift_top: top shift of the annotations
+        """
         raise NotImplementedError()
 
     def all_annotations(self) -> list[IAnnotation]:
@@ -146,14 +144,13 @@ class IFullPage:
     ) -> None:
         raise NotImplementedError()
 
-    @classmethod
+    @staticmethod
     def from_mung_file(
-            cls,
             annot_path: Path,
             image_size: tuple[int, int],
             class_reference_table: dict[str, int],
             class_output_names: list[str]
-    ) -> Self:
+    ) -> "IFullPage":
         """
         Loads a page of annotations from a MuNG annotation file.
 
@@ -166,14 +163,13 @@ class IFullPage:
         """
         raise NotImplementedError()
 
-    @classmethod
+    @staticmethod
     def from_mung(
-            cls,
             annot_path: Path,
             image_path: Path,
             class_reference_table: dict[str, int],
             class_output_names: list[str]
-    ) -> Self:
+    ) -> "IFullPage":
         """
         Loads a page of annotations from an image and a MuNG annotation file.
 
@@ -186,13 +182,12 @@ class IFullPage:
         """
         raise NotImplementedError()
 
-    @classmethod
+    @staticmethod
     def from_coco_file(
-            cls,
             file_path: Path,
             class_reference_table: dict[str, int],
             class_output_names: list[str]
-    ) -> Self:
+    ) -> "IFullPage":
         """
         Loads a page of annotations from a COCO annotation file.
 
@@ -243,14 +238,13 @@ class IFullPage:
         """
         raise NotImplementedError()
 
-    @classmethod
+    @staticmethod
     def from_yolo_segmentation(
-            cls,
             annot_path: Path,
             image_path: Path,
             class_reference_table: dict[str, int],
             class_output_names: list[str]
-    ) -> Self:
+    ) -> "IFullPage":
         """
         Loads a single page of annotations from a YOLO segmentation annotation file.
 
@@ -279,6 +273,7 @@ class IFullPage:
         :param verbose: make script verbose
         :return: IFullPage
         """
+
 
 class ISplitPage:
     def __init__(

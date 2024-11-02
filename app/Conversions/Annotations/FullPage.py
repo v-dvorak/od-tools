@@ -36,9 +36,15 @@ class FullPage(IFullPage):
             class_names
         )
 
-    # ---------------
-    # LOAD FROM FILES
-    # ---------------
+    def all_annotations(self) -> Generator[Annotation, None, None]:
+        for row in self.annotations:
+            for annotation in row:
+                yield annotation
+
+    def annotation_count(self) -> int:
+        return sum([len(self.annotations[i]) for i in range(len(self.annotations))])
+
+    # region Loading from files
     @classmethod
     def load_from_file(
             cls,
@@ -86,161 +92,68 @@ class FullPage(IFullPage):
             class_reference_table: dict[str, int],
             class_output_names: list[str]
     ) -> Self:
-        # TODO: manage class filtering
-        image_width, image_height = ConversionUtils.get_num_pixels(image_path)
-        annots = []
-
-        with open(annot_path, "r") as file:
-            for line in file:
-                annots.append(cls._parse_single_line_yolo_detection(line, image_width, image_height))
-
-        return cls.from_list_of_coco_annotations(
-            (image_width, image_width),
-            annots,
+        return _YOLOHelper.from_yolo_detection(
+            annot_path,
+            image_path,
+            class_reference_table,
             class_output_names
         )
 
     @staticmethod
-    def _parse_single_line_yolo_detection(line: str, image_width: int, image_height: int) -> Annotation:
-        """
-        From YOLO detection output_format to `Annotation`.
-
-        :param line: single line of detection in YOLO output_format
-        :param image_width: image width
-        :param image_height: image height
-        :return: Annotation
-        """
-        # parse data
-        parts = line.strip().split()
-        class_id = int(parts[0])
-        center_x = float(parts[1])
-        center_y = float(parts[2])
-        width = float(parts[3])
-        height = float(parts[4])
-
-        # Convert normalized coordinates to pixel values
-        left = (center_x * image_width) - (width * image_width) / 2
-        top = (center_y * image_height) - (height * image_height) / 2
-        width_pixels = width * image_width
-        height_pixels = height * image_height
-
-        return Annotation(class_id, int(left), int(top), int(width_pixels), int(height_pixels), None)
-
-    @staticmethod
-    def _parse_single_line_yolo_segmentation(
-            line: str,
-            image_width: int,
-            image_height: int
-    ) -> Annotation:
-        parts = line.strip().split()
-        assert len(parts) > 2 and len(parts) % 2 == 1
-
-        class_id = int(parts[0])
-
-        segm = []
-        i = 0
-        # process every point of segmentation
-        while i + 1 < len(parts[1:]):
-            x, y = int(float(parts[i]) * image_width), int(float(parts[i + 1]) * image_height)
-            segm.append((x, y))
-            i += 2
-
-        l, t, w, h = Annotation._bounding_box_from_segmentation(segm)
-
-        return Annotation(class_id, l, t, w, h, segm)
-
-    @classmethod
     def from_yolo_segmentation(
-            cls,
             annot_path: Path,
             image_path: Path,
             class_reference_table: dict[str, int],
             class_output_names: list[str]
-    ) -> Self:
-        image_width, image_height = ConversionUtils.get_num_pixels(image_path)
-        annots = []
-
-        with open(annot_path, "r") as file:
-            for line in file:
-                annots.append(cls._parse_single_line_yolo_segmentation(line, image_width, image_height))
-
-        return cls.from_list_of_coco_annotations(
-            (image_width, image_width),
-            annots,
+    ) -> "FullPage":
+        return _YOLOHelper.from_yolo_segmentation(
+            annot_path,
+            image_path,
+            class_reference_table,
             class_output_names
         )
 
-    @classmethod
+    @staticmethod
     def from_mung_file(
-            cls,
             annot_path: Path,
             image_size: tuple[int, int],
             class_reference_table: dict[str, int],
             class_output_names: list[str]
-    ) -> Self:
-        nodes = read_nodes_from_file(annot_path.__str__())
-
-        annots = []
-        # process each node
-        for node in nodes:
-            if node.class_name in class_reference_table:
-                annots.append(Annotation.from_mung_node(class_reference_table[node.class_name], node))
-
-        # create single page
-        full_page = FullPage.from_list_of_coco_annotations(image_size, annots, class_output_names)
-        return full_page
-
-    @classmethod
-    def from_mung(
-            cls,
-            annot_path: Path,
-            image_path: Path,
-            class_reference_table: dict[str, int],
-            class_output_names: list[str]
-    ):
-        image_size = ConversionUtils.get_num_pixels(image_path)
-        return FullPage.from_mung_file(
+    ) -> "FullPage":
+        return _MuNGHelper.from_mung_file(
             annot_path,
             image_size,
             class_reference_table,
             class_output_names
         )
 
-    @classmethod
+    @staticmethod
+    def from_mung(
+            annot_path: Path,
+            image_path: Path,
+            class_reference_table: dict[str, int],
+            class_output_names: list[str]
+    ) -> "FullPage":
+        return _MuNGHelper.from_mung(
+            annot_path,
+            image_path,
+            class_reference_table,
+            class_output_names
+        )
+
+    @staticmethod
     def from_coco_file(
-            cls,
             file_path: Path,
             class_reference_table: dict[str, int],
             class_output_names: list[str]
-    ) -> Self:
-        with open(file_path.__str__(), "r") as file:
-            data = json.load(file)
-        image_width, image_height = data["width"], data["height"]
-        annots = [[] for _ in range(len(class_output_names))]
-        for class_name in class_reference_table.keys():
-            for annot in data[class_name]:
-                # process coordinates
-                left = annot["left"]
-                top = annot["top"]
-                width = annot["width"]
-                height = annot["height"]
+    ) -> "FullPage":
+        return _COCOHelper.from_coco_file(
+            file_path,
+            class_reference_table,
+            class_output_names
+        )
 
-                # process segmentation
-                if annot["segmentation"] is None:
-                    segm = None
-                else:
-                    i = 0
-                    segm = []
-                    while i + 1 < len(annot["segmentation"][0]):
-                        segm.append((int(annot["segmentation"][0][i]), int(annot["segmentation"][0][i + 1])))
-                        i += 2
-
-                # save parsed annotation
-                annots[class_reference_table[class_name]].append(
-                    Annotation(class_reference_table[class_name], left, top, width, height, segm)
-                )
-
-        return cls((image_width, image_height), annots, class_output_names)
+    # endregion
 
     def save_to_file(
             self,
@@ -249,24 +162,17 @@ class FullPage(IFullPage):
             output_format: OutputFormat,
     ):
         if output_format == OutputFormat.COCO:
-            with open(output_dir / (dato_name + f".{output_format.to_annotation_extension()}"), "w") as f:
-                json.dump(self, f, indent=4, cls=COCOFullPageEncoder)
+            _COCOHelper.save_annotation(
+                self,
+                output_dir / f"{dato_name}.{output_format.to_annotation_extension()}",
+            )
+        elif output_format == OutputFormat.YOLO_DETECTION:
+            _YOLOHelper.save_yolo_detection(
+                self,
+                output_dir / f"{dato_name}.{output_format.to_annotation_extension()}",
+            )
         else:
             raise NotImplementedError()
-
-    def to_eval_format(self) -> list[tuple[list[int], float, int]]:
-        output = []
-        for annotation in self.all_annotations():
-            output.append(annotation.to_val_box())
-        return output
-
-    def all_annotations(self) -> Generator[Annotation, None, None]:
-        for row in self.annotations:
-            for annotation in row:
-                yield annotation
-
-    def annotation_count(self) -> int:
-        return sum([len(self.annotations[i]) for i in range(len(self.annotations))])
 
     @classmethod
     def from_yolo_result(cls, result: Results) -> Self:
@@ -326,60 +232,6 @@ class FullPage(IFullPage):
     def adjust_position_for_all_annotations(self, shift_left: int = 0, shift_top: int = 0) -> None:
         for annotation in self.all_annotations():
             annotation.adjust_position(shift_left, shift_top)
-
-    @staticmethod
-    def resolve_overlaps_for_list_of_annotations(
-            annotations: list[Annotation],
-            iou_threshold: float = 0.25,
-            inside_threshold: float = 0.0,
-            verbose: bool = False,
-    ) -> list[Annotation]:
-        """
-        By finding overlaps and classifying them, tries to resolve predicted bounding boxes
-        for a list of COCOAnnotations.
-
-        Detects if IoU of two bboxes is greater than given limit, eliminates duplicated bboxes.
-        Detects if bbox is mostly inside other bounding box, eliminates splitting of bbox into multiple smaller ones.
-
-        :param annotations: list of annotations to resolve
-        :param iou_threshold: sets threshold for when are two bounding boxes considered to be significantly overlapping
-        :param inside_threshold: sets threshold for when smaller box is considered to be inside other bounding box
-        :param verbose: makes script verbose
-        """
-        # sort by confidence, higher confidence first
-        annotations.sort(key=lambda x: x.confidence, reverse=True)
-
-        # annotations that passed the vibe check,
-        # they do not overlap with already chosen annotations etc.
-        cleared_annotations = []
-
-        for current_annot in annotations:
-            intersects = False
-            for selected_annot in cleared_annotations:
-                if current_annot.bbox.intersects(selected_annot.bbox) and (
-                        (
-                                # detects if IoU of two bboxes is greater than limit
-                                # eliminates duplicated bboxes
-                                0 < iou_threshold < current_annot.bbox.intersection_over_union(selected_annot.bbox)
-                        ) or (
-                                # detects if currently investigated bbox is mostly inside other annotation
-                                # eliminates splitting of bbox into multiple smaller ones
-                                0 < inside_threshold <
-                                current_annot.bbox.intersection_area(selected_annot.bbox) / current_annot.bbox.area()
-                        )
-                ):
-                    intersects = True
-                    if verbose:
-                        print("------INTERSECTION---------")
-                        print(current_annot.bbox)
-                        print(selected_annot.bbox)
-                        print(f"{current_annot.confidence} vs {selected_annot.confidence}")
-
-                    break
-            if not intersects:
-                cleared_annotations.append(current_annot)
-
-        return cleared_annotations
 
     def resolve_overlaps_with_other_page(
             self,
@@ -573,3 +425,200 @@ class COCOAnnotationEncoder(JSONEncoder):
                 "segmentation": [segm],
             }
         return super().default(obj)
+
+
+class _COCOHelper:
+    @staticmethod
+    def from_coco_file(
+            file_path: Path,
+            class_reference_table: dict[str, int],
+            class_output_names: list[str]
+    ) -> FullPage:
+        with open(file_path.__str__(), "r") as file:
+            data = json.load(file)
+        image_width, image_height = data["width"], data["height"]
+        annots = [[] for _ in range(len(class_output_names))]
+        for class_name in class_reference_table.keys():
+            for annot in data[class_name]:
+                # process coordinates
+                left = annot["left"]
+                top = annot["top"]
+                width = annot["width"]
+                height = annot["height"]
+
+                # process segmentation
+                if annot["segmentation"] is None:
+                    segm = None
+                else:
+                    i = 0
+                    segm = []
+                    while i + 1 < len(annot["segmentation"][0]):
+                        segm.append((int(annot["segmentation"][0][i]), int(annot["segmentation"][0][i + 1])))
+                        i += 2
+
+                # save parsed annotation
+                annots[class_reference_table[class_name]].append(
+                    Annotation(class_reference_table[class_name], left, top, width, height, segm)
+                )
+
+        return FullPage((image_width, image_height), annots, class_output_names)
+
+    @staticmethod
+    def save_annotation(
+            page: FullPage,
+            output_path: Path
+    ) -> None:
+        with open(output_path, "w") as f:
+            json.dump(page, f, indent=4, cls=COCOFullPageEncoder)
+
+
+class _MuNGHelper:
+    @staticmethod
+    def from_mung(
+            annot_path: Path,
+            image_path: Path,
+            class_reference_table: dict[str, int],
+            class_output_names: list[str]
+    ) -> FullPage:
+        image_size = ConversionUtils.get_num_pixels(image_path)
+        return FullPage.from_mung_file(
+            annot_path,
+            image_size,
+            class_reference_table,
+            class_output_names
+        )
+
+    @staticmethod
+    def from_mung_file(
+            annot_path: Path,
+            image_size: tuple[int, int],
+            class_reference_table: dict[str, int],
+            class_output_names: list[str]
+    ) -> FullPage:
+        nodes = read_nodes_from_file(annot_path.__str__())
+
+        annots = []
+        # process each node
+        for node in nodes:
+            if node.class_name in class_reference_table:
+                annots.append(Annotation.from_mung_node(class_reference_table[node.class_name], node))
+
+        # create single page
+        full_page = FullPage.from_list_of_coco_annotations(image_size, annots, class_output_names)
+        return full_page
+
+
+class _YOLOHelper:
+    @staticmethod
+    def from_yolo_detection(
+            annot_path: Path,
+            image_path: Path,
+            class_reference_table: dict[str, int],
+            class_output_names: list[str]
+    ) -> FullPage:
+        # TODO: manage class filtering
+        image_width, image_height = ConversionUtils.get_num_pixels(image_path)
+        annots = []
+
+        with open(annot_path, "r") as file:
+            for line in file:
+                annots.append(_YOLOHelper._parse_single_line_yolo_detection(line, image_width, image_height))
+
+        return FullPage.from_list_of_coco_annotations(
+            (image_width, image_width),
+            annots,
+            class_output_names
+        )
+
+    @staticmethod
+    def from_yolo_segmentation(
+            annot_path: Path,
+            image_path: Path,
+            class_reference_table: dict[str, int],
+            class_output_names: list[str]
+    ) -> FullPage:
+        image_width, image_height = ConversionUtils.get_num_pixels(image_path)
+        annots = []
+
+        with open(annot_path, "r") as file:
+            for line in file:
+                annots.append(_YOLOHelper._parse_single_line_yolo_segmentation(line, image_width, image_height))
+
+        return FullPage.from_list_of_coco_annotations(
+            (image_width, image_width),
+            annots,
+            class_output_names
+        )
+
+    @staticmethod
+    def _parse_single_line_yolo_detection(line: str, image_width: int, image_height: int) -> Annotation:
+        """
+        From YOLO detection output_format to `Annotation`.
+
+        :param line: single line of detection in YOLO output_format
+        :param image_width: image width
+        :param image_height: image height
+        :return: Annotation
+        """
+        # parse data
+        parts = line.strip().split()
+        class_id = int(parts[0])
+        center_x = float(parts[1])
+        center_y = float(parts[2])
+        width = float(parts[3])
+        height = float(parts[4])
+
+        # Convert normalized coordinates to pixel values
+        left = (center_x * image_width) - (width * image_width) / 2
+        top = (center_y * image_height) - (height * image_height) / 2
+        width_pixels = width * image_width
+        height_pixels = height * image_height
+
+        return Annotation(class_id, int(left), int(top), int(width_pixels), int(height_pixels), None)
+
+    @staticmethod
+    def _parse_single_line_yolo_segmentation(
+            line: str,
+            image_width: int,
+            image_height: int
+    ) -> Annotation:
+        parts = line.strip().split()
+        assert len(parts) > 2 and len(parts) % 2 == 1
+
+        class_id = int(parts[0])
+
+        segm = []
+        i = 0
+        # process every point of segmentation
+        while i + 1 < len(parts[1:]):
+            x, y = int(float(parts[i]) * image_width), int(float(parts[i + 1]) * image_height)
+            segm.append((x, y))
+            i += 2
+
+        l, t, w, h = Annotation.bounding_box_from_segmentation(segm)
+
+        return Annotation(class_id, l, t, w, h, segm)
+
+    @staticmethod
+    def save_yolo_detection(
+            page: FullPage,
+            output_path: Path,
+    ) -> None:
+        with open(output_path, "w") as file:
+            for annotation in page.all_annotations():
+                file.write(_YOLOHelper._serialize_detection(page.size, annotation))
+                file.write("\n")
+
+    @staticmethod
+    def _serialize_detection(image_size: tuple[int, int], annotation: Annotation) -> str:
+        """
+        Return normalized YOLO detection format: `class_id x_center y_center width height`.
+
+        :param image_size: image size (width, height)
+        :param annotation: annotation
+        :return: serialized annotation in YOLO format
+        """
+        im_width, im_height = image_size
+        xc, yc, w, h = annotation.bbox.xcycwh()
+        return f"{annotation.class_id} {xc / im_width:.6f} {yc / im_height:.6f} {w / im_width:.6f} {h / im_height:.6f}"
+

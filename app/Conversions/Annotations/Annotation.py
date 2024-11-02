@@ -31,7 +31,7 @@ class Annotation(IAnnotation):
         )
 
     @staticmethod
-    def _bounding_box_from_segmentation(
+    def bounding_box_from_segmentation(
             segm: list[tuple[int, int]]
     ):
         left = min(segm, key=lambda x: x[0])[0]
