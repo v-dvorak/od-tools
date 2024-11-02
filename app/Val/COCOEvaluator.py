@@ -2,7 +2,7 @@ from collections import defaultdict
 
 import numpy as np
 
-from ..Conversions.COCO.AnnotationClasses import COCOAnnotation
+from ..Conversions.Annotations import Annotation
 
 """
 This module is based on the "Object Detection Metrics" by Rafael Padilla.
@@ -11,7 +11,7 @@ license: MIT
 """
 
 
-def get_coco_summary(ground_truth_bbs: list[COCOAnnotation], detected_bbs: list[COCOAnnotation]):
+def get_coco_summary(ground_truth_bbs: list[Annotation], detected_bbs: list[Annotation]):
     """
     Calculate the 12 standard metrics used in COCOEval,
     AP, AP50, AP75,
@@ -23,8 +23,8 @@ def get_coco_summary(ground_truth_bbs: list[COCOAnnotation], detected_bbs: list[
     that class is removed from the average calculation.
     If for a given calculation, no metrics whatsoever are available, returns NaN.
     
-    :param ground_truth_bbs: list of COCOAnnotation
-    :param detected_bbs: list of COCOAnnotation
+    :param ground_truth_bbs: list of Annotation
+    :param detected_bbs: list of Annotation
     :return: A dictionary with one entry for each metric.
     """
 
@@ -151,8 +151,8 @@ def get_coco_summary(ground_truth_bbs: list[COCOAnnotation], detected_bbs: list[
 
 
 def get_coco_metrics(
-        ground_truth_bbs: list[COCOAnnotation],
-        detected_bbs: list[COCOAnnotation],
+        ground_truth_bbs: list[Annotation],
+        detected_bbs: list[Annotation],
         iou_threshold: float = 0.5,
         area_range: tuple[float, float] = (0, np.inf),
         max_detections: int = 500,
@@ -161,9 +161,9 @@ def get_coco_metrics(
     Calculate the Average Precision and Recall metrics as in COCO's official implementation
         given an IOU threshold, area range and maximum number of detections.
 
-    :param ground_truth_bbs: A list containing objects of type COCOAnnotation
+    :param ground_truth_bbs: A list containing objects of type Annotation
     representing the ground-truth bounding boxes.
-    :param detected_bbs: A list containing objects of type COCOAnnotation representing the detected bounding boxes.
+    :param detected_bbs: A list containing objects of type Annotation representing the detected bounding boxes.
     :param iou_threshold: Intersection Over Union (IOU) value used to consider a TP detection.
     :param area_range: Lower and upper bounds on annotation areas that should be considered.
     :param max_detections: Upper bound on the number of detections to be considered for each class in an image.
@@ -227,7 +227,7 @@ def get_coco_metrics(
     return res
 
 
-def _group_detections(dt: list[COCOAnnotation], gt: list[COCOAnnotation]):
+def _group_detections(dt: list[Annotation], gt: list[Annotation]):
     """
     Group ground truths and detections on a image x class basis.
     """
@@ -243,7 +243,7 @@ def _group_detections(dt: list[COCOAnnotation], gt: list[COCOAnnotation]):
     return bb_info
 
 
-def _compute_ious(dt: list[COCOAnnotation], gt: list[COCOAnnotation]):
+def _compute_ious(dt: list[Annotation], gt: list[Annotation]):
     """
     Compute pairwise IoUs.
     """
@@ -314,7 +314,7 @@ def _compute_ap_recall(scores, matched, NP, recall_thresholds=None):
     }
 
 
-def _evaluate_image(dt: list[COCOAnnotation], gt: list[COCOAnnotation], ious, iou_threshold, max_dets=None,
+def _evaluate_image(dt: list[Annotation], gt: list[Annotation], ious, iou_threshold, max_dets=None,
                     area_range=None):
     """
     Use COCO's algorithm to associate detections to ground truths.

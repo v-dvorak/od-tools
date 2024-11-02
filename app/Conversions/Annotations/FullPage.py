@@ -6,94 +6,21 @@ from typing import Self
 
 import numpy as np
 from mung.io import read_nodes_from_file
-from mung.node import Node
 from ultralytics.engine.results import Results
 
-from .Interfaces import ICOCOAnnotation, ICOCOFullPage, ICOCOSplitPage
+from .Annotation import Annotation
+from .Interfaces import IAnnotation, IFullPage
 from .. import ConversionUtils
 from ..Formats import InputFormat, OutputFormat
 from ...Splitting.SplitUtils import BoundingBox
 
 
-class COCOAnnotation(ICOCOAnnotation):
-    def __init__(self, class_id: int, left: int, top: int, width: int, height: int,
-                 segmentation: list[tuple[int, int]], confidence: float = 1.0):
-        super().__init__(class_id, left, top, width, height, segmentation, confidence=confidence)
-        self.bbox = BoundingBox.from_ltwh(left, top, width, height)  # Python shenanigans
-        self.image_name: str = None
-
-    def set_image_name(self, image_name: str):
-        self.image_name = image_name
-
-    def get_image_name(self) -> str:
-        return self.image_name
-
-    def get_class_id(self) -> int:
-        return self.class_id
-
-    @classmethod
-    def from_mung_node(cls, clss: int, node: Node) -> Self:
-        return cls(
-            clss,
-            node.left, node.top, node.width, node.height,
-            ConversionUtils.mung_segmentation_to_absolute_coordinates(node)
-        )
-
-    @staticmethod
-    def _bounding_box_from_segmentation(
-            segm: list[tuple[int, int]]
-    ):
-        left = min(segm, key=lambda x: x[0])[0]
-        top = min(segm, key=lambda x: x[1])[1]
-        right = max(segm, key=lambda x: x[0])[0]
-        bottom = max(segm, key=lambda x: x[1])[1]
-        return (left, top, right, bottom)
-
-    def intersects(self, other: Self) -> bool:
-        other: COCOAnnotation
-        return self.bbox.intersects(other.bbox)
-
-    def adjust_position(self, left_shift: int = 0, top_shift: int = 0) -> None:
-        """
-        Adjusts classes position in place.
-
-        :param left_shift: pixel shift to the left
-        :param top_shift: pixel shift to the top
-        """
-        self.bbox.shift(left_shift, top_shift)
-
-    def adjust_position_copy(self, left_shift: int, top_shift: int) -> Self:
-        """
-        Creates a new COCOAnnotation object with adjusted position.
-
-        :param left_shift: pixel shift to the left
-        :param top_shift: pixel shift to the top
-        :return: new COCOAnnotation object with adjusted coordinates
-        """
-        if self.segmentation is not None:
-            new_segmentation = [(x + left_shift, y + top_shift) for x, y in self.segmentation]
-        else:
-            new_segmentation = None
-
-        return COCOAnnotation(
-            self.class_id,
-
-            self.bbox.left + left_shift,
-            self.bbox.top + top_shift,
-            self.bbox.width,
-            self.bbox.height,
-
-            new_segmentation,
-            confidence=self.confidence
-        )
-
-
-class COCOFullPage(ICOCOFullPage):
-    def __init__(self, image_size: tuple[int, int], annotations: list[list[ICOCOAnnotation]], class_names: list[str]):
+class FullPage(IFullPage):
+    def __init__(self, image_size: tuple[int, int], annotations: list[list[IAnnotation]], class_names: list[str]):
         super().__init__(image_size, annotations, class_names)
 
     @staticmethod
-    def _sort_annotations_by_class(annotations: list[COCOAnnotation], class_count: int) -> list[list[COCOAnnotation]]:
+    def _sort_annotations_by_class(annotations: list[Annotation], class_count: int) -> list[list[Annotation]]:
         output = [[] for _ in range(class_count)]
         for annot in annotations:
             output[annot.class_id].append(annot)
@@ -101,7 +28,7 @@ class COCOFullPage(ICOCOFullPage):
         return output
 
     @classmethod
-    def from_list_of_coco_annotations(cls, image_size: tuple[int, int], annotations: list[COCOAnnotation],
+    def from_list_of_coco_annotations(cls, image_size: tuple[int, int], annotations: list[Annotation],
                                       class_names: list[str]) -> Self:
         return cls(
             image_size,
@@ -209,7 +136,7 @@ class COCOFullPage(ICOCOFullPage):
             output.append(annotation.to_val_box())
         return output
 
-    def all_annotations(self) -> Generator[COCOAnnotation, None, None]:
+    def all_annotations(self) -> Generator[Annotation, None, None]:
         for row in self.annotations:
             for annotation in row:
                 yield annotation
@@ -231,10 +158,10 @@ class COCOFullPage(ICOCOFullPage):
         # process each node
         for node in nodes:
             if node.class_name in class_reference_table:
-                annots.append(COCOAnnotation.from_mung_node(class_reference_table[node.class_name], node))
+                annots.append(Annotation.from_mung_node(class_reference_table[node.class_name], node))
 
         # create single page
-        full_page = COCOFullPage.from_list_of_coco_annotations(image_size, annots, class_output_names)
+        full_page = FullPage.from_list_of_coco_annotations(image_size, annots, class_output_names)
         return full_page
 
     @classmethod
@@ -246,7 +173,7 @@ class COCOFullPage(ICOCOFullPage):
             class_output_names: list[str]
     ):
         image_size = ConversionUtils.get_num_pixels(image_path)
-        return COCOFullPage.from_mung_file(
+        return FullPage.from_mung_file(
             annot_path,
             image_size,
             class_reference_table,
@@ -284,20 +211,20 @@ class COCOFullPage(ICOCOFullPage):
 
                 # save parsed annotation
                 annots[class_reference_table[class_name]].append(
-                    COCOAnnotation(class_reference_table[class_name], left, top, width, height, segm)
+                    Annotation(class_reference_table[class_name], left, top, width, height, segm)
                 )
 
         return cls((image_width, image_height), annots, class_output_names)
 
     @staticmethod
-    def _parse_single_line_yolo_detection(line: str, image_width: int, image_height: int) -> COCOAnnotation:
+    def _parse_single_line_yolo_detection(line: str, image_width: int, image_height: int) -> Annotation:
         """
-        From YOLO detection output_format to `COCOAnnotation`.
+        From YOLO detection output_format to `Annotation`.
 
         :param line: single line of detection in YOLO output_format
         :param image_width: image width
         :param image_height: image height
-        :return: COCOAnnotation
+        :return: Annotation
         """
         # parse data
         parts = line.strip().split()
@@ -313,14 +240,14 @@ class COCOFullPage(ICOCOFullPage):
         width_pixels = width * image_width
         height_pixels = height * image_height
 
-        return COCOAnnotation(class_id, int(left), int(top), int(width_pixels), int(height_pixels), None)
+        return Annotation(class_id, int(left), int(top), int(width_pixels), int(height_pixels), None)
 
     @staticmethod
     def _parse_single_line_yolo_segmentation(
             line: str,
             image_width: int,
             image_height: int
-    ) -> COCOAnnotation:
+    ) -> Annotation:
         parts = line.strip().split()
         assert len(parts) > 2 and len(parts) % 2 == 1
 
@@ -334,9 +261,9 @@ class COCOFullPage(ICOCOFullPage):
             segm.append((x, y))
             i += 2
 
-        l, t, w, h = COCOAnnotation._bounding_box_from_segmentation(segm)
+        l, t, w, h = Annotation._bounding_box_from_segmentation(segm)
 
-        return COCOAnnotation(class_id, l, t, w, h, segm)
+        return Annotation(class_id, l, t, w, h, segm)
 
     @classmethod
     def from_yolo_result(cls, result: Results) -> Self:
@@ -347,7 +274,7 @@ class COCOFullPage(ICOCOFullPage):
             x_center, y_center, width, height = (int(result.boxes.xywh[i, 0]), int(result.boxes.xywh[i, 1]),
                                                  int(result.boxes.xywh[i, 2]), int(result.boxes.xywh[i, 3]))
             predictions[int(result.boxes.cls[i])].append(
-                COCOAnnotation(
+                Annotation(
                     int(result.boxes.cls[i]),
                     x_center - width // 2,
                     y_center - height // 2,
@@ -399,11 +326,11 @@ class COCOFullPage(ICOCOFullPage):
 
     @staticmethod
     def resolve_overlaps_for_list_of_annotations(
-            annotations: list[COCOAnnotation],
+            annotations: list[Annotation],
             iou_threshold: float = 0.25,
             inside_threshold: float = 0.0,
             verbose: bool = False,
-    ) -> list[COCOAnnotation]:
+    ) -> list[Annotation]:
         """
         By finding overlaps and classifying them, tries to resolve predicted bounding boxes
         for a list of COCOAnnotations.
@@ -458,9 +385,9 @@ class COCOFullPage(ICOCOFullPage):
             iou_threshold: float = 0.25,
             verbose: bool = False
     ) -> None:
-        other: COCOFullPage
+        other: FullPage
         for class_id in range(len(self.annotations)):
-            resolved1, resolved2 = COCOFullPage._resolve_overlaps_smart(
+            resolved1, resolved2 = FullPage._resolve_overlaps_smart(
                 self.annotations[class_id],
                 other.annotations[class_id],
                 inside_threshold=inside_threshold,
@@ -477,7 +404,7 @@ class COCOFullPage(ICOCOFullPage):
             iou_threshold: float = 0.25,
             verbose: bool = False,
     ) -> None:
-        subpages: list[list[COCOFullPage]]
+        subpages: list[list[FullPage]]
 
         vectors = [(1, 0), (1, 1), (0, 1)]
         for row in range(len(subpages)):
@@ -493,13 +420,13 @@ class COCOFullPage(ICOCOFullPage):
 
     @staticmethod
     def _resolve_overlaps_smart(
-            first: list[COCOAnnotation],
-            second: list[COCOAnnotation],
+            first: list[Annotation],
+            second: list[Annotation],
 
             inside_threshold: float = 0.0,
             iou_threshold: float = 0.25,
             verbose: bool = False,
-    ) -> tuple[list[COCOAnnotation], list[COCOAnnotation]]:
+    ) -> tuple[list[Annotation], list[Annotation]]:
         if len(first) == 0 or len(second) == 0:
             return first, second
 
@@ -565,7 +492,7 @@ class COCOFullPage(ICOCOFullPage):
             verbose: bool = False,
     ) -> Self:
         for i, (subpage, split) in enumerate(zip(subpages, [x for xs in splits for x in xs])):
-            subpage: COCOFullPage
+            subpage: FullPage
             split: BoundingBox
 
             # cut predictions on edges
@@ -594,7 +521,7 @@ class COCOFullPage(ICOCOFullPage):
 
         # resolve overlaps
         matrix = list(np.reshape(subpages, (len(splits), len(splits[0]))))
-        COCOFullPage.resolve_matrix_of_pages(matrix, inside_threshold=0, iou_threshold=0.25, verbose=verbose)
+        FullPage.resolve_matrix_of_pages(matrix, inside_threshold=0, iou_threshold=0.25, verbose=verbose)
 
         # dump all annotations into a single matrix
         completed_annotations = [[] for _ in range(len(class_names))]
@@ -603,15 +530,15 @@ class COCOFullPage(ICOCOFullPage):
                 completed_annotations[annotation.class_id].append(annotation)
         # #
         # # resolve overlaps etc.
-        # completed_annotations = [COCOFullPage.resolve_overlaps_for_list_of_annotations(class_annotations) for
+        # completed_annotations = [FullPage.resolve_overlaps_for_list_of_annotations(class_annotations) for
         #                          class_annotations in completed_annotations]
 
-        return COCOFullPage((last_split.left, last_split.bottom), completed_annotations, class_names)
+        return FullPage((last_split.left, last_split.bottom), completed_annotations, class_names)
 
 
 class COCOFullPageEncoder(JSONEncoder):
     def default(self, obj):
-        if isinstance(obj, COCOFullPage):
+        if isinstance(obj, FullPage):
             output = {
                 # "source": obj.source,
                 "width": obj.size[0],
@@ -620,7 +547,7 @@ class COCOFullPageEncoder(JSONEncoder):
             for i in range(len(obj.class_names)):
                 output[obj.class_names[i]] = obj.annotations[i]
             return output
-        elif isinstance(obj, COCOAnnotation):
+        elif isinstance(obj, Annotation):
             return COCOAnnotationEncoder().default(obj)
 
         return super().default(obj)
@@ -628,7 +555,7 @@ class COCOFullPageEncoder(JSONEncoder):
 
 class COCOAnnotationEncoder(JSONEncoder):
     def default(self, obj):
-        if isinstance(obj, COCOAnnotation):
+        if isinstance(obj, Annotation):
             # flatten
             segm = []
             for x, y in obj.segmentation:
@@ -643,79 +570,3 @@ class COCOAnnotationEncoder(JSONEncoder):
                 "segmentation": [segm],
             }
         return super().default(obj)
-
-
-class COCOSplitPage(ICOCOSplitPage):
-    def __init__(
-            self,
-            image_size: tuple[int, int],
-            subpages: list[list[COCOFullPage]],
-            class_names: list[str],
-            splits: list[list[BoundingBox]]
-    ):
-        super().__init__(
-            image_size,
-            subpages,
-            class_names,
-            splits
-        )
-
-    def save_to_file(
-            self,
-            output_dir: Path,
-            dato_name: Path | str,
-            output_format: OutputFormat,
-    ) -> None:
-        for row in range(len(self.subpages)):
-            for col in range(len(self.subpages[0])):
-                self.subpages[row][col].save_to_file(
-                    output_dir,
-                    dato_name + f"-{row}-{col}",
-                    output_format
-                )
-
-    @classmethod
-    def from_coco_full_page(
-            cls,
-            full_page: COCOFullPage,
-            splits: list[list[BoundingBox]],
-            inside_threshold: float = 1.0
-    ) -> Self:
-        cutouts = []
-        for row in splits:
-            cutout_row = []
-            for cutout in row:
-                intersecting_annotations = []
-
-                for annotation_class in full_page.annotations:
-                    class_annots = []
-
-                    for annotation in annotation_class:
-                        # TODO: resolve "outside cutout", make bbox smaller
-
-                        # DEBUG
-                        # print(f"AoI is: {rec.intersection_area(cutout) / rec.area():.4f}", end=" ")
-                        # if rec.intersection_area(cutout) / rec.area() >= inside_threshold:
-                        #     print("ACCEPT")
-                        # else:
-                        #     print("reject")
-
-                        if (annotation.bbox.intersects(cutout) and
-                                annotation.bbox.intersection_area(cutout) / annotation.bbox.area() >= inside_threshold):
-                            class_annots.append(annotation.adjust_position_copy(- cutout.left, - cutout.top))
-                    intersecting_annotations.append(class_annots)
-
-                cutout_row.append(COCOFullPage(
-                    cutout.size(),
-                    intersecting_annotations,
-                    full_page.class_names
-                ))
-
-            cutouts.append(cutout_row)
-
-        return cls(
-            full_page.size,
-            cutouts,
-            full_page.class_names,
-            splits
-        )

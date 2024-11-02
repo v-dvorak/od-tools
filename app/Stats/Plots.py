@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from tqdm import tqdm
 
-from ..Conversions.COCO.AnnotationClasses import COCOFullPage
+from ..Conversions.Annotations import FullPage
 
 
 def load_and_plot_stats(
@@ -39,7 +39,7 @@ def load_and_plot_stats(
 
     print("Loading annotations...")
     for path_to_image, path_to_annotations in tqdm(data, disable=not verbose):
-        page = COCOFullPage.from_mung(
+        page = FullPage.from_mung(
             path_to_image,
             path_to_annotations,
             class_reference_table,

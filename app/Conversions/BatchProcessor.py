@@ -1,13 +1,13 @@
 from pathlib import Path
 
+import cv2
 from tqdm import tqdm
 
-from . import DataSaving
 from .Formats import InputFormat, OutputFormat
 from ..Conversions import ConversionUtils
-from ..Conversions.COCO.AnnotationClasses import COCOFullPage
-from ..Conversions.COCO.AnnotationClasses import COCOSplitPage
+from ..Conversions.Annotations import FullPage, SplitPage
 from ..Splitting import SplitUtils
+from ..Splitting.SplitUtils import BoundingBox
 
 
 def process_normal_batch(
@@ -24,7 +24,7 @@ def process_normal_batch(
 
     for path_to_image, path_to_annotation in tqdm(data):
         # load and process page to classes
-        page = COCOFullPage.load_from_file(
+        page = FullPage.load_from_file(
             path_to_annotation,
             path_to_image,
             class_reference_table,
@@ -60,7 +60,7 @@ def process_split_batch(
     image_output_dir, annotation_output_dir = output_paths
 
     for path_to_image, path_to_annotations in tqdm(data, position=0):
-        # load and proces page to classes
+        # load and process page to classes
         split_page = create_splits_from_full_page(
             path_to_image,
             path_to_annotations,
@@ -71,7 +71,7 @@ def process_split_batch(
             overlap_ratio=overlap_ratio,
         )
         # save images (same for both annot_format)
-        DataSaving._save_split_page_image(
+        save_split_page_image(
             path_to_image,
             image_output_dir,
             split_page.splits,
@@ -93,9 +93,9 @@ def create_splits_from_full_page(
         input_format: InputFormat,
         window_size: tuple[int, int] = (640, 640),
         overlap_ratio: float = 0.25,
-) -> COCOSplitPage:
+) -> SplitPage:
     # create single page
-    page = COCOFullPage.load_from_file(
+    page = FullPage.load_from_file(
         path_to_annotation,
         path_to_image,
         class_reference_table,
@@ -111,5 +111,43 @@ def create_splits_from_full_page(
     )
 
     # split page based on created splits
-    split_page = COCOSplitPage.from_coco_full_page(page, splits)
+    split_page = SplitPage.from_coco_full_page(page, splits)
     return split_page
+
+
+def save_split_page_image(
+        path_to_image: Path,
+        output_dir: Path,
+        splits: list[list[BoundingBox]],
+        image_format: str = "jpg",
+) -> None:
+    """
+    Loads and splits image given by path and saves it to output_dir.
+    Images are stored in output_format `"name"-"row"-"column"."image_format"`.
+
+    :param path_to_image: image to process
+    :param output_dir: directory to save all split images to
+    :param splits: list of bounding boxes that define splits to save
+    :param image_format: output_format of image to save to
+    """
+    img = cv2.imread(path_to_image.__str__())
+    dato_name = path_to_image.stem
+
+    for row in range(len(splits)):
+        for col in range(len(splits[0])):
+            # save subpage images
+
+            cutout = splits[row][col]
+            sub_img = img[cutout.top:cutout.bottom, cutout.left:cutout.right]
+
+            # DEBUG viz
+            # SplitUtils.draw_rectangles_on_image(
+            #     sub_img,
+            #     [SplitUtils.BoundingBox.from_coco_annotation(a) for a in full_page.subpages[row][col].annotations[0]],
+            #     thickness=2,
+            #     loaded=True,
+            #     color=(255, 0, 0),
+            # )
+
+            # input("..")
+            cv2.imwrite((output_dir / (dato_name + f"-{row}-{col}.{image_format}")).__str__(), sub_img)

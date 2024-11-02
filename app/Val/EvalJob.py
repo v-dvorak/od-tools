@@ -7,8 +7,7 @@ from ultralytics import YOLO
 
 from . import Utils
 from ..Conversions import ConversionUtils
-from ..Conversions.BoundingBox import BoundingBox
-from ..Conversions.COCO.AnnotationClasses import COCOFullPage, COCOAnnotation
+from ..Conversions.Annotations import FullPage, Annotation
 from ..Conversions.Formats import InputFormat
 from ..Splitting import SplitUtils
 
@@ -27,9 +26,9 @@ def retrieve_ground_truth(
         index: int,
         debug: bool = False,
 
-) -> list[COCOAnnotation]:
+) -> list[Annotation]:
 
-    ground_truth = COCOFullPage.load_from_file(
+    ground_truth = FullPage.load_from_file(
         annotation_path,
         image_path,
         class_reference_table,
@@ -60,7 +59,7 @@ def predict_yolo_split(
         index: int,
         overlap: float = 0.25,
         debug: bool = False,
-) -> list[COCOAnnotation]:
+) -> list[Annotation]:
     width, height = ConversionUtils.get_num_pixels(image_path)
 
     # prepare images for inference
@@ -73,10 +72,10 @@ def predict_yolo_split(
     subpages = []
     for i in range(len(results)):
         result = results[i]
-        res = COCOFullPage.from_yolo_result(result)
+        res = FullPage.from_yolo_result(result)
         subpages.append(res)
 
-    resolved = COCOFullPage.combine_multiple_pages_and_resolve(subpages, splits)
+    resolved = FullPage.combine_multiple_pages_and_resolve(subpages, splits)
 
     if debug:
         SplitUtils.draw_rectangles_on_image(
@@ -109,7 +108,7 @@ def validate_model(
         overlap: float = 0.25,
         image_splitting: bool = False,
         debug: bool = False,
-) -> tuple[list[COCOAnnotation], list[COCOAnnotation]]:
+) -> tuple[list[Annotation], list[Annotation]]:
     # load validation data
     images = sorted(list(images_path.rglob(f"*.{image_format}")))
     annotations = sorted(list(annotations_path.rglob(f"*.{input_format.to_annotation_extension()}")))
@@ -133,8 +132,8 @@ def validate_model(
         random.Random(seed).shuffle(images)
         data = data[:count]
 
-    ground_truths: list[COCOAnnotation] = []
-    predictions: list[COCOAnnotation] = []
+    ground_truths: list[Annotation] = []
+    predictions: list[Annotation] = []
 
     # predict for every single image
     index = 0

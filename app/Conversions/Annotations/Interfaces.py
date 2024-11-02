@@ -7,7 +7,7 @@ from ultralytics.engine.results import Results
 from ..Formats import OutputFormat
 
 
-class ICOCOAnnotation:
+class IAnnotation:
     def __init__(self, class_id: int, left: int, top: int, width: int, height: int,
                  segmentation: list[tuple[int, int]], confidence: float = 1.0):
         self.class_id = class_id
@@ -32,11 +32,11 @@ class ICOCOAnnotation:
         raise NotImplementedError()
 
 
-class ICOCOFullPage:
+class IFullPage:
     def __init__(
             self,
             image_size: tuple[int, int],
-            annotations: list[list[ICOCOAnnotation]],
+            annotations: list[list[IAnnotation]],
             class_names: list[str]
     ):
         """
@@ -45,12 +45,12 @@ class ICOCOFullPage:
         where each list corresponds to single class id.
 
         :param image_size: path_to_image image_size, (width, height)
-        :param annotations: list of COCOAnnotation
+        :param annotations: list of Annotation
         :param class_names: list of class names
         """
         self.size = image_size
         self.class_names = class_names
-        self.annotations: list[list[ICOCOAnnotation]] = annotations
+        self.annotations: list[list[IAnnotation]] = annotations
 
     def __str__(self):
         return f"({self.class_names=}, {self.size=}, {self.annotations})"
@@ -59,7 +59,7 @@ class ICOCOFullPage:
         raise NotImplementedError()
 
     @classmethod
-    def from_list_of_coco_annotations(cls, image_size: tuple[int, int], annotations: list[ICOCOAnnotation],
+    def from_list_of_coco_annotations(cls, image_size: tuple[int, int], annotations: list[IAnnotation],
                                       class_names: list[str]) -> Self:
         raise NotImplementedError()
 
@@ -83,14 +83,14 @@ class ICOCOFullPage:
 
     @staticmethod
     def resolve_overlaps_for_list_of_annotations(
-            annotations: list[ICOCOAnnotation],
+            annotations: list[IAnnotation],
             iou_threshold: float = 0.25,
             inside_threshold: float = 0.0,
             verbose: bool = False,
-    ) -> list[ICOCOAnnotation]:
+    ) -> list[IAnnotation]:
         raise NotImplementedError()
 
-    def all_annotations(self) -> list[ICOCOAnnotation]:
+    def all_annotations(self) -> list[IAnnotation]:
         raise NotImplementedError()
 
     def annotation_count(self) -> int:
@@ -137,7 +137,7 @@ class ICOCOFullPage:
         :param class_reference_table: class reference table
         :param class_output_names: class output names
 
-        :return: ICOCOFullPage
+        :return: IFullPage
         """
         raise NotImplementedError()
 
@@ -157,7 +157,7 @@ class ICOCOFullPage:
         :param class_reference_table: class reference table
         :param class_output_names: class output names
 
-        :return: ICOCOFullPage
+        :return: IFullPage
         """
         raise NotImplementedError()
 
@@ -174,15 +174,15 @@ class ICOCOFullPage:
         :param file_path: path to COCO annotation file
         :param class_reference_table: class reference table
         :param class_output_names: class output names
-        :return: ICOCOFullPage
+        :return: IFullPage
         """
 
 
-class ICOCOSplitPage:
+class ISplitPage:
     def __init__(
             self,
             image_size: tuple[int, int],
-            subpages: list[list[ICOCOFullPage]],
+            subpages: list[list[IFullPage]],
             class_names: list[str],
             splits
     ):

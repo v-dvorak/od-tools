@@ -4,7 +4,7 @@ from pathlib import Path
 import yaml
 
 from . import ConversionUtils
-from . import MungToCOCO
+from . import BatchProcessor
 from .Formats import InputFormat, OutputFormat
 
 

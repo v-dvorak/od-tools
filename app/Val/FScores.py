@@ -6,10 +6,11 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 
+from . import COCOEvaluator
+from ..Conversions.Annotations import Annotation
+
 font_path = os.path.join(cv2.__path__[0], "qt", "fonts", "DejaVuSans.ttf")
 
-from . import COCOEvaluator
-from ..Conversions.COCO.AnnotationClasses import COCOAnnotation
 
 def calculate_f1_score(tp: int, fp: int, fn: int) -> float:
     if tp == 0 and fp == 0 and fn == 0:
@@ -51,8 +52,8 @@ def plot_f_scores(iou_thresholds: list[float], f1_scores_per_class: list[list[fl
 
 
 def collect_f_scores(
-        ground_truth: list[COCOAnnotation],
-        predictions: list[COCOAnnotation],
+        ground_truth: list[Annotation],
+        predictions: list[Annotation],
         class_names: list[str],
         iou_thresholds: list[float] = None,
         summation: bool = True,
