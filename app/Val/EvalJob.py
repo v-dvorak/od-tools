@@ -44,7 +44,7 @@ def run_f1_scores_vs_iou(
         input_format: InputFormat,
         model_type: ModelType,
         class_output_names: list[str],
-
+        overlap: float = 0.25,
         output_dir: Path = None,
         summarize: bool = True,
         count: int = None,
@@ -59,6 +59,7 @@ def run_f1_scores_vs_iou(
     :param input_format: annotation input format
     :param model_type: model type
     :param class_output_names: list of class names
+    :param overlap: overlap threshold
     :param output_dir: path to output directory
     :param summarize: whether to add "All" category to f1 scores
     :param count: number of images to process
@@ -78,6 +79,7 @@ def run_f1_scores_vs_iou(
         model_type,
         class_output_names,
         class_reference_table,
+        overlap=overlap,
         count=count,
         verbose=verbose,
         debug=False,

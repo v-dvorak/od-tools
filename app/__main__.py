@@ -67,7 +67,7 @@ if __name__ == "__main__":
 
     val_parser.add_argument("--image_format", default="jpg", help="Input image format.")
 
-    val_parser.add_argument("--overlap", type=int, help="Overlap ratio for image splits.")
+    val_parser.add_argument("--overlap", type=float, default=0.25, help="Overlap ratio for image splits.")
     val_parser.add_argument("-c", "--count", type=int, help="How many images the model will be tested on.")
     val_parser.add_argument("-s", "--seed", type=int, default=42, help="Seed for dataset shuffling.")
     val_parser.add_argument("--sum", action="store_true", help="Adds \"All\" category to evaluation.")
@@ -139,6 +139,7 @@ if __name__ == "__main__":
             Formatter.InputFormat.from_string(args.input_format),
             EvalJob.ModelType.from_string(args.model_type),
             loaded_config["class_output_names"],
+            overlap=args.overlap,
             # optional graph saving
             output_dir=Path(args.output_path) if args.output_path is not None else None,
             summarize=args.sum,
