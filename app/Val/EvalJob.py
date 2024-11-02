@@ -46,7 +46,7 @@ def run_f1_scores_vs_iou(
         class_output_names: list[str],
 
         output_dir: Path = None,
-        summation: bool = True,
+        summarize: bool = True,
         count: int = None,
         verbose: bool = False,
 ):
@@ -60,7 +60,7 @@ def run_f1_scores_vs_iou(
     :param model_type: model type
     :param class_output_names: list of class names
     :param output_dir: path to output directory
-    :param summation: whether to add "All" category to f1 scores
+    :param summarize: whether to add "All" category to f1 scores
     :param count: number of images to process
     :param verbose: make script verbose
     """
@@ -89,13 +89,13 @@ def run_f1_scores_vs_iou(
         class_output_names,
         iou_thresholds=GLOBAL_IOU_THRESHOLDS,
         verbose=verbose,
-        summation=summation,
+        summation=summarize,
     )
 
     FScores.plot_f_scores(
         GLOBAL_IOU_THRESHOLDS,
         scores,
-        class_output_names + ["all"] if summation else class_output_names,
+        class_output_names + ["all"] if summarize else class_output_names,
         output_path=output_dir / "f1-scores.png" if output_dir is not None else None,
     )
 

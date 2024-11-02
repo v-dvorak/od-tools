@@ -141,7 +141,7 @@ if __name__ == "__main__":
             loaded_config["class_output_names"],
             # optional graph saving
             output_dir=Path(args.output_path) if args.output_path is not None else None,
-            summation=args.sum,
+            summarize=args.sum,
             count=args.count,
             verbose=args.verbose
         )
