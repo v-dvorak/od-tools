@@ -33,7 +33,7 @@ if __name__ == "__main__":
     # global arguments
     form_parser.add_argument("-v", "--verbose", action="store_true", help="Make script verbose")
     form_parser.add_argument("--config", default=None,
-                             help="Path to config, see \"default_config.json\" for example.")
+                             help="Path to config, see \"default.config\" for example.")
 
     # DATASET STATISTICS
     stats_parser = subparsers.add_parser("stats")
@@ -45,7 +45,7 @@ if __name__ == "__main__":
     # global arguments
     stats_parser.add_argument("-v", "--verbose", action="store_true", help="Make script verbose")
     stats_parser.add_argument("--config", default=None,
-                              help="Path to config, see \"default_config.json\" for example.")
+                             help="Path to config, see \"default.config\" for example.")
 
     # MODEL VALIDATION
     val_parser = subparsers.add_parser("val")
@@ -68,14 +68,13 @@ if __name__ == "__main__":
     # global arguments
     val_parser.add_argument("-v", "--verbose", action="store_true", help="Make script verbose")
     val_parser.add_argument("--config", default=None,
-                            help="Path to config, see \"default_config.json\" for example.")
+                             help="Path to config, see \"default.config\" for example.")
 
     args = parser.parse_args()
 
     # load config
     if args.config is None:
-        inp_file = impresources.files(data) / "default_config.json"
-        with inp_file.open("rt") as f:
+        with open("configs/default.config", "rt") as f:
             loaded_config = json.load(f)
     else:
         with open(args.config, "r", encoding="utf8") as f:
@@ -84,10 +83,6 @@ if __name__ == "__main__":
     if args.command == "form":
         input_f = Formatter.InputFormat.from_string(args.input_format)
         output_f = Formatter.OutputFormat.from_string(args.output_format)
-
-        print(input_f.name, output_f.name)
-        print(input_f.to_annotation_extension())
-        # quit()
 
         Formatter.format_dataset(
             # directories
