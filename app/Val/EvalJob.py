@@ -132,7 +132,7 @@ def retrieve_ground_truth(
     if debug:
         SplitUtils.draw_rectangles_on_image(
             image_path.__str__(),
-            [annot.bbox for annot in ground_truth.annotations()],
+            [annot.bbox for annot in ground_truth.all_annotations()],
             color=(0, 255, 0),
             thickness=2,
             # output_path=f"pred1-{index}.jpg"
