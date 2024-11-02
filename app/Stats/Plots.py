@@ -6,13 +6,16 @@ import numpy as np
 from tqdm import tqdm
 
 from ..Conversions.Annotations import FullPage
+from ..Conversions.Formats import InputFormat
 
 
 def load_and_plot_stats(
         images_path: Path,
         annotations_path: Path,
+        input_format: InputFormat,
         class_reference_table: dict[str, int],
         class_output_names: list[str],
+        summarize: bool = False,
         image_format: str = "jpg",
         output_path: Path = None,
         verbose: bool = False,
@@ -22,9 +25,12 @@ def load_and_plot_stats(
 
     :param images_path: path to directory with images
     :param annotations_path: path to directory with labels
+    :param input_format: input format
 
     :param class_reference_table: dictionary, a function that assigns class id by class name
     :param class_output_names: list of class names
+
+    :param summarize: whether to add "all" category to statistics
 
     :param image_format: annot_format in which the images are saved
     :param output_path: output path, if not None, graph will be saved here
@@ -33,21 +39,27 @@ def load_and_plot_stats(
     """
     # load data from given paths
     images = sorted(list(images_path.rglob(f"*.{image_format}")))
-    annotations = sorted(list(annotations_path.rglob(f"*.xml")))
+    annotations = sorted(list(annotations_path.rglob(f"*.{input_format.to_annotation_extension()}")))
     data = list(zip(images, annotations))
     counts = [[] for _ in range(len(class_output_names))]
 
-    print("Loading annotations...")
-    for path_to_image, path_to_annotations in tqdm(data, disable=not verbose):
-        page = FullPage.from_mung(
-            path_to_image,
+    if summarize:
+        all_counts = []
+
+    for path_to_image, path_to_annotations in tqdm(data, disable=not verbose, desc="Loading annotations"):
+        page = FullPage.load_from_file(
             path_to_annotations,
+            path_to_image,
             class_reference_table,
-            class_output_names
+            class_output_names,
+            input_format
         )
 
         for i in range(len(counts)):
             counts[i].append(len(page.annotations[i]))
+
+        if summarize:
+            all_counts.append(page.annotation_count())
 
     means = []
     stdevs = []
@@ -59,10 +71,18 @@ def load_and_plot_stats(
             print(f"mean: {means[-1]}")
             print(f"stdev: {stdevs[-1]}")
 
+    if summarize:
+        means.append(statistics.mean(all_counts))
+        stdevs.append(statistics.stdev(all_counts))
+        if verbose:
+            print("class: All")
+            print(f"mean: {means[-1]}")
+            print(f"stdev: {stdevs[-1]}")
+
     _plot_stddev(
         means,
         stdevs,
-        names=class_output_names,
+        names=class_output_names + ["ALL"] if summarize else class_output_names,
         output_path=output_path
     )
 
@@ -93,12 +113,13 @@ def _plot_stddev(
     # legend
     plt.title("Average number of annotations on single page")
     if names is not None:
-        plt.xticks(x, names, rotation=45, ha="right")
-        plt.subplots_adjust(bottom=0.3)
+        plt.xticks(x, names, rotation=90, ha="center")
+        # plt.subplots_adjust(bottom=0.3)
     else:
         plt.xticks(x, range(len(means)))
 
     plt.grid(True)
+    plt.tight_layout()
     if output_path is None:
         plt.show()
     else:

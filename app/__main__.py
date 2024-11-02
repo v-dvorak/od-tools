@@ -16,7 +16,7 @@ if __name__ == "__main__":
     form_parser = subparsers.add_parser("form")
     form_parser.add_argument("output", help="Transformed dataset destination.")
     form_parser.add_argument("images_path", help="Path to images.")
-    form_parser.add_argument("annot_path", help="Path to subpages.")
+    form_parser.add_argument("annot_path", help="Path to annotations.")
 
     form_parser.add_argument("-i", "--input_format", default="mung", choices=["mung", "coco", "yolod", "yolos"])
     form_parser.add_argument("-o", "--output_format", default="coco", choices=["mung", "coco", "yolod", "yolos"])
@@ -37,22 +37,25 @@ if __name__ == "__main__":
     # DATASET STATISTICS
     stats_parser = subparsers.add_parser("stats")
     stats_parser.add_argument("images_path", help="Path to images.")
-    stats_parser.add_argument("annot_path", help="Path to subpages.")
+    stats_parser.add_argument("annot_path", help="Path to annotations.")
 
     stats_parser.add_argument("-o", "--output", type=str, default=None, help="If used, plots will be saved here.")
+    stats_parser.add_argument("-i", "--input_format", default="mung", choices=["mung", "coco", "yolod", "yolos"])
     # parser.add_argument('-j', '--jobs', nargs='+', help="Specify jobs to run.", choices=)
 
     # global arguments
     stats_parser.add_argument("-v", "--verbose", action="store_true", help="Make script verbose")
     stats_parser.add_argument("--config", default=None,
                               help="Path to config, see \"default.config\" for example.")
+    stats_parser.add_argument("--sum", action="store_true", help="Adds \"All\" category to stats.")
+
 
     # MODEL VALIDATION
     val_parser = subparsers.add_parser("val")
 
     val_parser.add_argument("model_path", type=str, help="Path to model.")
     val_parser.add_argument("images_path", help="Path to images.")
-    val_parser.add_argument("annot_path", help="Path to subpages.")
+    val_parser.add_argument("annot_path", help="Path to annotations.")
 
     val_parser.add_argument("-i", "--input_format", default="yolod", choices=["mung", "coco", "yolod", "yolos"],
                             help="Validation dataset annotation format.")
@@ -115,12 +118,14 @@ if __name__ == "__main__":
             # directories
             Path(args.images_path),
             Path(args.annot_path),
+            Formatter.InputFormat.from_string(args.input_format),
             # class ids etc.
             class_reference_table=loaded_config["class_id_reference_table"],
             class_output_names=loaded_config["class_output_names"],
             image_format="jpg",
             # others
             output_path=Path(args.output) if args.output is not None else None,
+            summarize=args.sum,
             verbose=args.verbose
         )
 
