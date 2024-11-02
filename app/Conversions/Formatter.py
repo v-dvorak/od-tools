@@ -1,10 +1,9 @@
-from enum import Enum
 from pathlib import Path
 
 import yaml
 
-from . import ConversionUtils
 from . import BatchProcessor
+from . import ConversionUtils
 from .Formats import InputFormat, OutputFormat
 
 
@@ -65,7 +64,7 @@ def format_dataset(
         annot_dir.mkdir(exist_ok=True, parents=True)
 
         if image_splitting:
-            MungToCOCO.process_split_batch(
+            BatchProcessor.process_split_batch(
                 data,
                 (images_dir, annot_dir),
                 class_reference_table,
@@ -77,7 +76,7 @@ def format_dataset(
                 overlap_ratio=overlap_ratio
             )
         else:
-            MungToCOCO.process_normal_batch(
+            BatchProcessor.process_normal_batch(
                 data,
                 (images_dir, annot_dir),
                 class_reference_table,
@@ -113,7 +112,7 @@ def format_dataset(
         train_data, val_data = ConversionUtils.split_dataset(data, split_ratio=split_ratio, seed=seed)
 
         if image_splitting:
-            MungToCOCO.process_split_batch(
+            BatchProcessor.process_split_batch(
                 train_data,
                 (train_image_dir, train_annotation_dir),
                 class_reference_table,
@@ -125,7 +124,7 @@ def format_dataset(
                 overlap_ratio=overlap_ratio
             )
 
-            MungToCOCO.process_split_batch(
+            BatchProcessor.process_split_batch(
                 val_data,
                 (val_image_dir, val_annotation_dir),
                 class_reference_table,
@@ -137,7 +136,7 @@ def format_dataset(
                 overlap_ratio=overlap_ratio
             )
         else:
-            MungToCOCO.process_normal_batch(
+            BatchProcessor.process_normal_batch(
                 train_data,
                 (train_image_dir, train_annotation_dir),
                 class_reference_table,
@@ -148,7 +147,7 @@ def format_dataset(
                 resize=resize
             )
 
-            MungToCOCO.process_normal_batch(
+            BatchProcessor.process_normal_batch(
                 val_data,
                 (val_image_dir, val_annotation_dir),
                 class_reference_table,
