@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Generator
 from typing import Self
 
 from mung.node import Node
@@ -21,16 +22,61 @@ class IAnnotation:
         return f"({self.class_id=}, {self.bbox.left}, {self.bbox.top}, {self.bbox.width}, {self.bbox.height}, {self.bbox.segmentation})"
 
     def adjust_position_copy(self, left_shift: int, top_shift: int) -> Self:
+        """
+        Creates a new Annotation object with adjusted position.
+
+        :param left_shift: pixel shift to the left
+        :param top_shift: pixel shift to the top
+        :return: new Annotation object with adjusted coordinates
+        """
         raise NotImplementedError()
 
     def adjust_position(self, left_shift: int, top_shift: int) -> None:
+        """
+        Adjusts classes position in place.
+
+        :param left_shift: pixel shift to the left
+        :param top_shift: pixel shift to the top
+        """
         raise NotImplementedError()
 
     @classmethod
     def from_mung_node(cls, class_id: int, node: Node) -> Self:
+        """
+        Creates a new Annotation object from Mung Node.
+
+        :param class_id: class id
+        :param node: Mung Node
+        :return: new Annotation object
+        """
         raise NotImplementedError()
 
     def intersects(self, other: Self) -> bool:
+        """
+        Returns true if two Annotation objects intersect, else false.
+
+        :param other: other Annotation object
+        """
+        raise NotImplementedError()
+
+    @staticmethod
+    def bounding_box_from_segmentation(segm: list[tuple[int, int]]) -> IBoundingBox:
+        """
+        Returns the bounding box of the given segmentation.
+
+        :param segm: list of segmentation coordinates
+        :return: IBoundingBox
+        """
+        raise NotImplementedError()
+
+    @staticmethod
+    def segmentation_from_bounding_box(bbox: IBoundingBox) -> list[tuple[int, int]]:
+        """
+        Returns the segmentation coordinates of the given bounding box.
+
+        :param bbox: bounding box
+        :return: segmentation as list[tuple[int, int]]
+        """
         raise NotImplementedError()
 
     def set_image_name(self, image_name: str):
@@ -81,12 +127,27 @@ class IFullPage:
     def __str__(self):
         return f"({self.class_names=}, {self.size=}, {self.annotations})"
 
-    def save_to_file(self, output_dir: Path, dato_name: Path | str, output_format: OutputFormat):
+    def save_to_file(self, output_dir: Path, dato_name: Path | str, output_format: OutputFormat) -> None:
+        """
+        Based on OutputFormat saves FullPage to the output directory.
+
+        :param output_dir: output directory
+        :param dato_name: output file name, without extension
+        :param output_format: output format
+        """
         raise NotImplementedError()
 
     @classmethod
     def from_list_of_coco_annotations(cls, image_size: tuple[int, int], annotations: list[IAnnotation],
                                       class_names: list[str]) -> Self:
+        """
+        Creates a new FullPage object from a list of annotations.
+
+        :param image_size: path_to_image image_size, (width, height)
+        :param annotations: list of Annotation
+        :param class_names: list of class names
+        :return: new FullPage object
+        """
         raise NotImplementedError()
 
     def cut_off_predictions_too_close_to_edge(
@@ -113,17 +174,28 @@ class IFullPage:
         """
         raise NotImplementedError()
 
-    def all_annotations(self) -> list[IAnnotation]:
+    def all_annotations(self) -> Generator[IAnnotation, None, None]:
+        """
+        Creates a generator of all Annotations in FullPage.
+
+        :return: generator of Annotations
+        """
         raise NotImplementedError()
 
     def annotation_count(self) -> int:
+        """
+        Returns the total number of annotations.
+        """
         raise NotImplementedError()
 
     @classmethod
     def from_yolo_result(cls, result: Results) -> Self:
-        raise NotImplementedError()
+        """
+        Transforms YOLO predictions into an FullPage object.
 
-    def to_eval_format(self) -> list[tuple[list[int], float, int]]:
+        :param result: YOLO predictions
+        :return: FullPage object
+        """
         raise NotImplementedError()
 
     def resolve_overlaps_with_other_page(
@@ -133,6 +205,15 @@ class IFullPage:
             iou_threshold: float = 0.25,
             verbose: bool = False
     ) -> None:
+        """
+        Removes overlapping annotations from two different pages based on IoU.
+        Annotations with higher confidence are kept, resolution is done in place - original objects are changed.
+
+        :param other: another FullPage object
+        :param inside_threshold: how much object has to be inside other object to trigger resolving
+        :param iou_threshold: how big IoU has to be to trigger resolving
+        :param verbose: make script verbose
+        """
         raise NotImplementedError()
 
     @staticmethod
@@ -142,6 +223,14 @@ class IFullPage:
             iou_threshold: float = 0.25,
             verbose: bool = False,
     ) -> None:
+        """
+        Given a matrix of subpages, resolves their overlaps with smart algorithm.
+
+        :param subpages: matrix of subpages
+        :param inside_threshold: how much object has to be inside other object to trigger resolving
+        :param iou_threshold: how big IoU has to be to trigger resolving
+        :param verbose: make script verbose
+        """
         raise NotImplementedError()
 
     @staticmethod

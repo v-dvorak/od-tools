@@ -12,6 +12,8 @@ class Annotation(IAnnotation):
                  segmentation: list[tuple[int, int]] | None, confidence: float = 1.0):
         super().__init__(class_id, left, top, width, height, segmentation, confidence=confidence)
         self.bbox = BoundingBox.from_ltwh(left, top, width, height)  # Python shenanigans
+        if segmentation is None:
+            self.segmentation = self.segmentation_from_bounding_box(self.bbox)
 
     def set_image_name(self, image_name: str):
         self.image_name = image_name
@@ -38,29 +40,23 @@ class Annotation(IAnnotation):
         top = min(segm, key=lambda x: x[1])[1]
         right = max(segm, key=lambda x: x[0])[0]
         bottom = max(segm, key=lambda x: x[1])[1]
-        return (left, top, right, bottom)
+        return left, top, right, bottom
+
+    @staticmethod
+    def segmentation_from_bounding_box(
+            bbox: BoundingBox
+    ):
+        x1, y1, x2, y2 = bbox.xyxy()
+        return [(x1, y1), (x2, y1), (x2, y2), (x1, y2)]
 
     def intersects(self, other: Self) -> bool:
         other: Annotation
         return self.bbox.intersects(other.bbox)
 
     def adjust_position(self, left_shift: int = 0, top_shift: int = 0) -> None:
-        """
-        Adjusts classes position in place.
-
-        :param left_shift: pixel shift to the left
-        :param top_shift: pixel shift to the top
-        """
         self.bbox.shift(left_shift, top_shift)
 
     def adjust_position_copy(self, left_shift: int, top_shift: int) -> Self:
-        """
-        Creates a new Annotation object with adjusted position.
-
-        :param left_shift: pixel shift to the left
-        :param top_shift: pixel shift to the top
-        :return: new Annotation object with adjusted coordinates
-        """
         if self.segmentation is not None:
             new_segmentation = [(x + left_shift, y + top_shift) for x, y in self.segmentation]
         else:
