@@ -49,7 +49,6 @@ if __name__ == "__main__":
                               help="Path to config, see \"default.config\" for example.")
     stats_parser.add_argument("--sum", action="store_true", help="Adds \"All\" category to stats.")
 
-
     # MODEL VALIDATION
     val_parser = subparsers.add_parser("val")
 
@@ -71,6 +70,8 @@ if __name__ == "__main__":
     val_parser.add_argument("-c", "--count", type=int, help="How many images the model will be tested on.")
     val_parser.add_argument("-s", "--seed", type=int, default=42, help="Seed for dataset shuffling.")
     val_parser.add_argument("--sum", action="store_true", help="Adds \"All\" category to evaluation.")
+    val_parser.add_argument("--iou", type=float, default=0.25,
+                            help="Threshold to consider two annotations overlapping while resolving predictions.")
 
     # global arguments
     val_parser.add_argument("-v", "--verbose", action="store_true", help="Make script verbose")
@@ -138,7 +139,8 @@ if __name__ == "__main__":
             # formatting
             Formatter.InputFormat.from_string(args.input_format),
             EvalJob.ModelType.from_string(args.model_type),
-            loaded_config["class_output_names"],
+            loaded_config["class_output_names"],    
+            iou_threshold=args.iou,
             overlap=args.overlap,
             # optional graph saving
             output_dir=Path(args.output_path) if args.output_path is not None else None,

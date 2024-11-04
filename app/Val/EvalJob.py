@@ -44,6 +44,7 @@ def run_f1_scores_vs_iou(
         input_format: InputFormat,
         model_type: ModelType,
         class_output_names: list[str],
+        iou_threshold: float = 0.25,
         overlap: float = 0.25,
         output_dir: Path = None,
         summarize: bool = True,
@@ -59,6 +60,7 @@ def run_f1_scores_vs_iou(
     :param input_format: annotation input format
     :param model_type: model type
     :param class_output_names: list of class names
+    :param iou_threshold: threshold to consider two annotations overlapping in resolution
     :param overlap: overlap threshold
     :param output_dir: path to output directory
     :param summarize: whether to add "All" category to f1 scores
@@ -79,6 +81,7 @@ def run_f1_scores_vs_iou(
         model_type,
         class_output_names,
         class_reference_table,
+        iou_threshold=iou_threshold,
         overlap=overlap,
         count=count,
         verbose=verbose,
@@ -153,6 +156,7 @@ def predict_yolo_split(
         image_path: Path,
         index: int,
         overlap: float = 0.25,
+        iou_threshold: float = 0.25,
         debug: bool = False,
 ) -> list[Annotation]:
     """
@@ -162,6 +166,7 @@ def predict_yolo_split(
     :param image_path: Path to the image
     :param index: index of the image
     :param overlap: overlap ratio
+    :param iou_threshold: threshold to consider two annotations overlapping in resolution
     :param debug: show loaded annotations as rectangles on image
     :return: list of predictions
     """
@@ -180,7 +185,7 @@ def predict_yolo_split(
         res = FullPage.from_yolo_result(result)
         subpages.append(res)
 
-    resolved = FullPage.combine_multiple_pages_and_resolve(subpages, splits)
+    resolved = FullPage.combine_multiple_pages_and_resolve(subpages, splits, iou_threshold=iou_threshold)
 
     if debug:
         SplitUtils.draw_rectangles_on_image(
@@ -210,6 +215,7 @@ def get_gts_and_predictions(
         count: int = None,
         verbose: bool = False,
         seed: int = 42,
+        iou_threshold: float = 0.25,
         overlap: float = 0.25,
         # image_splitting: bool = False,
         debug: bool = False,
@@ -228,6 +234,7 @@ def get_gts_and_predictions(
     :param count: number of images to process
     :param verbose: show loaded annotations as rectangles on image
     :param seed: seed for reproducibility
+    :param iou_threshold: threshold to consider two annotations overlapping in resolution
     :param overlap: overlap ratio
     :param debug: show loaded annotations as rectangles on image
     :return: list of ground truths and list of predictions
@@ -276,6 +283,7 @@ def get_gts_and_predictions(
             image,
             index,
             overlap=overlap,
+            iou_threshold=iou_threshold,
             debug=debug
         )
         index += 1
