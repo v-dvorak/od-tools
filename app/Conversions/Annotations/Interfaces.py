@@ -216,6 +216,22 @@ class IFullPage:
         """
         raise NotImplementedError()
 
+    def resolve_overlaps_inside_self(
+            self,
+            inside_threshold: float = 0.0,
+            iou_threshold: float = 0.25,
+            verbose: bool = False
+    ):
+        """
+        Removes overlapping annotations inside single page based on IoU.
+        Annotations with higher confidence are kept, resolution is done in place - original objects are changed.
+
+        :param inside_threshold: how much object has to be inside other object to trigger resolving
+        :param iou_threshold: how big IoU has to be to trigger resolving
+        :param verbose: make script verbose
+        """
+        raise NotImplementedError()
+
     @staticmethod
     def resolve_matrix_of_pages(
             subpages=list[list[Self]],
@@ -230,60 +246,6 @@ class IFullPage:
         :param inside_threshold: how much object has to be inside other object to trigger resolving
         :param iou_threshold: how big IoU has to be to trigger resolving
         :param verbose: make script verbose
-        """
-        raise NotImplementedError()
-
-    @staticmethod
-    def from_mung_file(
-            annot_path: Path,
-            image_size: tuple[int, int],
-            class_reference_table: dict[str, int],
-            class_output_names: list[str]
-    ) -> "IFullPage":
-        """
-        Loads a page of annotations from a MuNG annotation file.
-
-        :param annot_path: path to mung file
-        :param image_size: image size (width, height)
-        :param class_reference_table: class reference table
-        :param class_output_names: class output names
-
-        :return: IFullPage
-        """
-        raise NotImplementedError()
-
-    @staticmethod
-    def from_mung(
-            annot_path: Path,
-            image_path: Path,
-            class_reference_table: dict[str, int],
-            class_output_names: list[str]
-    ) -> "IFullPage":
-        """
-        Loads a page of annotations from an image and a MuNG annotation file.
-
-        :param annot_path: path to mung file
-        :param image_path: path to image
-        :param class_reference_table: class reference table
-        :param class_output_names: class output names
-
-        :return: IFullPage
-        """
-        raise NotImplementedError()
-
-    @staticmethod
-    def from_coco_file(
-            file_path: Path,
-            class_reference_table: dict[str, int],
-            class_output_names: list[str]
-    ) -> "IFullPage":
-        """
-        Loads a page of annotations from a COCO annotation file.
-
-        :param file_path: path to COCO annotation file
-        :param class_reference_table: class reference table
-        :param class_output_names: class output names
-        :return: IFullPage
         """
         raise NotImplementedError()
 
@@ -350,6 +312,7 @@ class IFullPage:
             cls,
             subpages: list[Self],
             splits: list[list[IBoundingBox]],
+            iou_threshold: float = 0.25,
             edge_offset: int = 20,
             verbose: bool = False,
     ) -> Self:
@@ -358,6 +321,7 @@ class IFullPage:
 
         :param subpages: list of subpages
         :param splits: matrix of splits
+        :param iou_threshold: how big IoU has to be to trigger resolving
         :param edge_offset: offset from edges, anything outside the edge will be dropped from final page
         :param verbose: make script verbose
         :return: IFullPage

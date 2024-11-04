@@ -14,6 +14,7 @@ from .. import ConversionUtils
 from ..Formats import InputFormat, OutputFormat
 from ...Splitting.SplitUtils import BoundingBox
 
+RESOLVE_OVERLAPS_INSIDE_TILE = True
 
 class FullPage(IFullPage):
     def __init__(self, image_size: tuple[int, int], annotations: list[list[IAnnotation]], class_names: list[str]):
@@ -181,6 +182,46 @@ class FullPage(IFullPage):
             self.annotations[class_id] = resolved1
             other.annotations[class_id] = resolved2
 
+    def resolve_overlaps_inside_self(
+            self,
+            inside_threshold: float = 0.0,
+            iou_threshold: float = 0.25,
+            verbose: bool = False
+    ):
+        # for every class of annotations
+        for i, class_annotations in enumerate(self.annotations):
+            cleared_annotations = []
+            # take one annotation
+            for current_annot in sorted(class_annotations, key=lambda x: x.confidence, reverse=True):
+                # and check if it does not intersect with already chosen annotations
+                intersects = False
+                for chosen_annot in cleared_annotations:
+                    if current_annot.bbox.intersects(chosen_annot.bbox) and (
+                            (
+                                    # detects if IoU of two bboxes is greater than limit
+                                    # eliminates duplicated bboxes
+                                    0 < iou_threshold < current_annot.bbox.intersection_over_union(chosen_annot.bbox)
+                            ) or (
+                                    # detects if currently investigated bbox is mostly inside other annotation
+                                    # eliminates splitting of bbox into multiple smaller ones
+                                    0 < inside_threshold <
+                                    current_annot.bbox.intersection_area(chosen_annot.bbox) / current_annot.bbox.area()
+                            )
+                    ):
+                        intersects = True
+                        if verbose:
+                            print("------INTERSECTION---------")
+                            print(current_annot.bbox)
+                            print(chosen_annot.bbox)
+                            print(f"{current_annot.confidence} vs {chosen_annot.confidence}")
+
+                        break
+
+                if not intersects:
+                    cleared_annotations.append(current_annot)
+
+            self.annotations[i] = cleared_annotations
+
     @staticmethod
     def resolve_matrix_of_pages(
             subpages=list[list["FullPage"]],
@@ -206,7 +247,6 @@ class FullPage(IFullPage):
     def _resolve_overlaps_smart(
             first: list[Annotation],
             second: list[Annotation],
-
             inside_threshold: float = 0.0,
             iou_threshold: float = 0.25,
             verbose: bool = False,
@@ -271,6 +311,7 @@ class FullPage(IFullPage):
             subpages: list[Self],
             splits: list[list[BoundingBox]],
             edge_offset: int = 20,
+            iou_threshold: float = 0.25,
             verbose: bool = False,
     ) -> Self:
         for i, (subpage, split) in enumerate(zip(subpages, [x for xs in splits for x in xs])):
@@ -290,6 +331,9 @@ class FullPage(IFullPage):
                     ),
                     verbose=verbose
                 )
+            # remove overlaps inside tiles
+            if RESOLVE_OVERLAPS_INSIDE_TILE:
+                subpage.resolve_overlaps_inside_self(inside_threshold=0, iou_threshold=iou_threshold, verbose=verbose)
 
             # shift annotations based in their absolute position in image
             subpage.adjust_position_for_all_annotations(split.left, split.top)
@@ -303,7 +347,7 @@ class FullPage(IFullPage):
 
         # resolve overlaps
         matrix = list(np.reshape(subpages, (len(splits), len(splits[0]))))
-        FullPage.resolve_matrix_of_pages(matrix, inside_threshold=0, iou_threshold=0.25, verbose=verbose)
+        FullPage.resolve_matrix_of_pages(matrix, inside_threshold=0, iou_threshold=iou_threshold, verbose=verbose)
 
         # dump all annotations into a single matrix
         completed_annotations = [[] for _ in range(len(class_names))]
