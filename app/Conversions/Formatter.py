@@ -87,7 +87,7 @@ def format_dataset(
                 resize=resize
             )
 
-        if output_format == InputFormat.YOLO_DETECTION or output_format == InputFormat.YOLO_SEGMENTATION:
+        if output_format == OutputFormat.YOLO_DETECTION or output_format == OutputFormat.YOLO_SEGMENTATION:
             _create_yaml_config_for_yolo(
                 dataset_path,
                 images_dir,
