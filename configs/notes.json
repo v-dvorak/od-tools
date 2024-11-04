@@ -1,0 +1,23 @@
+{
+    "class_mapping": {
+        "0": [
+            [
+                "noteheadFull",
+                "noteheadFullSmall"
+            ],
+            "noteheadFull"
+        ],
+        "1": [
+            [
+                "noteheadHalf",
+                "noteheadHalfSmall"
+            ],
+            "noteheadHalf"
+        ]
+    },
+    "window_size": [
+        640,
+        640
+    ],
+    "overlap_ratio": 0.25
+}

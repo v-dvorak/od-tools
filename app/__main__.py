@@ -2,6 +2,7 @@ import argparse
 import json
 from pathlib import Path
 
+from . import Utils
 from .Conversions import Formatter
 from .Stats import Plots
 from .Val import EvalJob
@@ -82,11 +83,13 @@ if __name__ == "__main__":
 
     # load config
     if args.config is None:
-        with open("configs/default.config", "rt") as f:
+        with open("configs/default.json", "rt") as f:
             loaded_config = json.load(f)
     else:
         with open(args.config, "r", encoding="utf8") as f:
             loaded_config = json.load(f)
+
+    class_id_mapping, class_output_names = Utils.get_mapping_and_names_from_config(loaded_config, args.verbose)
 
     if args.command == "form":
         input_f = Formatter.InputFormat.from_string(args.input_format)
@@ -98,8 +101,8 @@ if __name__ == "__main__":
             Path(args.annot_path),
             Path(args.output),
             # class ids etc.
-            class_reference_table=loaded_config["class_id_reference_table"],
-            class_output_names=loaded_config["class_output_names"],
+            class_reference_table=class_id_mapping,
+            class_output_names=class_output_names,
             # formatting
             input_format=input_f,
             output_format=output_f,
@@ -121,8 +124,8 @@ if __name__ == "__main__":
             Path(args.annot_path),
             Formatter.InputFormat.from_string(args.input_format),
             # class ids etc.
-            class_reference_table=loaded_config["class_id_reference_table"],
-            class_output_names=loaded_config["class_output_names"],
+            class_reference_table=class_id_mapping,
+            class_output_names=class_output_names,
             image_format="jpg",
             # others
             output_path=Path(args.output) if args.output is not None else None,
@@ -139,7 +142,7 @@ if __name__ == "__main__":
             # formatting
             Formatter.InputFormat.from_string(args.input_format),
             EvalJob.ModelType.from_string(args.model_type),
-            loaded_config["class_output_names"],    
+            class_output_names,
             iou_threshold=args.iou,
             overlap=args.overlap,
             # optional graph saving
