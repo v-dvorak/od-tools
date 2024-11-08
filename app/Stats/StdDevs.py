@@ -28,7 +28,7 @@ def plot_stddev(
     plt.ylim(bottom=0)
 
     # legend
-    plt.title("Average number of annotations on single page")
+    plt.title("Average number of annotations per page")
     if names is not None:
         plt.xticks(x, names, rotation=90, ha="center")
     else:
