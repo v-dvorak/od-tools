@@ -97,7 +97,7 @@ def load_and_plot_stats(
             class_output_names,
             summarize=summarize,
             verbose=verbose,
-            output_path=output_dir / "class_counts.png" if output_dir is not None else None,
+            output_path=output_dir / "annot_counts.png" if output_dir is not None else None,
         )
 
     if "xybin" in jobs:
@@ -106,7 +106,7 @@ def load_and_plot_stats(
             num_bins=50,
             xlabel="x",
             ylabel="y",
-            output_path=output_dir / "xy_bins.png" if output_dir is not None else None,
+            output_path=output_dir / "xy_heatmap.png" if output_dir is not None else None,
         )
     if "whbin" in jobs:
         Bins.plot_2d_heatmap(
@@ -114,7 +114,7 @@ def load_and_plot_stats(
             num_bins=50,
             xlabel="width",
             ylabel="height",
-            output_path=output_dir / "wh_bins.png" if output_dir is not None else None,
+            output_path=output_dir / "wh_heatmap.png" if output_dir is not None else None,
         )
 
     if "rect" in jobs:
@@ -122,7 +122,7 @@ def load_and_plot_stats(
         random.Random(seed).shuffle(data)
         Bins.plot_rectangles(
             data[:500],
-            output_path=output_dir / "rect.png" if output_dir is not None else None,
+            output_path=output_dir / "rectangles.png" if output_dir is not None else None,
         )
 
 
