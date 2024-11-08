@@ -40,9 +40,10 @@ if __name__ == "__main__":
     stats_parser.add_argument("images_path", help="Path to images.")
     stats_parser.add_argument("annot_path", help="Path to annotations.")
 
-    stats_parser.add_argument("-o", "--output", type=str, default=None, help="If used, plots will be saved here.")
+    stats_parser.add_argument("-o", "--output_dir", type=str, default=None, help="If used, plots will be saved here.")
     stats_parser.add_argument("-i", "--input_format", default="mung", choices=["mung", "coco", "yolod", "yolos"])
-    # parser.add_argument('-j', '--jobs', nargs='+', help="Specify jobs to run.", choices=)
+    stats_parser.add_argument('-j', '--jobs', nargs='+', help="Specify jobs to run, if None, all jobs will be run.",
+                              choices=["stddev", "xybin", "whbin", "rect"])
 
     # global arguments
     stats_parser.add_argument("-v", "--verbose", action="store_true", help="Make script verbose")
@@ -62,7 +63,7 @@ if __name__ == "__main__":
     val_parser.add_argument("-m", "--model_type", default="yolod", choices=["yolod", "yolos"],
                             help="Type of model.")
 
-    val_parser.add_argument("-o", "--output_path", type=str, default=None,
+    val_parser.add_argument("-o", "--output_dir", type=str, default=None,
                             help="Path to output directory, if not specified, plot will be shown.")
 
     val_parser.add_argument("--image_format", default="jpg", help="Input image format.")
@@ -127,8 +128,9 @@ if __name__ == "__main__":
             class_reference_table=class_id_mapping,
             class_output_names=class_output_names,
             image_format="jpg",
+            jobs=args.jobs,
             # others
-            output_path=Path(args.output) if args.output is not None else None,
+            output_dir=Path(args.output_dir) if args.output_dir is not None else None,
             summarize=args.sum,
             verbose=args.verbose
         )

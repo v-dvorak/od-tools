@@ -1,10 +1,10 @@
+import random
 import statistics
 from pathlib import Path
 
-import matplotlib.pyplot as plt
-import numpy as np
 from tqdm import tqdm
 
+from . import StdDevs, Bins
 from ..Conversions.Annotations import FullPage
 from ..Conversions.Formats import InputFormat
 
@@ -15,9 +15,11 @@ def load_and_plot_stats(
         input_format: InputFormat,
         class_reference_table: dict[str, int],
         class_output_names: list[str],
+        jobs: list[str] = None,
         summarize: bool = False,
         image_format: str = "jpg",
-        output_path: Path = None,
+        output_dir: Path = None,
+        seed: int = 42,
         verbose: bool = False,
 ):
     """
@@ -30,22 +32,35 @@ def load_and_plot_stats(
     :param class_reference_table: dictionary, a function that assigns class id by class name
     :param class_output_names: list of class names
 
+    :param jobs: list of jobs to perform on data
     :param summarize: whether to add "all" category to statistics
 
     :param image_format: annot_format in which the images are saved
-    :param output_path: output path, if not None, graph will be saved here
+    :param output_dir: output path, if not None, graph will be saved here
 
+    :param seed: seed for reproducibility
     :param verbose: make script verbose
     """
+    # set up params
+    if jobs is None:
+        jobs = ["stddev", "xybin", "whbin", "rect"]
+    if output_dir is not None:
+        output_dir.mkdir(exist_ok=True, parents=True)
+
     # load data from given paths
     images = sorted(list(images_path.rglob(f"*.{image_format}")))
     annotations = sorted(list(annotations_path.rglob(f"*.{input_format.to_annotation_extension()}")))
     data = list(zip(images, annotations))
+
+    # setup variables for stats
     counts = [[] for _ in range(len(class_output_names))]
+    all_counts = []
 
-    if summarize:
-        all_counts = []
+    wh_relative_coords = []
+    xy_center_relative_coords = []
+    class_ids_in_order = []
 
+    # retrieve data for every page in data
     for path_to_image, path_to_annotations in tqdm(data, disable=not verbose, desc="Loading annotations"):
         page = FullPage.load_from_file(
             path_to_annotations,
@@ -55,12 +70,70 @@ def load_and_plot_stats(
             input_format
         )
 
-        for i in range(len(counts)):
-            counts[i].append(len(page.annotations[i]))
+        # STDDEV job
+        if "stddev" in jobs:
+            for i in range(len(counts)):
+                counts[i].append(len(page.annotations[i]))
 
-        if summarize:
-            all_counts.append(page.annotation_count())
+            if summarize:
+                all_counts.append(page.annotation_count())
 
+        # WHBIN, RECT and XYBIN job
+        for annot in page.all_annotations():
+            if "whbin" in jobs or "rect" in jobs:
+                wh_relative_coords.append((annot.bbox.width / page.size[0], annot.bbox.height / page.size[1]))
+            if "xybin" in jobs:
+                xy_center_relative_coords.append(
+                    ((annot.bbox.left - annot.bbox.width / 2) / page.size[0],
+                     (annot.bbox.top - annot.bbox.height / 2) / page.size[1])
+                )
+            if "rect" in jobs:
+                class_ids_in_order.append(annot.class_id)
+
+    if "stddev" in jobs:
+        _process_stddev(
+            counts,
+            all_counts,
+            class_output_names,
+            summarize=summarize,
+            verbose=verbose,
+            output_path=output_dir / "class_counts.png" if output_dir is not None else None,
+        )
+
+    if "xybin" in jobs:
+        Bins.plot_2d_heatmap(
+            xy_center_relative_coords,
+            num_bins=50,
+            xlabel="x",
+            ylabel="y",
+            output_path=output_dir / "xy_bins.png" if output_dir is not None else None,
+        )
+    if "whbin" in jobs:
+        Bins.plot_2d_heatmap(
+            wh_relative_coords,
+            num_bins=50,
+            xlabel="width",
+            ylabel="height",
+            output_path=output_dir / "wh_bins.png" if output_dir is not None else None,
+        )
+
+    if "rect" in jobs:
+        data = list(zip(class_ids_in_order, wh_relative_coords))
+        random.Random(seed).shuffle(data)
+        Bins.plot_rectangles(
+            data[:500],
+            output_path=output_dir / "rect.png" if output_dir is not None else None,
+        )
+
+
+def _process_stddev(
+        counts: list[list[int]],
+        all_counts: list[int],
+        class_output_names: list[str],
+        summarize: bool = False,
+        output_path: Path | str = None,
+        verbose: bool = False,
+):
     means = []
     stdevs = []
     for i, count in enumerate(counts):
@@ -79,48 +152,9 @@ def load_and_plot_stats(
             print(f"mean: {means[-1]}")
             print(f"stdev: {stdevs[-1]}")
 
-    _plot_stddev(
+    StdDevs.plot_stddev(
         means,
         stdevs,
         names=class_output_names + ["ALL"] if summarize else class_output_names,
         output_path=output_path
     )
-
-
-def _plot_stddev(
-        means: list[float],
-        std_devs: list[float],
-        names: list[str | int] = None,
-        output_path: Path = None,
-) -> None:
-    """
-    Plot means wíth standard deviations.
-
-    :param means: means of each column
-    :param std_devs: standard deviation of each column
-    :param names: names of each column
-    :param output_path: output path, if not None, graph will be saved here
-    """
-    # plot values
-    x = np.arange(len(means))
-    plt.figure(figsize=(10, 6))
-    plt.errorbar(x, means, yerr=std_devs, fmt='o', ecolor='red', capsize=5)
-
-    # limits on axis
-    plt.xlim(-0.5, len(means) - 0.5)
-    plt.ylim(bottom=0)
-
-    # legend
-    plt.title("Average number of annotations on single page")
-    if names is not None:
-        plt.xticks(x, names, rotation=90, ha="center")
-        # plt.subplots_adjust(bottom=0.3)
-    else:
-        plt.xticks(x, range(len(means)))
-
-    plt.grid(True)
-    plt.tight_layout()
-    if output_path is None:
-        plt.show()
-    else:
-        plt.savefig(output_path)
