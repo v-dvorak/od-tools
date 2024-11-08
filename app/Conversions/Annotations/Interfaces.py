@@ -1,3 +1,4 @@
+from enum import Enum
 from pathlib import Path
 from typing import Generator
 from typing import Self
@@ -9,13 +10,20 @@ from ..Formats import OutputFormat, InputFormat
 from ..IBoundingBox import IBoundingBox
 
 
+class AnnotationType(Enum):
+    GROUND_TRUTH = 1
+    PREDICTION = 2
+
+
 class IAnnotation:
     def __init__(self, class_id: int, left: int, top: int, width: int, height: int,
-                 segmentation: list[tuple[int, int]] | None, confidence: float = 1.0):
+                 segmentation: list[tuple[int, int]] | None, confidence: float = 1.0,
+                 an_type: AnnotationType = AnnotationType.GROUND_TRUTH):
         self.class_id = class_id
         self.bbox = None  # Python shenanigans
         self.segmentation = segmentation
         self.confidence = confidence
+        self.an_type = an_type
         self.image_name: str = None
 
     def __str__(self):

@@ -2,15 +2,16 @@ from typing import Self
 
 from mung.io import Node
 
-from .Interfaces import IAnnotation
+from .Interfaces import IAnnotation, AnnotationType
 from .. import ConversionUtils
 from ..BoundingBox import BoundingBox
 
 
 class Annotation(IAnnotation):
     def __init__(self, class_id: int, left: int, top: int, width: int, height: int,
-                 segmentation: list[tuple[int, int]] | None, confidence: float = 1.0):
-        super().__init__(class_id, left, top, width, height, segmentation, confidence=confidence)
+                 segmentation: list[tuple[int, int]] | None, confidence: float = 1.0,
+                 an_type: AnnotationType = AnnotationType.GROUND_TRUTH):
+        super().__init__(class_id, left, top, width, height, segmentation, confidence=confidence, an_type=an_type)
         self.bbox = BoundingBox.from_ltwh(left, top, width, height)  # Python shenanigans
         if segmentation is None:
             self.segmentation = self.segmentation_from_bounding_box(self.bbox)
@@ -25,11 +26,12 @@ class Annotation(IAnnotation):
         return self.class_id
 
     @classmethod
-    def from_mung_node(cls, class_id: int, node: Node) -> Self:
+    def from_mung_node(cls, class_id: int, node: Node, an_type: AnnotationType = AnnotationType.GROUND_TRUTH) -> Self:
         return cls(
             class_id,
             node.left, node.top, node.width, node.height,
-            ConversionUtils.mung_segmentation_to_absolute_coordinates(node)
+            ConversionUtils.mung_segmentation_to_absolute_coordinates(node),
+            an_type=an_type
         )
 
     @staticmethod
@@ -71,5 +73,6 @@ class Annotation(IAnnotation):
             self.bbox.height,
 
             new_segmentation,
-            confidence=self.confidence
+            confidence=self.confidence,
+            an_type=self.an_type
         )
