@@ -12,6 +12,13 @@ def get_mapping_and_names_from_config(config: dict, verbose: bool = False) -> tu
     output_names = []
     class_id_reference_table = {}
     class_mapping = config["class_mapping"]
+
+    if verbose:
+        header = f"{' Input name':<33} {' Output name':<30} (ID)"
+        print("-" * len(header))
+        print(header)
+        print("-" * len(header))
+
     for class_id in range(len(class_mapping)):
         dato = class_mapping[str(class_id)]
         if isinstance(dato, list):
@@ -28,13 +35,10 @@ def get_mapping_and_names_from_config(config: dict, verbose: bool = False) -> tu
         for name in group:
             class_id_reference_table[name] = class_id
             if verbose:
-                print(f"Mapping \"{name}\" -> \"{output_name}\" (id = {class_id})")
+                q_name = '"' + name + '"'
+                q_output_name = '"' + output_name + '"'
+                print(f"{q_name:<30} -> {q_output_name:<30} ({class_id})")
 
         output_names.append(output_name)
-
-    if verbose:
-        print()
-        names = ", ".join(['"' + name + '"' for name in output_names])
-        print(f"Output names: {names}")
 
     return class_id_reference_table, output_names

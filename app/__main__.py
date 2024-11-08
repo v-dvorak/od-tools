@@ -7,7 +7,8 @@ from .Conversions import Formatter
 from .Stats import Plots
 from .Val import EvalJob
 
-if __name__ == "__main__":
+
+def main():
     parser = argparse.ArgumentParser(
         prog="Object Detection Tools"
     )
@@ -80,7 +81,18 @@ if __name__ == "__main__":
     val_parser.add_argument("--config", default=None,
                             help="Path to config, see \"default.config\" for example.")
 
+    # CONFIG CHECK
+    conf_parser = subparsers.add_parser("confcheck")
+    conf_parser.add_argument("config_path", help="Path to config.")
+
     args = parser.parse_args()
+
+    if args.command == "confcheck":
+        with open(args.config_path, "r", encoding="utf8") as f:
+            loaded_config = json.load(f)
+
+        Utils.get_mapping_and_names_from_config(loaded_config, verbose=True)
+        return 0
 
     # load config
     if args.config is None:
@@ -90,7 +102,7 @@ if __name__ == "__main__":
         with open(args.config, "r", encoding="utf8") as f:
             loaded_config = json.load(f)
 
-    class_id_mapping, class_output_names = Utils.get_mapping_and_names_from_config(loaded_config, args.verbose)
+    class_id_mapping, class_output_names = Utils.get_mapping_and_names_from_config(loaded_config)
 
     if args.command == "form":
         input_f = Formatter.InputFormat.from_string(args.input_format)
@@ -153,3 +165,7 @@ if __name__ == "__main__":
             count=args.count,
             verbose=args.verbose
         )
+
+
+if __name__ == "__main__":
+    main()
