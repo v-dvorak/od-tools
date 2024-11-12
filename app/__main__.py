@@ -160,7 +160,7 @@ def main():
             iou_threshold=args.iou,
             overlap=args.overlap,
             # optional graph saving
-            output_dir=Path(args.output_path) if args.output_path is not None else None,
+            output_dir=Path(args.output_dir) if args.output_dir is not None else None,
             summarize=args.sum,
             count=args.count,
             verbose=args.verbose
