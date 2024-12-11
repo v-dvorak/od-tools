@@ -7,6 +7,7 @@ import numpy as np
 def plot_stddev(
         means: list[float],
         std_devs: list[float],
+        title: str = None,
         names: list[str | int] = None,
         output_path: Path | str = None,
 ) -> None:
@@ -15,6 +16,7 @@ def plot_stddev(
 
     :param means: means of each column
     :param std_devs: standard deviation of each column
+    :param title: title of the plot
     :param names: names of each column
     :param output_path: output path, if not None, graph will be saved here
     """
@@ -24,11 +26,12 @@ def plot_stddev(
     plt.bar(x, height=means, yerr=std_devs, ecolor="red", capsize=5, zorder=10)
 
     # limits on axis
-    plt.xlim(-0.6, len(means) - 0.6)
+    plt.xlim(-0.6, len(means) - 0.4)
     plt.ylim(bottom=0)
 
     # legend
-    plt.title("Average number of annotations per page")
+    if title is not None:
+        plt.title(title)
     if names is not None:
         plt.xticks(x, names, rotation=90, ha="center")
     else:

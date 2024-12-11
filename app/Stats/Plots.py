@@ -8,6 +8,9 @@ from . import StdDevs, Bins
 from ..Conversions.Annotations import FullPage
 from ..Conversions.Formats import InputFormat
 
+SMALL_SIZE_CAP = 32 * 32
+MEDIUM_SIZE_CAP = 96 * 96
+
 
 def load_and_plot_stats(
         images_path: Path,
@@ -56,11 +59,14 @@ def load_and_plot_stats(
     counts = [[] for _ in range(len(class_output_names))]
     all_counts = []
 
+    sizes = [[0, 0, 0] for _ in range(len(annotations))]
+
     wh_relative_coords = []
     xy_center_relative_coords = []
     class_ids_in_order = []
 
     # retrieve data for every page in data
+    annot_index = 0
     for path_to_image, path_to_annotations in tqdm(data, disable=not verbose, desc="Loading annotations"):
         page = FullPage.load_from_file(
             path_to_annotations,
@@ -89,15 +95,36 @@ def load_and_plot_stats(
                 )
             if "rect" in jobs:
                 class_ids_in_order.append(annot.class_id)
+            if "sizes" in jobs:
+                box_area = annot.bbox.area()
+                if box_area < SMALL_SIZE_CAP:
+                    sizes[annot_index][0] += 1
+                elif box_area < MEDIUM_SIZE_CAP:
+                    sizes[annot_index][1] += 1
+                else:
+                    sizes[annot_index][2] += 1
+
+        annot_index += 1
 
     if "stddev" in jobs:
         _process_stddev(
             counts,
             all_counts,
             class_output_names,
+            title="Average number of annotations per page",
             summarize=summarize,
             verbose=verbose,
             output_path=output_dir / "annot_counts.png" if output_dir is not None else None,
+        )
+
+    if "sizes" in jobs:
+        _process_stddev(
+            [[sizes[i][j] for i in range(len(sizes))] for j in range(len(sizes[0]))],
+            None,
+            ["small", "medium", "large"],
+            title="Average annotation sizes per page",
+            output_path=output_dir / "sizes.png" if output_dir is not None else None,
+            verbose=verbose
         )
 
     if "xybin" in jobs:
@@ -128,8 +155,9 @@ def load_and_plot_stats(
 
 def _process_stddev(
         counts: list[list[int]],
-        all_counts: list[int],
+        all_counts: list[int] | None,
         class_output_names: list[str],
+        title: str = None,
         summarize: bool = False,
         output_path: Path | str = None,
         verbose: bool = False,
@@ -155,6 +183,7 @@ def _process_stddev(
     StdDevs.plot_stddev(
         means,
         stdevs,
+        title=title,
         names=class_output_names + ["ALL"] if summarize else class_output_names,
         output_path=output_path
     )

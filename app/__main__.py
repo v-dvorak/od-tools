@@ -44,7 +44,7 @@ def main():
     stats_parser.add_argument("-o", "--output_dir", type=str, default=None, help="If used, plots will be saved here.")
     stats_parser.add_argument("-i", "--input_format", default="mung", choices=["mung", "coco", "yolod", "yolos"])
     stats_parser.add_argument('-j', '--jobs', nargs='+', help="Specify jobs to run, if None, all jobs will be run.",
-                              choices=["stddev", "xybin", "whbin", "rect"])
+                              choices=["stddev", "xybin", "whbin", "rect", "sizes"])
 
     # global arguments
     stats_parser.add_argument("-v", "--verbose", action="store_true", help="Make script verbose")
