@@ -5,6 +5,7 @@ from pathlib import Path
 from tqdm import tqdm
 
 from . import StdDevs, Bins
+from .StatJob import StatJob
 from ..Conversions.Annotations import FullPage
 from ..Conversions.Formats import InputFormat
 
@@ -18,7 +19,7 @@ def load_and_plot_stats(
         input_format: InputFormat,
         class_reference_table: dict[str, int],
         class_output_names: list[str],
-        jobs: list[str] = None,
+        jobs: list[StatJob] = None,
         summarize: bool = False,
         image_format: str = "jpg",
         output_dir: Path = None,
@@ -46,7 +47,7 @@ def load_and_plot_stats(
     """
     # set up params
     if jobs is None:
-        jobs = ["stddev", "xybin", "whbin", "rect"]
+        jobs = StatJob.get_all_jobs()
     if output_dir is not None:
         output_dir.mkdir(exist_ok=True, parents=True)
 
@@ -77,7 +78,7 @@ def load_and_plot_stats(
         )
 
         # STDDEV job
-        if "stddev" in jobs:
+        if StatJob.ANNOTATION_COUNT_ON_PAGE in jobs:
             for i in range(len(counts)):
                 counts[i].append(len(page.annotations[i]))
 
@@ -86,16 +87,16 @@ def load_and_plot_stats(
 
         # WHBIN, RECT and XYBIN job
         for annot in page.all_annotations():
-            if "whbin" in jobs or "rect" in jobs:
+            if StatJob.WH_HEATMAP in jobs or StatJob.RECTANGLE_PLOT in jobs:
                 wh_relative_coords.append((annot.bbox.width / page.size[0], annot.bbox.height / page.size[1]))
-            if "xybin" in jobs:
+            if StatJob.XY_HEATMAP in jobs:
                 xy_center_relative_coords.append(
                     ((annot.bbox.left - annot.bbox.width / 2) / page.size[0],
                      (annot.bbox.top - annot.bbox.height / 2) / page.size[1])
                 )
-            if "rect" in jobs:
+            if StatJob.RECTANGLE_PLOT in jobs:
                 class_ids_in_order.append(annot.class_id)
-            if "sizes" in jobs:
+            if StatJob.ANNOTATION_SIZES_ON_PAGE in jobs:
                 box_area = annot.bbox.area()
                 if box_area < SMALL_SIZE_CAP:
                     sizes[annot_index][0] += 1
@@ -106,51 +107,50 @@ def load_and_plot_stats(
 
         annot_index += 1
 
-    if "stddev" in jobs:
-        _process_stddev(
-            counts,
-            all_counts,
-            class_output_names,
-            title="Average number of annotations per page",
-            summarize=summarize,
-            verbose=verbose,
-            output_path=output_dir / "annot_counts.png" if output_dir is not None else None,
-        )
-
-    if "sizes" in jobs:
-        _process_stddev(
-            [[sizes[i][j] for i in range(len(sizes))] for j in range(len(sizes[0]))],
-            None,
-            ["small", "medium", "large"],
-            title="Average annotation sizes per page",
-            output_path=output_dir / "sizes.png" if output_dir is not None else None,
-            verbose=verbose
-        )
-
-    if "xybin" in jobs:
-        Bins.plot_2d_heatmap(
-            xy_center_relative_coords,
-            num_bins=50,
-            xlabel="x",
-            ylabel="y",
-            output_path=output_dir / "xy_heatmap.png" if output_dir is not None else None,
-        )
-    if "whbin" in jobs:
-        Bins.plot_2d_heatmap(
-            wh_relative_coords,
-            num_bins=50,
-            xlabel="width",
-            ylabel="height",
-            output_path=output_dir / "wh_heatmap.png" if output_dir is not None else None,
-        )
-
-    if "rect" in jobs:
-        data = list(zip(class_ids_in_order, wh_relative_coords))
-        random.Random(seed).shuffle(data)
-        Bins.plot_rectangles(
-            data[:500],
-            output_path=output_dir / "rectangles.png" if output_dir is not None else None,
-        )
+    for job in jobs:
+        match job:
+            case StatJob.ANNOTATION_COUNT_ON_PAGE:
+                _process_stddev(
+                    counts,
+                    all_counts,
+                    class_output_names,
+                    title="Average number of annotations per page",
+                    summarize=summarize,
+                    verbose=verbose,
+                    output_path=output_dir / "annot_counts.png" if output_dir is not None else None,
+                )
+            case StatJob.ANNOTATION_SIZES_ON_PAGE:
+                _process_stddev(
+                    [[sizes[i][j] for i in range(len(sizes))] for j in range(len(sizes[0]))],
+                    None,
+                    ["small", "medium", "large"],
+                    title="Average annotation sizes per page",
+                    output_path=output_dir / "sizes.png" if output_dir is not None else None,
+                    verbose=verbose
+                )
+            case StatJob.XY_HEATMAP:
+                Bins.plot_2d_heatmap(
+                    xy_center_relative_coords,
+                    num_bins=50,
+                    xlabel="x",
+                    ylabel="y",
+                    output_path=output_dir / "xy_heatmap.png" if output_dir is not None else None,
+                )
+            case StatJob.WH_HEATMAP:
+                Bins.plot_2d_heatmap(
+                    wh_relative_coords,
+                    num_bins=50,
+                    xlabel="width",
+                    ylabel="height",
+                    output_path=output_dir / "wh_heatmap.png" if output_dir is not None else None,
+                )
+            case StatJob.RECTANGLE_PLOT:
+                data = list(zip(class_ids_in_order, wh_relative_coords))
+                random.Random(seed).shuffle(data)
+                Bins.plot_rectangles(
+                    data[:500],
+                    output_path=output_dir / "rectangles.png" if output_dir is not None else None,
+                )
 
 
 def _process_stddev(

@@ -5,6 +5,7 @@ from pathlib import Path
 from . import Utils
 from .Conversions import Formatter
 from .Stats import Plots
+from .Stats.StatJob import StatJob
 from .Val import EvalJob
 
 
@@ -44,7 +45,7 @@ def main():
     stats_parser.add_argument("-o", "--output_dir", type=str, default=None, help="If used, plots will be saved here.")
     stats_parser.add_argument("-i", "--input_format", default="mung", choices=["mung", "coco", "yolod", "yolos"])
     stats_parser.add_argument('-j', '--jobs', nargs='+', help="Specify jobs to run, if None, all jobs will be run.",
-                              choices=["stddev", "xybin", "whbin", "rect", "sizes"])
+                              choices=StatJob.get_all_jobs_str())
 
     # global arguments
     stats_parser.add_argument("-v", "--verbose", action="store_true", help="Make script verbose")
@@ -140,7 +141,7 @@ def main():
             class_reference_table=class_id_mapping,
             class_output_names=class_output_names,
             image_format="jpg",
-            jobs=args.jobs,
+            jobs=[StatJob.from_string(job) for job in args.jobs],
             # others
             output_dir=Path(args.output_dir) if args.output_dir is not None else None,
             summarize=args.sum,
