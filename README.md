@@ -1,6 +1,6 @@
-# Notehead experiments
+# Object Detection Tools
 
-This project is currenctly a work in progress.
+This project is currenctly a work in progress. Conversions between dataset formats, image splitting and stitching for detection of small objects.
 
 ## Dataset visualization
 
