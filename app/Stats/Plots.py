@@ -108,6 +108,10 @@ def load_and_plot_stats(
         annot_index += 1
 
     for job in jobs:
+        output_path = None
+        if output_dir is not None:
+            output_path = output_dir / f"{job.value}.png"
+
         match job:
             case StatJob.ANNOTATION_COUNT_ON_PAGE:
                 _process_stddev(
@@ -117,7 +121,7 @@ def load_and_plot_stats(
                     title="Average number of annotations per page",
                     summarize=summarize,
                     verbose=verbose,
-                    output_path=output_dir / "annot_counts.png" if output_dir is not None else None,
+                    output_path=output_path,
                 )
             case StatJob.ANNOTATION_SIZES_ON_PAGE:
                 _process_stddev(
@@ -125,7 +129,7 @@ def load_and_plot_stats(
                     None,
                     ["small", "medium", "large"],
                     title="Average annotation sizes per page",
-                    output_path=output_dir / "sizes.png" if output_dir is not None else None,
+                    output_path=output_path,
                     verbose=verbose
                 )
             case StatJob.XY_HEATMAP:
@@ -134,7 +138,7 @@ def load_and_plot_stats(
                     num_bins=50,
                     xlabel="x",
                     ylabel="y",
-                    output_path=output_dir / "xy_heatmap.png" if output_dir is not None else None,
+                    output_path=output_path,
                 )
             case StatJob.WH_HEATMAP:
                 Bins.plot_2d_heatmap(
@@ -142,14 +146,14 @@ def load_and_plot_stats(
                     num_bins=50,
                     xlabel="width",
                     ylabel="height",
-                    output_path=output_dir / "wh_heatmap.png" if output_dir is not None else None,
+                    output_path=output_path,
                 )
             case StatJob.RECTANGLE_PLOT:
                 data = list(zip(class_ids_in_order, wh_relative_coords))
                 random.Random(seed).shuffle(data)
                 Bins.plot_rectangles(
                     data[:500],
-                    output_path=output_dir / "rectangles.png" if output_dir is not None else None,
+                    output_path=output_path,
                 )
 
 
