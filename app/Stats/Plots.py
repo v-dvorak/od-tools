@@ -47,7 +47,7 @@ def load_and_plot_stats(
     """
     # set up params
     if jobs is None:
-        jobs = StatJob.get_all_jobs()
+        jobs = StatJob.get_all()
     if output_dir is not None:
         output_dir.mkdir(exist_ok=True, parents=True)
 

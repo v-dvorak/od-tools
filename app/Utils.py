@@ -1,3 +1,7 @@
+from enum import Enum
+from typing import Self
+
+
 def get_mapping_and_names_from_config(config: dict, verbose: bool = False) -> tuple[dict[str, int], list[str]]:
     """
     Get class name mapping to ids and output names from config file.
@@ -42,3 +46,22 @@ def get_mapping_and_names_from_config(config: dict, verbose: bool = False) -> tu
         output_names.append(output_name)
 
     return class_id_reference_table, output_names
+
+
+class ExtendedEnum(Enum):
+    @classmethod
+    def get_all(cls) -> list[Self]:
+        return [e for e in cls]
+
+    @classmethod
+    def get_all_value(cls) -> list[int | str]:
+        return [e.value for e in cls]
+
+    @classmethod
+    def from_string(cls, token:str) -> Self:
+        token = token.lower()
+        for e in cls:
+            if e.value == token:
+                return e
+
+        return ValueError(f"Invalid input format: \"{token}\"")
