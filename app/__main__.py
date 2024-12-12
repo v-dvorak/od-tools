@@ -4,6 +4,7 @@ from pathlib import Path
 
 from . import Utils
 from .Conversions import Formatter
+from .Conversions.Formats import InputFormat, OutputFormat
 from .Stats import Plots
 from .Stats.StatJob import StatJob
 from .Val import EvalJob
@@ -21,8 +22,10 @@ def main():
     form_parser.add_argument("images_path", help="Path to images.")
     form_parser.add_argument("annot_path", help="Path to annotations.")
 
-    form_parser.add_argument("-i", "--input_format", default="mung", choices=["mung", "coco", "yolod", "yolos"])
-    form_parser.add_argument("-o", "--output_format", default="coco", choices=["mung", "coco", "yolod", "yolos"])
+    form_parser.add_argument("-i", "--input_format", default=InputFormat.MUNG.value,
+                             choices=InputFormat.get_all_value())
+    form_parser.add_argument("-o", "--output_format", default=OutputFormat.COCO.value,
+                             choices=OutputFormat.get_all_value())
     form_parser.add_argument("--image_format", default="jpg", help="Input image format.")
 
     form_parser.add_argument("-s", "--split", type=float, default=1.0, help="Train/test split ratio.")
@@ -43,9 +46,10 @@ def main():
     stats_parser.add_argument("annot_path", help="Path to annotations.")
 
     stats_parser.add_argument("-o", "--output_dir", type=str, default=None, help="If used, plots will be saved here.")
-    stats_parser.add_argument("-i", "--input_format", default="mung", choices=["mung", "coco", "yolod", "yolos"])
+    stats_parser.add_argument("-i", "--input_format", default=InputFormat.MUNG.value,
+                              choices=InputFormat.get_all_value())
     stats_parser.add_argument('-j', '--jobs', nargs='+', help="Specify jobs to run, if None, all jobs will be run.",
-                              choices=StatJob.get_all_jobs_value())
+                              choices=StatJob.get_all_value())
 
     # global arguments
     stats_parser.add_argument("-v", "--verbose", action="store_true", help="Make script verbose")
@@ -60,8 +64,8 @@ def main():
     val_parser.add_argument("images_path", help="Path to images.")
     val_parser.add_argument("annot_path", help="Path to annotations.")
 
-    val_parser.add_argument("-i", "--input_format", default="yolod", choices=["mung", "coco", "yolod", "yolos"],
-                            help="Validation dataset annotation format.")
+    val_parser.add_argument("-i", "--input_format", default=InputFormat.MUNG.value,
+                            choices=InputFormat.get_all_value())
     val_parser.add_argument("-m", "--model_type", default="yolod", choices=["yolod", "yolos"],
                             help="Type of model.")
 
@@ -106,8 +110,8 @@ def main():
     class_id_mapping, class_output_names = Utils.get_mapping_and_names_from_config(loaded_config)
 
     if args.command == "form":
-        input_f = Formatter.InputFormat.from_string(args.input_format)
-        output_f = Formatter.OutputFormat.from_string(args.output_format)
+        input_f = InputFormat.from_string(args.input_format)
+        output_f = OutputFormat.from_string(args.output_format)
 
         Formatter.format_dataset(
             # directories
@@ -136,7 +140,7 @@ def main():
             # directories
             Path(args.images_path),
             Path(args.annot_path),
-            Formatter.InputFormat.from_string(args.input_format),
+            InputFormat.from_string(args.input_format),
             # class ids etc.
             class_reference_table=class_id_mapping,
             class_output_names=class_output_names,
@@ -155,7 +159,7 @@ def main():
             Path(args.images_path),
             Path(args.annot_path),
             # formatting
-            Formatter.InputFormat.from_string(args.input_format),
+            InputFormat.from_string(args.input_format),
             EvalJob.ModelType.from_string(args.model_type),
             class_output_names,
             iou_threshold=args.iou,
