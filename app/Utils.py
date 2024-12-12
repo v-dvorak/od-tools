@@ -1,6 +1,8 @@
 from enum import Enum
 from typing import Self
 
+from prettytable import PrettyTable, MARKDOWN
+
 
 def get_mapping_and_names_from_config(config: dict, verbose: bool = False) -> tuple[dict[str, int], list[str]]:
     """
@@ -13,15 +15,18 @@ def get_mapping_and_names_from_config(config: dict, verbose: bool = False) -> tu
     if verbose:
         print("Parsing config...")
         print()
+
     output_names = []
     class_id_reference_table = {}
     class_mapping = config["class_mapping"]
 
     if verbose:
-        header = f"{' Input name':<33} {' Output name':<30} (ID)"
-        print("-" * len(header))
-        print(header)
-        print("-" * len(header))
+        # setup table
+        table = PrettyTable(["Input name", "Output name", "ID"])
+        table.set_style(MARKDOWN)
+        table.align["Input name"] = "l"
+        table.align["Output name"] = "l"
+        table.align["ID"] = "c"
 
     for class_id in range(len(class_mapping)):
         dato = class_mapping[str(class_id)]
@@ -39,11 +44,13 @@ def get_mapping_and_names_from_config(config: dict, verbose: bool = False) -> tu
         for name in group:
             class_id_reference_table[name] = class_id
             if verbose:
-                q_name = '"' + name + '"'
-                q_output_name = '"' + output_name + '"'
-                print(f"{q_name:<30} -> {q_output_name:<30} ({class_id})")
+                table.add_row(['"' + name + '"', '"' + output_name + '"', class_id])
 
         output_names.append(output_name)
+
+    if verbose:
+        table.sortby = "ID"
+        print(table)
 
     return class_id_reference_table, output_names
 
