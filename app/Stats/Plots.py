@@ -2,6 +2,7 @@ import random
 import statistics
 from pathlib import Path
 
+from prettytable import PrettyTable, MARKDOWN
 from tqdm import tqdm
 
 from . import StdDevs, Bins
@@ -88,7 +89,10 @@ def load_and_plot_stats(
         # WHBIN, RECT and XYBIN job
         for annot in page.all_annotations():
             if StatJob.WH_HEATMAP in jobs or StatJob.RECTANGLE_PLOT in jobs:
-                wh_relative_coords.append((annot.bbox.width / page.size[0], annot.bbox.height / page.size[1]))
+                wh_relative_coords.append(
+                    (annot.bbox.width / page.size[0],
+                     annot.bbox.height / page.size[1])
+                )
             if StatJob.XY_HEATMAP in jobs:
                 xy_center_relative_coords.append(
                     ((annot.bbox.left - annot.bbox.width / 2) / page.size[0],
@@ -168,21 +172,27 @@ def _process_stddev(
 ):
     means = []
     stdevs = []
+
+    if verbose:
+        table = PrettyTable(["ID", "Class name", "Mean", "Stddev"])
+        table.set_style(MARKDOWN)
+        table.align = "r"
+
     for i, count in enumerate(counts):
         means.append(statistics.mean(count))
         stdevs.append(statistics.stdev(count))
         if verbose:
-            print(f"class: {i}, {class_output_names[i]}")
-            print(f"mean: {means[-1]}")
-            print(f"stdev: {stdevs[-1]}")
+            table.add_row([i, class_output_names[i], f"{means[-1]:.4f}", f"{stdevs[-1]:.4f}"])
 
     if summarize:
         means.append(statistics.mean(all_counts))
         stdevs.append(statistics.stdev(all_counts))
         if verbose:
-            print("class: All")
-            print(f"mean: {means[-1]}")
-            print(f"stdev: {stdevs[-1]}")
+            table.add_row([-1, "ALL", f"{means[-1]:.4f}", f"{stdevs[-1]:.4f}"])
+            table.sortby = "ID"
+
+    if verbose:
+        print(table)
 
     StdDevs.plot_stddev(
         means,
