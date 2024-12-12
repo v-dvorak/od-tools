@@ -58,7 +58,7 @@ class ExtendedEnum(Enum):
         return [e.value for e in cls]
 
     @classmethod
-    def from_string(cls, token:str) -> Self:
+    def from_string(cls, token: str) -> Self:
         token = token.lower()
         for e in cls:
             if e.value == token:

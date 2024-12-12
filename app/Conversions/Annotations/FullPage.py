@@ -64,39 +64,40 @@ class FullPage(IFullPage):
             input_format: InputFormat,
             an_type: AnnotationType = AnnotationType.GROUND_TRUTH
     ) -> Self:
-        if input_format == InputFormat.COCO:
-            return _COCOHelper.from_coco_file(
-                annot_path,
-                class_reference_table,
-                class_output_names,
-                an_type=an_type
-            )
-        elif input_format == InputFormat.MUNG:
-            return _MuNGHelper.from_mung(
-                annot_path,
-                image_path,
-                class_reference_table,
-                class_output_names,
-                an_type=an_type
-            )
-        elif input_format == InputFormat.YOLO_DETECTION:
-            return _YOLOHelper.from_yolo_detection(
-                annot_path,
-                image_path,
-                class_reference_table,
-                class_output_names,
-                an_type=an_type
-            )
-        elif input_format == InputFormat.YOLO_SEGMENTATION:
-            return _YOLOHelper.from_yolo_segmentation(
-                annot_path,
-                image_path,
-                class_reference_table,
-                class_output_names,
-                an_type=an_type
-            )
-        else:
-            raise ValueError(f"Unsupported input format: {input_format}")
+        match input_format:
+            case InputFormat.COCO:
+                return _COCOHelper.from_coco_file(
+                    annot_path,
+                    class_reference_table,
+                    class_output_names,
+                    an_type=an_type
+                )
+            case InputFormat.MUNG:
+                return _MuNGHelper.from_mung(
+                    annot_path,
+                    image_path,
+                    class_reference_table,
+                    class_output_names,
+                    an_type=an_type
+                )
+            case InputFormat.YOLO_DETECTION:
+                return _YOLOHelper.from_yolo_detection(
+                    annot_path,
+                    image_path,
+                    class_reference_table,
+                    class_output_names,
+                    an_type=an_type
+                )
+            case InputFormat.YOLO_SEGMENTATION:
+                return _YOLOHelper.from_yolo_segmentation(
+                    annot_path,
+                    image_path,
+                    class_reference_table,
+                    class_output_names,
+                    an_type=an_type
+                )
+            case _:
+                raise ValueError(f"Unsupported input format: {input_format}")
 
     def save_to_file(
             self,
@@ -104,18 +105,19 @@ class FullPage(IFullPage):
             dato_name: Path | str,
             output_format: OutputFormat,
     ) -> None:
-        if output_format == OutputFormat.COCO:
-            _COCOHelper.save_annotation(
-                self,
-                output_dir / f"{dato_name}.{output_format.to_annotation_extension()}",
-            )
-        elif output_format == OutputFormat.YOLO_DETECTION:
-            _YOLOHelper.save_yolo_detection(
-                self,
-                output_dir / f"{dato_name}.{output_format.to_annotation_extension()}",
-            )
-        else:
-            raise NotImplementedError()
+        match output_format:
+            case OutputFormat.COCO:
+                _COCOHelper.save_annotation(
+                    self,
+                    output_dir / f"{dato_name}.{output_format.to_annotation_extension()}",
+                )
+            case OutputFormat.YOLO_DETECTION:
+                _YOLOHelper.save_yolo_detection(
+                    self,
+                    output_dir / f"{dato_name}.{output_format.to_annotation_extension()}",
+                )
+            case _:
+                raise NotImplementedError()
 
     @classmethod
     def from_yolo_result(cls, result: Results) -> Self:
