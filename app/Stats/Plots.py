@@ -174,7 +174,7 @@ def _process_stddev(
     stdevs = []
 
     if verbose:
-        table = PrettyTable(["ID", "Class name", "Mean", "Stddev"])
+        table = PrettyTable(["ID", "Name", "Mean", "Stddev"])
         table.set_style(MARKDOWN)
         table.align = "r"
 
@@ -192,7 +192,9 @@ def _process_stddev(
             table.sortby = "ID"
 
     if verbose:
+        print(title)
         print(table)
+        print()
 
     StdDevs.plot_stddev(
         means,
