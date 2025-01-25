@@ -2,6 +2,7 @@ import json
 import math
 import warnings
 from importlib import resources as impresources
+from pathlib import Path
 
 import cv2
 import numpy as np
@@ -21,31 +22,32 @@ def hex_to_rgb(hex_color: str):
 
 
 def draw_rectangles_on_image(
-        image_path: str | cv2.Mat,
+        image: str | Path | cv2.Mat,
         rectangles: list[BoundingBox],
         thickness: int = 5,
-        color: tuple[int, int, int] = None,
+        color: tuple[int, int, int] | list[tuple[int, int, int]] = None,
         shift_based_on_thickness: bool = False,
         output_path: str = None,
-        loaded: bool = False
+        show: bool = False
 ):
     """
     Draws a list of annotations on the given path_to_image.
 
-    :param image_path: path to path_to_image
+    :param image: image or path to image
     :param rectangles: list of BoundingBox objects to display
     :param thickness: drawn rectangle thickness
-    :param color: if not None, this color is applied to every rectangle,
+    :param color: if not None, this color is applied to every rectangle
     otherwise each rectangle is assigned a unique color
     :param shift_based_on_thickness: whether the shift outline by "thickness" numer of pixels, better visualization
-    :param output_path: path to store the path_to_image at
-    :param loaded: if true, passed path_to_image is already loaded as cv2 path_to_image
+    :param output_path: path to store the final image at
+    :param show: whether to show the final image or not
     """
-    # Load the path_to_image using OpenCV
-    if loaded:
-        img = image_path
+    # Load the image using OpenCV
+    if isinstance(image, Path) or isinstance(image, str):
+        img = cv2.imread(image)
     else:
-        img = cv2.imread(image_path)
+        img = image
+
     # draw annotations
     for i, rectangle in enumerate(rectangles):
         (x1, y1, x2, y2) = rectangle.coordinates()
@@ -63,10 +65,13 @@ def draw_rectangles_on_image(
         else:
             cv2.rectangle(img, (x1, y1), (x2, y2), color=c_color, thickness=thickness)
 
-    # convert BGR to RGB
-    img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    # display
-    Image.fromarray(img_rgb).show()
+    # optional show
+    if show:
+        # convert BGR to RGB
+        img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        # display
+        Image.fromarray(img_rgb).show()
+
     # optional save
     if output_path is not None:
         cv2.imwrite(output_path, img)
