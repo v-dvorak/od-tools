@@ -125,15 +125,19 @@ class FullPage(IFullPage):
         predictions = [[] for _ in range(class_count)]
         class_names = [result.names[i] for i in range(class_count)]
         for i in range(len(result.boxes.xywh)):
-            x_center, y_center, width, height = (int(result.boxes.xywh[i, 0]), int(result.boxes.xywh[i, 1]),
-                                                 int(result.boxes.xywh[i, 2]), int(result.boxes.xywh[i, 3]))
+            x_center, y_center, width, height = (
+                float(result.boxes.xywh[i, 0]),
+                float(result.boxes.xywh[i, 1]),
+                float(result.boxes.xywh[i, 2]),
+                float(result.boxes.xywh[i, 3])
+            )
             predictions[int(result.boxes.cls[i])].append(
                 Annotation(
                     int(result.boxes.cls[i]),
-                    x_center - width // 2,
-                    y_center - height // 2,
-                    width,
-                    height,
+                    round(x_center - width / 2),
+                    round(y_center - height / 2),
+                    round(width),
+                    round(height),
                     # TODO: what to do with segmentation?
                     segmentation=None,
                     confidence=float(result.boxes.conf[i]),
