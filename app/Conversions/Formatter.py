@@ -1,12 +1,55 @@
+import shutil
 from pathlib import Path
 
 import yaml
-import shutil
 from tqdm import tqdm
 
 from . import BatchProcessor
 from . import ConversionUtils
 from .Formats import InputFormat, OutputFormat
+
+
+def _setup_split_dirs(
+        dataset_path: Path,
+        exist_ok: bool = True,
+        parents: bool = True
+) -> tuple[Path, Path, Path, Path]:
+    train_image_dir = dataset_path / "images" / "train"
+    val_image_dir = dataset_path / "images" / "val"
+    train_annot_dir = dataset_path / "labels" / "train"
+    val_annot_dir = dataset_path / "labels" / "val"
+
+    train_image_dir.mkdir(exist_ok=exist_ok, parents=parents)
+    val_image_dir.mkdir(exist_ok=exist_ok, parents=parents)
+    train_annot_dir.mkdir(exist_ok=exist_ok, parents=parents)
+    val_annot_dir.mkdir(exist_ok=exist_ok, parents=parents)
+
+    return train_image_dir, val_image_dir, train_annot_dir, val_annot_dir
+
+
+def _setup_no_split_dirs(
+        dataset_path: Path,
+        exist_ok: bool = True,
+        parents: bool = True
+) -> tuple[Path, Path]:
+    images_dir = dataset_path / "images"
+    annot_dir = dataset_path / "labels"
+
+    images_dir.mkdir(exist_ok=exist_ok, parents=parents)
+    annot_dir.mkdir(exist_ok=exist_ok, parents=parents)
+
+    return images_dir, annot_dir
+
+
+def _load_data_from_paths(
+        images_path: Path,
+        images_search_regex: str,
+        annotations_path: Path,
+        annotations_search_regex: str,
+) -> list[tuple[Path, Path]]:
+    images = sorted(list(images_path.rglob(images_search_regex)))
+    annotations = sorted(list(annotations_path.rglob(annotations_search_regex)))
+    return list(zip(images, annotations))
 
 
 def split_and_save_dataset(
@@ -17,30 +60,22 @@ def split_and_save_dataset(
         seed: int = 42,
         verbose: bool = False,
 ) -> None:
-    images = sorted(list(images_path.rglob("*")))
-    annotations = sorted(list(annotations_path.rglob("*")))
-    data = list(zip(images, annotations))
-
-    # set up folders
-    train_image_dir = dataset_path / "images" / "train"
-    val_image_dir = dataset_path / "images" / "val"
-    train_annotation_dir = dataset_path / "labels" / "train"
-    val_annotation_dir = dataset_path / "labels" / "val"
-
-    train_image_dir.mkdir(exist_ok=True, parents=True)
-    val_image_dir.mkdir(exist_ok=True, parents=True)
-    train_annotation_dir.mkdir(exist_ok=True, parents=True)
-    val_annotation_dir.mkdir(exist_ok=True, parents=True)
+    data = _load_data_from_paths(
+        images_path, "*",
+        annotations_path, "*"
+    )
+    train_image_dir, val_image_dir, train_annot_dir, val_annot_dir = _setup_split_dirs(dataset_path)
 
     # split
     train_data, val_data = ConversionUtils.split_dataset(data, split_ratio=split_ratio, seed=seed)
+
     for image, annotation in tqdm(train_data, desc="Processing train", disable=not verbose):
         shutil.copy(image, train_image_dir / image.name)
-        shutil.copy(annotation, train_annotation_dir / annotation.name)
+        shutil.copy(annotation, train_annot_dir / annotation.name)
 
     for image, annotation in tqdm(val_data, desc="Processing val", disable=not verbose):
         shutil.copy(image, val_image_dir / image.name)
-        shutil.copy(annotation, val_annotation_dir / annotation.name)
+        shutil.copy(annotation, val_annot_dir / annotation.name)
 
 
 def format_dataset(
@@ -62,7 +97,7 @@ def format_dataset(
 ) -> None:
     """
     Finds all images and subpages inside given files
-    and processes them according to the split ratio and output annot_format.
+    and processes them according to the split ratio and output format.
 
     :param images_path: path to directory with images
     :param annotations_path: path to directory with labels
@@ -77,7 +112,7 @@ def format_dataset(
     :param split_ratio: train/test split ratio
     :param resize: resizes images so that the longer side is this many pixels long
     :param seed: seed for dataset shuffling
-    :param image_format: annot_format in which the images are saved
+    :param image_format: format in which the images are saved
 
     :param window_size: size of the sliding window applied to image in case of image splitting
     :param overlap_ratio: overlap ratio between two tiles in case of image splitting
@@ -85,24 +120,20 @@ def format_dataset(
 
     :param verbose: make script verbose
     """
-    # load data from given paths
-    images = sorted(list(images_path.rglob(f"*.{image_format}")))
-    annotations = sorted(list(annotations_path.rglob(f"*.{input_format.to_annotation_extension()}")))
-    data = list(zip(images, annotations))
+    data = _load_data_from_paths(
+        images_path, f"*.{image_format}",
+        annotations_path, f"*.{input_format.to_annotation_extension()}"
+    )
 
     # dump everything into one directory
     if split_ratio == 1.0:
         # set up folders
-        images_dir = dataset_path / "images"
-        annot_dir = dataset_path / "labels"
-
-        images_dir.mkdir(exist_ok=True, parents=True)
-        annot_dir.mkdir(exist_ok=True, parents=True)
+        image_dir, annot_dir = _setup_no_split_dirs(dataset_path)
 
         if image_splitting:
             BatchProcessor.process_split_batch(
                 data,
-                (images_dir, annot_dir),
+                (image_dir, annot_dir),
                 class_reference_table,
                 class_output_names,
                 input_format,
@@ -114,7 +145,7 @@ def format_dataset(
         else:
             BatchProcessor.process_normal_batch(
                 data,
-                (images_dir, annot_dir),
+                (image_dir, annot_dir),
                 class_reference_table,
                 class_output_names,
                 input_format,
@@ -126,23 +157,15 @@ def format_dataset(
         if output_format == OutputFormat.YOLO_DETECTION or output_format == OutputFormat.YOLO_SEGMENTATION:
             _create_yaml_config_for_yolo(
                 dataset_path,
-                images_dir,
+                image_dir,
                 class_output_names,
                 verbose=verbose
             )
 
     # split to train/test
     else:
-        # set up folders
-        train_image_dir = dataset_path / "images" / "train"
-        val_image_dir = dataset_path / "images" / "val"
-        train_annotation_dir = dataset_path / "labels" / "train"
-        val_annotation_dir = dataset_path / "labels" / "val"
-
-        train_image_dir.mkdir(exist_ok=True, parents=True)
-        val_image_dir.mkdir(exist_ok=True, parents=True)
-        train_annotation_dir.mkdir(exist_ok=True, parents=True)
-        val_annotation_dir.mkdir(exist_ok=True, parents=True)
+        # setup folders
+        train_image_dir, val_image_dir, train_annot_dir, val_annot_dir = _setup_split_dirs(dataset_path)
 
         # split
         train_data, val_data = ConversionUtils.split_dataset(data, split_ratio=split_ratio, seed=seed)
@@ -150,7 +173,7 @@ def format_dataset(
         if image_splitting:
             BatchProcessor.process_split_batch(
                 train_data,
-                (train_image_dir, train_annotation_dir),
+                (train_image_dir, train_annot_dir),
                 class_reference_table,
                 class_output_names,
                 input_format,
@@ -162,7 +185,7 @@ def format_dataset(
 
             BatchProcessor.process_split_batch(
                 val_data,
-                (val_image_dir, val_annotation_dir),
+                (val_image_dir, val_annot_dir),
                 class_reference_table,
                 class_output_names,
                 input_format,
@@ -174,7 +197,7 @@ def format_dataset(
         else:
             BatchProcessor.process_normal_batch(
                 train_data,
-                (train_image_dir, train_annotation_dir),
+                (train_image_dir, train_annot_dir),
                 class_reference_table,
                 class_output_names,
                 input_format,
@@ -185,7 +208,7 @@ def format_dataset(
 
             BatchProcessor.process_normal_batch(
                 val_data,
-                (val_image_dir, val_annotation_dir),
+                (val_image_dir, val_annot_dir),
                 class_reference_table,
                 class_output_names,
                 input_format,
@@ -213,7 +236,7 @@ def _create_yaml_config_for_yolo(
         verbose: bool = False,
 ):
     """
-    Creates .yaml file in YOLO output_format necessary for model training.
+    Creates .yaml file in YOLO format necessary for model training.
 
     :param dataset_path: path to dataset directory
     :param train_path: path to train directory
