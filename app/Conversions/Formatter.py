@@ -10,14 +10,14 @@ from .Formats import InputFormat, OutputFormat
 
 
 def _setup_split_dirs(
-        dataset_path: Path,
+        output_dir: Path,
         exist_ok: bool = True,
         parents: bool = True
 ) -> tuple[Path, Path, Path, Path]:
-    train_image_dir = dataset_path / "images" / "train"
-    val_image_dir = dataset_path / "images" / "val"
-    train_annot_dir = dataset_path / "labels" / "train"
-    val_annot_dir = dataset_path / "labels" / "val"
+    train_image_dir = output_dir / "images" / "train"
+    val_image_dir = output_dir / "images" / "val"
+    train_annot_dir = output_dir / "labels" / "train"
+    val_annot_dir = output_dir / "labels" / "val"
 
     train_image_dir.mkdir(exist_ok=exist_ok, parents=parents)
     val_image_dir.mkdir(exist_ok=exist_ok, parents=parents)
@@ -28,12 +28,12 @@ def _setup_split_dirs(
 
 
 def _setup_no_split_dirs(
-        dataset_path: Path,
+        output_dir: Path,
         exist_ok: bool = True,
         parents: bool = True
 ) -> tuple[Path, Path]:
-    images_dir = dataset_path / "images"
-    annot_dir = dataset_path / "labels"
+    images_dir = output_dir / "images"
+    annot_dir = output_dir / "labels"
 
     images_dir.mkdir(exist_ok=exist_ok, parents=parents)
     annot_dir.mkdir(exist_ok=exist_ok, parents=parents)
@@ -42,29 +42,43 @@ def _setup_no_split_dirs(
 
 
 def _load_data_from_paths(
-        images_path: Path,
+        images_dir: Path,
         images_search_regex: str,
-        annotations_path: Path,
+        annotations_dir: Path,
         annotations_search_regex: str,
 ) -> list[tuple[Path, Path]]:
-    images = sorted(list(images_path.rglob(images_search_regex)))
-    annotations = sorted(list(annotations_path.rglob(annotations_search_regex)))
+    images = sorted(list(images_dir.rglob(images_search_regex)))
+    annotations = sorted(list(annotations_dir.rglob(annotations_search_regex)))
     return list(zip(images, annotations))
 
 
 def split_and_save_dataset(
-        images_path: Path,
-        annotations_path: Path,
-        dataset_path: Path,
+        output_path: Path,
+        image_source_dir: Path,
+        annot_source_dir: Path,
         split_ratio: float = 0.9,
         seed: int = 42,
         verbose: bool = False,
 ) -> None:
+    """
+    Splits images and annotations into train and test (val) datasets.
+    Given data are split based on the split_ratio regardless of their format.
+    Config file will not be created.
+
+    :param output_path: path to save split dataset
+    :param image_source_dir: path to image directory
+    :param annot_source_dir: path to annotation directory
+
+    :param split_ratio: split ratio
+    :param seed: random seed
+
+    :param verbose: make script verbose
+    """
     data = _load_data_from_paths(
-        images_path, "*",
-        annotations_path, "*"
+        image_source_dir, "*",
+        annot_source_dir, "*"
     )
-    train_image_dir, val_image_dir, train_annot_dir, val_annot_dir = _setup_split_dirs(dataset_path)
+    train_image_dir, val_image_dir, train_annot_dir, val_annot_dir = _setup_split_dirs(output_path)
 
     # split
     train_data, val_data = ConversionUtils.split_dataset(data, split_ratio=split_ratio, seed=seed)
@@ -79,9 +93,9 @@ def split_and_save_dataset(
 
 
 def format_dataset(
-        images_path: Path,
-        annotations_path: Path,
-        dataset_path: Path,
+        output_dir: Path,
+        image_source_dir: Path,
+        annot_source_dir: Path,
         class_reference_table: dict[str, int],
         class_output_names: list[str],
         input_format: InputFormat,
@@ -99,9 +113,9 @@ def format_dataset(
     Finds all images and subpages inside given files
     and processes them according to the split ratio and output format.
 
-    :param images_path: path to directory with images
-    :param annotations_path: path to directory with labels
-    :param dataset_path: path to final dataset, all data will be outputted here
+    :param image_source_dir: path to directory with images
+    :param annot_source_dir: path to directory with labels
+    :param output_dir: path to final dataset, all data will be outputted here
 
     :param class_reference_table: dictionary, a function that assigns class id by class name
     :param class_output_names: list of class names
@@ -121,19 +135,20 @@ def format_dataset(
     :param verbose: make script verbose
     """
     data = _load_data_from_paths(
-        images_path, f"*.{image_format}",
-        annotations_path, f"*.{input_format.to_annotation_extension()}"
+        image_source_dir, f"*.{image_format}",
+        annot_source_dir, f"*.{input_format.to_annotation_extension()}"
     )
 
     # dump everything into one directory
     if split_ratio == 1.0:
         # set up folders
-        image_dir, annot_dir = _setup_no_split_dirs(dataset_path)
+        out_image_dir, out_annot_dir = _setup_no_split_dirs(output_dir)
 
         if image_splitting:
             BatchProcessor.process_split_batch(
                 data,
-                (image_dir, annot_dir),
+                out_image_dir,
+                out_annot_dir,
                 class_reference_table,
                 class_output_names,
                 input_format,
@@ -145,7 +160,8 @@ def format_dataset(
         else:
             BatchProcessor.process_normal_batch(
                 data,
-                (image_dir, annot_dir),
+                out_image_dir,
+                out_annot_dir,
                 class_reference_table,
                 class_output_names,
                 input_format,
@@ -156,8 +172,8 @@ def format_dataset(
 
         if output_format == OutputFormat.YOLO_DETECTION or output_format == OutputFormat.YOLO_SEGMENTATION:
             _create_yaml_config_for_yolo(
-                dataset_path,
-                image_dir,
+                output_dir,
+                out_image_dir,
                 class_output_names,
                 verbose=verbose
             )
@@ -165,7 +181,7 @@ def format_dataset(
     # split to train/test
     else:
         # setup folders
-        train_image_dir, val_image_dir, train_annot_dir, val_annot_dir = _setup_split_dirs(dataset_path)
+        train_image_dir, val_image_dir, train_annot_dir, val_annot_dir = _setup_split_dirs(output_dir)
 
         # split
         train_data, val_data = ConversionUtils.split_dataset(data, split_ratio=split_ratio, seed=seed)
@@ -173,7 +189,8 @@ def format_dataset(
         if image_splitting:
             BatchProcessor.process_split_batch(
                 train_data,
-                (train_image_dir, train_annot_dir),
+                train_image_dir,
+                train_annot_dir,
                 class_reference_table,
                 class_output_names,
                 input_format,
@@ -185,7 +202,8 @@ def format_dataset(
 
             BatchProcessor.process_split_batch(
                 val_data,
-                (val_image_dir, val_annot_dir),
+                val_image_dir,
+                val_annot_dir,
                 class_reference_table,
                 class_output_names,
                 input_format,
@@ -197,7 +215,8 @@ def format_dataset(
         else:
             BatchProcessor.process_normal_batch(
                 train_data,
-                (train_image_dir, train_annot_dir),
+                train_image_dir,
+                train_annot_dir,
                 class_reference_table,
                 class_output_names,
                 input_format,
@@ -208,7 +227,8 @@ def format_dataset(
 
             BatchProcessor.process_normal_batch(
                 val_data,
-                (val_image_dir, val_annot_dir),
+                val_image_dir,
+                val_annot_dir,
                 class_reference_table,
                 class_output_names,
                 input_format,
@@ -219,7 +239,7 @@ def format_dataset(
 
         if output_format == OutputFormat.YOLO_DETECTION or output_format == OutputFormat.YOLO_SEGMENTATION:
             _create_yaml_config_for_yolo(
-                dataset_path,
+                output_dir,
                 train_image_dir,
                 class_output_names,
                 verbose=verbose,
@@ -228,7 +248,7 @@ def format_dataset(
 
 
 def _create_yaml_config_for_yolo(
-        dataset_path: Path,
+        output_path: Path,
         train_path: Path,
         class_output_names: list[str],
         val_path: Path = None,
@@ -238,7 +258,7 @@ def _create_yaml_config_for_yolo(
     """
     Creates .yaml file in YOLO format necessary for model training.
 
-    :param dataset_path: path to dataset directory
+    :param output_path: path to dataset directory
     :param train_path: path to train directory
     :param class_output_names: names of classes
     :param val_path: path to validation directory, optional, if not provided, defaults to `train_path`
@@ -252,14 +272,14 @@ def _create_yaml_config_for_yolo(
         names[i] = class_name
 
     data = {
-        "path": str(dataset_path.absolute().resolve()),
+        "path": str(output_path.absolute().resolve()),
         "train": str(train_path.absolute().resolve()),
         "val": str(val_path.absolute().resolve()),
         "names": names,
     }
 
-    with open(dataset_path / f"{config_name}.yaml", "w") as f:
+    with open(output_path / f"{config_name}.yaml", "w") as f:
         yaml.dump(data, f, sort_keys=False, indent=4)
 
     if verbose:
-        print(f"Created {config_name}.yaml in {dataset_path.absolute().resolve()}.")
+        print(f"Created {config_name}.yaml in {output_path.absolute().resolve()}.")

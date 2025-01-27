@@ -19,8 +19,8 @@ def main():
     # region DATASET FORMATTING AND SPLITTING ARGUMENTS
     form_parser = subparsers.add_parser("form")
     form_parser.add_argument("output", help="Transformed dataset destination.")
-    form_parser.add_argument("images_path", help="Path to images.")
-    form_parser.add_argument("annot_path", help="Path to annotations.")
+    form_parser.add_argument("image_dir", help="Path to images.")
+    form_parser.add_argument("annot_dir", help="Path to annotations.")
 
     form_parser.add_argument("-i", "--input_format", default=InputFormat.MUNG.value,
                              choices=InputFormat.get_all_value())
@@ -44,8 +44,8 @@ def main():
     # region DATASET SPLITTING ARGUMENTS
     split_parser = subparsers.add_parser("split")
     split_parser.add_argument("output", help="Split dataset destination.")
-    split_parser.add_argument("images_path", help="Path to images.")
-    split_parser.add_argument("annot_path", help="Path to annotations.")
+    split_parser.add_argument("image_dir", help="Path to images.")
+    split_parser.add_argument("annot_dir", help="Path to annotations.")
 
     split_parser.add_argument("-s", "--split", type=float, default=0.9, help="Train/test split ratio, default is 0.9.")
     split_parser.add_argument("--seed", type=int, default=42, help="Seed for dataset shuffling.")
@@ -56,8 +56,8 @@ def main():
 
     # region DATASET STATISTICS ARGUMENTS
     stats_parser = subparsers.add_parser("stats")
-    stats_parser.add_argument("images_path", help="Path to images.")
-    stats_parser.add_argument("annot_path", help="Path to annotations.")
+    stats_parser.add_argument("image_dir", help="Path to images.")
+    stats_parser.add_argument("annot_dir", help="Path to annotations.")
 
     stats_parser.add_argument("-o", "--output_dir", type=str, default=None, help="If used, plots will be saved here.")
     stats_parser.add_argument("-i", "--input_format", default=InputFormat.MUNG.value,
@@ -76,8 +76,8 @@ def main():
     val_parser = subparsers.add_parser("val")
 
     val_parser.add_argument("model_path", type=str, help="Path to model.")
-    val_parser.add_argument("images_path", help="Path to images.")
-    val_parser.add_argument("annot_path", help="Path to annotations.")
+    val_parser.add_argument("image_dir", help="Path to images.")
+    val_parser.add_argument("annot_dir", help="Path to annotations.")
 
     val_parser.add_argument("-i", "--input_format", default=InputFormat.MUNG.value,
                             choices=InputFormat.get_all_value())
@@ -117,12 +117,12 @@ def main():
         Utils.get_mapping_and_names_from_config(loaded_config, verbose=True)
         return 0
 
-    elif args.command == "split":
+    if args.command == "split":
         Formatter.split_and_save_dataset(
             # directories
-            Path(args.images_path),
-            Path(args.annot_path),
             Path(args.output),
+            Path(args.image_dir),
+            Path(args.annot_dir),
 
             split_ratio=args.split,
             seed=args.seed,
@@ -146,9 +146,9 @@ def main():
 
         Formatter.format_dataset(
             # directories
-            Path(args.images_path),
-            Path(args.annot_path),
             Path(args.output),
+            Path(args.image_dir),
+            Path(args.annot_dir),
             # class ids etc.
             class_reference_table=class_id_mapping,
             class_output_names=class_output_names,
@@ -159,7 +159,7 @@ def main():
             resize=args.resize,
             image_format=args.image_format,
             # image splitting settings
-            window_size=tuple(loaded_config["window_size"]),
+            window_size=(loaded_config["window_size"][0], loaded_config["window_size"][1]),
             overlap_ratio=loaded_config["overlap_ratio"],
             image_splitting=args.image_splitting,
             # others
@@ -169,8 +169,8 @@ def main():
     elif args.command == "stats":
         Plots.load_and_plot_stats(
             # directories
-            Path(args.images_path),
-            Path(args.annot_path),
+            Path(args.image_dir),
+            Path(args.annot_dir),
             InputFormat.from_string(args.input_format),
             # class ids etc.
             class_reference_table=class_id_mapping,
@@ -182,13 +182,12 @@ def main():
             summarize=args.sum,
             verbose=args.verbose
         )
-
     elif args.command == "val":
         EvalJob.run_f1_scores_vs_iou(
             # input paths
             Path(args.model_path),
-            Path(args.images_path),
-            Path(args.annot_path),
+            Path(args.image_dir),
+            Path(args.annot_dir),
             # formatting
             InputFormat.from_string(args.input_format),
             EvalJob.ModelType.from_string(args.model_type),

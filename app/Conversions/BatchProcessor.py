@@ -12,7 +12,8 @@ from ..Splitting.SplitUtils import BoundingBox
 
 def process_normal_batch(
         data: list[tuple[Path, Path]],
-        output_paths: tuple[Path, Path],
+        image_out_dir: Path,
+        annot_out_dir: Path,
         class_reference_table: dict[str, int],
         class_output_names: list[str],
         input_format: InputFormat,
@@ -20,35 +21,34 @@ def process_normal_batch(
         image_format: str = "jpg",
         resize: int = None
 ) -> None:
-    image_output_dir, annotation_output_dir = output_paths
-
-    for path_to_image, path_to_annotation in tqdm(data):
+    for image, annotation in tqdm(data):
         # load and process page to classes
         page = FullPage.load_from_file(
-            path_to_annotation,
-            path_to_image,
+            annotation,
+            image,
             class_reference_table,
             class_output_names,
             input_format
         )
         # save image
         ConversionUtils.copy_and_resize_image(
-            path_to_image,
-            image_output_dir / (path_to_image.stem + f".{image_format}"),
+            image,
+            image_out_dir / (image.stem + f".{image_format}"),
             max_size=resize
         )
 
         # save annotations
         page.save_to_file(
-            annotation_output_dir,
-            path_to_image.stem,
+            annot_out_dir,
+            image.stem,
             output_format,
         )
 
 
 def process_split_batch(
         data: list[tuple[Path, Path]],
-        output_paths: tuple[Path, Path],
+        image_out_dir: Path,
+        annot_out_dir: Path,
         class_reference_table: dict[str, int],
         class_output_names: list[str],
         input_format: InputFormat,
@@ -57,8 +57,6 @@ def process_split_batch(
         window_size: tuple[int, int] = (640, 640),
         overlap_ratio: float = 0.25
 ) -> None:
-    image_output_dir, annotation_output_dir = output_paths
-
     for path_to_image, path_to_annotations in tqdm(data, position=0):
         # load and process page to classes
         split_page = create_splits_from_full_page(
@@ -73,21 +71,21 @@ def process_split_batch(
         # save images (same for both annot_format)
         save_split_page_image(
             path_to_image,
-            image_output_dir,
+            image_out_dir,
             split_page.splits,
             image_format=image_format,
         )
         # save annotations
         split_page.save_to_file(
-            annotation_output_dir,
+            annot_out_dir,
             path_to_image.stem,
             output_format
         )
 
 
 def create_splits_from_full_page(
-        path_to_image: Path,
-        path_to_annotation: Path,
+        image_path: Path,
+        annot_path: Path,
         class_reference_table: dict[str, int],
         class_output_names: list[str],
         input_format: InputFormat,
@@ -96,8 +94,8 @@ def create_splits_from_full_page(
 ) -> SplitPage:
     # create single page
     page = FullPage.load_from_file(
-        path_to_annotation,
-        path_to_image,
+        annot_path,
+        image_path,
         class_reference_table,
         class_output_names,
         input_format
