@@ -16,7 +16,7 @@ def main():
     )
     subparsers = parser.add_subparsers(dest="command", help="Jobs")
 
-    # DATASET FORMATTING AND SPLITTING
+    # region DATASET FORMATTING AND SPLITTING ARGUMENTS
     form_parser = subparsers.add_parser("form")
     form_parser.add_argument("output", help="Transformed dataset destination.")
     form_parser.add_argument("images_path", help="Path to images.")
@@ -39,8 +39,22 @@ def main():
     form_parser.add_argument("-v", "--verbose", action="store_true", help="Make script verbose")
     form_parser.add_argument("--config", default=None,
                              help="Path to config, see \"default.config\" for example.")
+    # endregion
 
-    # DATASET STATISTICS
+    # region DATASET SPLITTING ARGUMENTS
+    split_parser = subparsers.add_parser("split")
+    split_parser.add_argument("output", help="Split dataset destination.")
+    split_parser.add_argument("images_path", help="Path to images.")
+    split_parser.add_argument("annot_path", help="Path to annotations.")
+
+    split_parser.add_argument("-s", "--split", type=float, default=0.9, help="Train/test split ratio, default is 0.9.")
+    split_parser.add_argument("--seed", type=int, default=42, help="Seed for dataset shuffling.")
+
+    # global arguments
+    split_parser.add_argument("-v", "--verbose", action="store_true", help="Make script verbose")
+    # endregion
+
+    # region DATASET STATISTICS ARGUMENTS
     stats_parser = subparsers.add_parser("stats")
     stats_parser.add_argument("images_path", help="Path to images.")
     stats_parser.add_argument("annot_path", help="Path to annotations.")
@@ -56,8 +70,9 @@ def main():
     stats_parser.add_argument("--config", default=None,
                               help="Path to config, see \"default.config\" for example.")
     stats_parser.add_argument("--sum", action="store_true", help="Adds \"All\" category to stats.")
+    # endregion
 
-    # MODEL VALIDATION
+    # region MODEL VALIDATION ARGUMENTS
     val_parser = subparsers.add_parser("val")
 
     val_parser.add_argument("model_path", type=str, help="Path to model.")
@@ -86,9 +101,12 @@ def main():
     val_parser.add_argument("--config", default=None,
                             help="Path to config, see \"default.config\" for example.")
 
-    # CONFIG CHECK
+    # endregion
+
+    # region CONFIG CHECK ARGUMENTS
     conf_parser = subparsers.add_parser("confcheck")
     conf_parser.add_argument("config_path", help="Path to config.")
+    # endregion
 
     args = parser.parse_args()
 
@@ -97,6 +115,19 @@ def main():
             loaded_config = json.load(f)
 
         Utils.get_mapping_and_names_from_config(loaded_config, verbose=True)
+        return 0
+
+    elif args.command == "split":
+        Formatter.split_and_save_dataset(
+            # directories
+            Path(args.images_path),
+            Path(args.annot_path),
+            Path(args.output),
+
+            split_ratio=args.split,
+            seed=args.seed,
+            verbose=args.verbose
+        )
         return 0
 
     # load config

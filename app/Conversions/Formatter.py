@@ -1,10 +1,46 @@
 from pathlib import Path
 
 import yaml
+import shutil
+from tqdm import tqdm
 
 from . import BatchProcessor
 from . import ConversionUtils
 from .Formats import InputFormat, OutputFormat
+
+
+def split_and_save_dataset(
+        images_path: Path,
+        annotations_path: Path,
+        dataset_path: Path,
+        split_ratio: float = 0.9,
+        seed: int = 42,
+        verbose: bool = False,
+) -> None:
+    images = sorted(list(images_path.rglob("*")))
+    annotations = sorted(list(annotations_path.rglob("*")))
+    data = list(zip(images, annotations))
+
+    # set up folders
+    train_image_dir = dataset_path / "images" / "train"
+    val_image_dir = dataset_path / "images" / "val"
+    train_annotation_dir = dataset_path / "labels" / "train"
+    val_annotation_dir = dataset_path / "labels" / "val"
+
+    train_image_dir.mkdir(exist_ok=True, parents=True)
+    val_image_dir.mkdir(exist_ok=True, parents=True)
+    train_annotation_dir.mkdir(exist_ok=True, parents=True)
+    val_annotation_dir.mkdir(exist_ok=True, parents=True)
+
+    # split
+    train_data, val_data = ConversionUtils.split_dataset(data, split_ratio=split_ratio, seed=seed)
+    for image, annotation in tqdm(train_data, desc="Processing train", disable=not verbose):
+        shutil.copy(image, train_image_dir / image.name)
+        shutil.copy(annotation, train_annotation_dir / annotation.name)
+
+    for image, annotation in tqdm(val_data, desc="Processing val", disable=not verbose):
+        shutil.copy(image, val_image_dir / image.name)
+        shutil.copy(annotation, val_annotation_dir / annotation.name)
 
 
 def format_dataset(

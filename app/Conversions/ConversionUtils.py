@@ -14,7 +14,19 @@ def get_num_pixels(filepath):
     return Image.open(filepath).size
 
 
-def split_dataset(data: list[tuple[Path, Path]], split_ratio=0.9, seed=42):
+def split_dataset(
+        data: list[tuple[Path, Path]],
+        split_ratio=0.9,
+        seed=42
+) -> tuple[list[tuple[Path, Path]], list[tuple[Path, Path]]]:
+    """
+    Split dataset into train and test sets based on given ratio.
+
+    :param data: The dataset to be split.
+    :param split_ratio: The ratio of train and test sets.
+    :param seed: Seed for the random number generator.
+    :return: Train and test sets as two lists of tuples (image, annotation).
+    """
     # shuffle by given seed
     random.Random(seed).shuffle(data)
     # actually split the dataset
