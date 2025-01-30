@@ -19,7 +19,7 @@ image_path = "sheet-test.jpg"
 # not ideal
 image_path = "F:/Studium/4/rocnikac/od-tools/datasets/2024-10-07_proto-dataset/images/81c9f683-28d1-4e73-8e25-e37333408f5a_ac45624e-0846-4c6d-a079-a1f1877e1aea.jpg"
 # ideal
-image_path = "F:/Studium/4/rocnikac/od-tools/datasets/2024-10-07_proto-dataset/images/bf061840-2322-11eb-979b-005056827e52_2e117f2e-4c19-4bc3-ba6b-5531ca623e22.jpg"
+# image_path = "F:/Studium/4/rocnikac/od-tools/datasets/2024-10-07_proto-dataset/images/bf061840-2322-11eb-979b-005056827e52_2e117f2e-4c19-4bc3-ba6b-5531ca623e22.jpg"
 # ideal, more sophisticated
 # image_path = "F:/Studium/4/rocnikac/od-tools/datasets/2024-10-07_proto-dataset/images/81c9f683-28d1-4e73-8e25-e37333408f5a_5b6164cc-5653-494b-b43f-946fbb64d440.jpg"
 # image = "demo/3bb9e322-bc61-4307-856b-6f8fb1a640df_2d5f652c-1df0-474c-ae23-3fb699afe808.jpg"
@@ -181,6 +181,8 @@ class VirtualNode(BaseNode):
 
 
 def bbox_center_distance(bbox1: BoundingBox, bbox2: BoundingBox, direction: Direction = None) -> float:
+    c_v1, c_h1 = bbox1.center()
+    c_v2, c_h2 = bbox2.center()
     if direction is None:
         raise NotImplementedError("TODO: euclidian distance")
     elif direction == Direction.HORIZONTAL:
@@ -465,6 +467,7 @@ def link_measures_inside_grand_stave(
     """
     top_index = 0
     bottom_index = 0
+    print(len(top_row), len(bottom_row))
 
     linked_measures: list[VirtualNode] = []
 
@@ -499,10 +502,12 @@ def link_measures_inside_grand_stave(
     elif top_index == len(top_row):
         while bottom_index < len(bottom_row):
             linked_measures.append(VirtualNode([bottom_row[bottom_index]]))
+            bottom_index += 1
     # dump the rest of top row
     else:
         while top_index < len(top_row):
             linked_measures.append(VirtualNode([top_row[top_index]]))
+            top_index += 1
 
     return linked_measures
 
