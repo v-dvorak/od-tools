@@ -1,4 +1,6 @@
+from enum import Enum
 from pathlib import Path
+from typing import Self, Any
 
 import cv2
 import numpy as np
@@ -96,79 +98,48 @@ if visualize:
             show=(i == len(viz_data) - 1)
         )
 
-from enum import Enum
 
-
-class NoteType(Enum):
-    HALF = 0
-    FULL = 1
-
-
-class Note:
-    annot: Annotation
-    height: float = None
-    gs_position: int = -1
-    note_type: NoteType = None
-
-    def __init__(self, note: Annotation, note_type: NoteType):
-        self.annot = note
-        self.note_type = note_type
-
-    def set_height(self, height: float):
-        self.height = height
-
-    def get_height(self):
-        return self.height
-
-    def __str__(self) -> str:
-        if self.gs_position == -1:
-            return str(round(self.height))
-        else:
-            return f"{self.gs_position}:{round(self.height)}"
-
-
-class Measure:
-    annot: Annotation
-    total_box: BoundingBox
-    notes: list[Note]
-
-    def __init__(self, measure: Annotation):
-        self.annot = measure
-        self.total_bbox = measure.bbox
-        self.notes = []
-
-    def update_total_bbox(self):
-        if len(self.notes) > 0:
-            temp_box = BoundingBox(
-                min(self.notes, key=lambda b: b.annot.bbox.left).annot.bbox.left,
-                min(self.notes, key=lambda b: b.annot.bbox.top).annot.bbox.top,
-                max(self.notes, key=lambda b: b.annot.bbox.right).annot.bbox.right,
-                max(self.notes, key=lambda b: b.annot.bbox.bottom).annot.bbox.bottom
-            )
-            self.total_bbox = BoundingBox(
-                temp_box.left if temp_box.left < self.total_bbox.left else self.total_bbox.left,
-                temp_box.top if temp_box.top < self.total_bbox.top else self.total_bbox.top,
-                temp_box.right if temp_box.right > self.total_bbox.right else self.total_bbox.right,
-                temp_box.bottom if temp_box.bottom > self.total_bbox.bottom else self.total_bbox.bottom
-            )
-
-from typing import Self
-
-class Node:
-    annot: Annotation
+class BaseNode:
     total_box: BoundingBox
     _children: list[Self]
+    _tags: dict[str, Any]
 
-    def __init__(self, base: Annotation):
-        self.annot = base
-        self.total_bbox = base.bbox
+    def __init__(self, tags: dict[str, Any] = None):
+        self.total_bbox = None
         self._children = []
+        self._tags: dict[str, Any] = tags if tags is not None else {}
 
     def add_child(self, child: Self):
         self._children.append(child)
 
-    def children(self):
+    def children(self) -> list[Self]:
         return self._children
+
+    def get_tag(self, key: str) -> Any:
+        return self._tags.get(key, None)
+
+    def set_tag(self, key: str, value: Any):
+        self._tags[key] = value
+
+    def update_total_bbox(self):
+        raise NotImplementedError()
+
+
+class Node(BaseNode):
+    """
+    Object with a bounding box in a scene.
+    """
+    annot: Annotation
+
+    def __init__(self, base: Annotation, tags: dict[str, Any] = None):
+        super().__init__(tags)
+        self.annot = base
+        self.total_bbox = base.bbox
+
+    def add_child(self, child: Self, update_t_bbox: bool = False):
+        self._children.append(child)
+        if update_t_bbox:
+            self.update_total_bbox()
 
     def update_total_bbox(self):
         if len(self._children) > 0:
@@ -186,6 +157,29 @@ class Node:
             )
 
 
+class VirtualNode(BaseNode):
+    """
+    Virtual object without a bounding box in a scene.
+    """
+    _children: list[Node]
+
+    def __init__(self, children: list[Node], tags: dict[str, Any] = None):
+        super().__init__(tags)
+        self._children: list[Node] = children
+        self.update_total_bbox()
+
+    def update_total_bbox(self):
+        self.total_bbox = BoundingBox(
+            min(self._children, key=lambda b: b.annot.bbox.left).annot.bbox.left,
+            min(self._children, key=lambda b: b.annot.bbox.top).annot.bbox.top,
+            max(self._children, key=lambda b: b.annot.bbox.right).annot.bbox.right,
+            max(self._children, key=lambda b: b.annot.bbox.bottom).annot.bbox.bottom
+        )
+
+    def children(self) -> list[Node]:
+        return self._children
+
+
 def bbox_center_distance(bbox1: BoundingBox, bbox2: BoundingBox, direction: Direction = None) -> float:
     if direction is None:
         raise NotImplementedError("TODO: euclidian distance")
@@ -195,55 +189,52 @@ def bbox_center_distance(bbox1: BoundingBox, bbox2: BoundingBox, direction: Dire
         return abs((bbox1.top + bbox1.height / 2) - (bbox2.top + bbox2.height / 2))
 
 
-def assign_to_closest(target: list[Measure], source: list[Note]):
+def assign_to_closest(target: list[Node], source: list[Node]):
     """
     Assigns object from source to targets based on their distance from them.
     Modifies the target list in place.
     """
-    for note in source:
+    for current_source in source:
         best_distance = np.inf
-        best_measure: Measure = None
+        best_target: Node = None
 
-        for measure in target:
-            if note.annot.bbox.is_fully_inside(measure.annot.bbox, direction=Direction.HORIZONTAL):
-                current_distance = bbox_center_distance(measure.annot.bbox, note.annot.bbox,
-                                                        direction=Direction.VERTICAL)
+        for current_target in target:
+            if current_source.annot.bbox.is_fully_inside(current_target.annot.bbox, direction=Direction.HORIZONTAL):
+                current_distance = bbox_center_distance(
+                    current_target.annot.bbox,
+                    current_source.annot.bbox,
+                    direction=Direction.VERTICAL
+                )
                 if current_distance < best_distance:
                     best_distance = current_distance
-                    best_measure = measure
+                    best_target = current_target
 
-        if best_measure is None:
-            print(f"Warning: No suitable target found for source: {note.annot.bbox}, id {note.annot.class_id}")
+        if best_target is None:
+            print(
+                f"Warning: No suitable target found for source: {current_source.annot.bbox}, id {current_source.annot.class_id}")
         else:
-            best_measure.notes.append(note)
+            best_target.add_child(current_source)
 
-    for measure in target:
-        measure.update_total_bbox()
-
-
-class GrandStaff:
-    annot: Annotation
-
-    def __init__(self, grand_staff: Annotation):
-        self.annot = grand_staff
+    for current_target in target:
+        current_target.update_total_bbox()
 
 
 # INITIALIZE GRAPH
 notehead_full = []
 for note in combined.annotations[5]:
-    notehead_full.append(Note(note, NoteType.FULL))
+    notehead_full.append(Node(note))
 
 notehead_half = []
 for note in combined.annotations[6]:
-    notehead_half.append(Note(note, NoteType.HALF))
+    notehead_half.append(Node(note))
 
 measures = []
 for measure in combined.annotations[1]:
-    measures.append(Measure(measure))
+    measures.append(Node(measure))
 
 grand_staff = []
 for gs in combined.annotations[4]:
-    grand_staff.append(GrandStaff(gs))
+    grand_staff.append(Node(gs))
 
 # ASSIGN NOTES TO MEASURES
 assign_to_closest(measures, notehead_full)
@@ -257,12 +248,12 @@ if visualize:
     )
 
 
-def assign_height_to_notes_inside_measure(measure: Measure):
+def assign_height_to_notes_inside_measure(measure: Node):
     half_line_height = measure.annot.bbox.height / 8
-    for note in measure.notes:
+    for note in measure.children():
         x_center, _ = note.annot.bbox.center()
         distance_from_zero = measure.annot.bbox.bottom - x_center
-        note.height = distance_from_zero / half_line_height
+        note.set_tag("height", distance_from_zero / half_line_height)
 
 
 # ASSIGN HEIGHT TO EACH NOTE
@@ -270,10 +261,15 @@ for measure in measures:
     assign_height_to_notes_inside_measure(measure)
 
 
-def sort_measures_by_grand_staff(measures: list[Measure], grand_staff: list[GrandStaff]):
+class SectionType(Enum):
+    IN_GS = 0
+    OUT_GS = 1
+
+
+def sort_measures_by_grand_staff(measures: list[Node], grand_staff: list[Node]):
     grand_staff = sorted(grand_staff, key=lambda g: g.annot.bbox.top)
     measures = sorted(measures, key=lambda m: m.annot.bbox.top)
-    sorted_by_gs: list[tuple[str, list[Measure]]] = []
+    sorted_by_gs: list[tuple[SectionType, list[Node]]] = []
 
     section = []
     gs_index = 0
@@ -293,7 +289,7 @@ def sort_measures_by_grand_staff(measures: list[Measure], grand_staff: list[Gran
         if intersects and not in_gs:
             # edge case, when the algorithm starts inside gs, this could otherwise create an empty section
             if len(section) > 0:
-                sorted_by_gs.append(("out", section))
+                sorted_by_gs.append((SectionType.OUT_GS, section))
             section = [measure]
             in_gs = True
         # measure is inside gs and the gs is the same as the last one
@@ -304,12 +300,12 @@ def sort_measures_by_grand_staff(measures: list[Measure], grand_staff: list[Gran
             section.append(measure)
         # measure is outside gs and the last one was inside
         elif not intersects and in_gs:
-            sorted_by_gs.append(("in", section))
+            sorted_by_gs.append((SectionType.IN_GS, section))
             section = [measure]
 
             # it can intersect with the next gs
-            if gs_index + 1 < len(grand_staff) and measure.annot.bbox.intersects(
-                    grand_staff[gs_index + 1].annot.bbox):
+            if (gs_index + 1 < len(grand_staff)
+                    and measure.annot.bbox.intersects(grand_staff[gs_index + 1].annot.bbox)):
                 in_gs = True
             else:
                 in_gs = False
@@ -317,21 +313,25 @@ def sort_measures_by_grand_staff(measures: list[Measure], grand_staff: list[Gran
             # switch to next gs
             gs_index += 1
         else:
-            raise NotImplementedError("wut")
+            raise NotImplementedError()
 
     # append last section
-    sorted_by_gs.append(("in" if in_gs else "out", section))
+    sorted_by_gs.append((SectionType.IN_GS if in_gs else SectionType.OUT_GS, section))
     return sorted_by_gs
 
 
 # SORT MEASURES INTO SECTION IN/OUT OF GRAND STAFF
 sorted_by_gs = sort_measures_by_grand_staff(measures, grand_staff)
-for state, measures in sorted_by_gs:
-    print(f"{state}: {len(measures)}", end=", ")
+for section_type, measures in sorted_by_gs:
+    print(f"{section_type}: {len(measures)}", end=", ")
 
 
-def sort_to_strips_with_threshold(nodes: list[Measure], threshold: float,
-                                  direction: Direction = Direction.HORIZONTAL) -> list[list[Measure]]:
+def sort_to_strips_with_threshold(
+        nodes: list[Node],
+        threshold: float,
+        direction: Direction = Direction.HORIZONTAL,
+        count_intersections: bool = False
+) -> list[list[Node]]:
     """
     Sort objects according to the given threshold into strips (rows/columns).
     HORIZONTAL corresponds to the reading order: left to right, top to bottom.
@@ -344,14 +344,24 @@ def sort_to_strips_with_threshold(nodes: list[Measure], threshold: float,
     :param direction: the direction of sorting
     :return: list of sorted strips
     """
+
+    def _intersects_with_any(row: list[Node], node: Node) -> bool:
+        for n in row:
+            if n.annot.bbox.intersects(node.annot.bbox):
+                return True
+        return False
+
     if direction == Direction.HORIZONTAL:
         top_sorted = sorted(nodes, key=lambda n: n.annot.bbox.top)
-        sorted_rows = []
-        row: list[Measure] = []
+        sorted_rows: list[list[Node]] = []
+        row: list[Node] = []
         for node in top_sorted:
             if len(row) == 0:
                 row.append(node)
-            elif abs(node.annot.bbox.top - row[-1].annot.bbox.top) < threshold:
+                continue
+
+            if (abs(node.annot.bbox.top - row[-1].annot.bbox.top) < threshold
+                    or (count_intersections and _intersects_with_any(row, node))):
                 row.append(node)
             else:
                 sorted_rows.append(sorted(row, key=lambda n: n.annot.bbox.left))
@@ -363,12 +373,15 @@ def sort_to_strips_with_threshold(nodes: list[Measure], threshold: float,
 
     elif direction == Direction.VERTICAL:
         left_sorted = sorted(nodes, key=lambda n: n.annot.bbox.left)
-        sorted_rows: list[list[Measure]] = []
-        row: list[Measure] = []
+        sorted_rows: list[list[Node]] = []
+        row: list[Node] = []
         for node in left_sorted:
             if len(row) == 0:
                 row.append(node)
-            elif abs(node.annot.bbox.left - row[-1].annot.bbox.left) < threshold:
+                continue
+
+            if (abs(node.annot.bbox.left - row[-1].annot.bbox.left) < threshold
+                    or (count_intersections and _intersects_with_any(row, node))):
                 row.append(node)
             else:
                 sorted_rows.append(sorted(row, key=lambda n: n.annot.bbox.top, reverse=True))
@@ -385,13 +398,13 @@ def sort_to_strips_with_threshold(nodes: list[Measure], threshold: float,
 # SORT SECTIONS INTO ROWS OF MEASURES
 measure_row_threshold = np.mean([m.annot.bbox.bottom - m.annot.bbox.top for m in measures]) * (2 / 5)
 
-sorted_sections: list[tuple[str, list[list[Measure]]]] = []
-for state, data in sorted_by_gs:
-    sorted_sections.append((state, sort_to_strips_with_threshold(data, measure_row_threshold)))
+sorted_sections: list[tuple[SectionType, list[list[Node]]]] = []
+for section_type, data in sorted_by_gs:
+    sorted_sections.append((section_type, sort_to_strips_with_threshold(data, measure_row_threshold)))
 
 print(len(sorted_sections))
-for state, section in sorted_sections:
-    print(f"{state}: {len(section)}")
+for section_type, section in sorted_sections:
+    print(f"{section_type}: {len(section)}")
     for subsection in section:
         print(len(subsection), end=", ")
     print()
@@ -399,7 +412,7 @@ for state, section in sorted_sections:
 from PIL import ImageDraw, ImageFont
 
 
-def write_numbers_on_image(image_path, measures: list[Measure]):
+def write_numbers_on_image(image_path, measures: list[Node]):
     image = Image.open(image_path)
     draw = ImageDraw.Draw(image)
 
@@ -434,14 +447,26 @@ def horizontal_iou(bbox1: BoundingBox, bbox2: BoundingBox) -> float:
 
 
 def link_measures_inside_grand_stave(
-        top_row: list[Measure],
-        bottom_row: list[Measure],
-        linkage_threshold: float = 0.9
-) -> list[list[Measure]]:
+        top_row: list[Node],
+        bottom_row: list[Node],
+        linkage_iou_threshold: float = 0.9
+) -> list[VirtualNode]:
+    """
+    Takes measures in top and bottom stave of a single grand stave
+    and returns a list of linked pairs connected by VirtualNode.
+    If a measure does not link with any other measure, it is returned as a single child of VirtualNode.
+
+    Linkage is made if the computed IoU (intersection over union of pairs horizontal coordinates)
+    is less than linkage_iou_threshold.
+
+    :param top_row: list of nodes representing the top stave
+    :param bottom_row: list of nodes representing the bottom stave
+    :param linkage_iou_threshold: threshold for linkage to be made
+    """
     top_index = 0
     bottom_index = 0
 
-    linked_measures: list[list[Measure]] = []
+    linked_measures: list[VirtualNode] = []
 
     # going from left to right
     while top_index < len(top_row) and bottom_index < len(bottom_row):
@@ -450,19 +475,21 @@ def link_measures_inside_grand_stave(
 
         iou = horizontal_iou(top_measure.annot.bbox, bottom_measure.annot.bbox)
         print(f"iou: {iou}")
+
         # linkage found
-        if iou > linkage_threshold:
-            linked_measures.append([top_measure, bottom_measure])
+        if iou > linkage_iou_threshold:
+            linked_measures.append(VirtualNode([top_measure, bottom_measure]))
             top_index += 1
             bottom_index += 1
+
         # throw out one measure and advance in its row
         else:
             # drop the leftmost measure
             if top_measure.annot.bbox.left < bottom_measure.annot.bbox.left:
-                linked_measures.append([top_measure])
+                linked_measures.append(VirtualNode([top_measure]))
                 top_index += 1
             else:
-                linked_measures.append([bottom_measure])
+                linked_measures.append(VirtualNode([bottom_measure]))
                 bottom_index += 1
 
     if top_index == len(top_row) and bottom_index == len(bottom_row):
@@ -471,27 +498,27 @@ def link_measures_inside_grand_stave(
     # dump the rest of bottom row
     elif top_index == len(top_row):
         while bottom_index < len(bottom_row):
-            linked_measures.append([bottom_row[bottom_index]])
+            linked_measures.append(VirtualNode([bottom_row[bottom_index]]))
     # dump the rest of top row
     else:
         while top_index < len(top_row):
-            linked_measures.append([top_row[top_index]])
+            linked_measures.append(VirtualNode([top_row[top_index]]))
 
     return linked_measures
 
 
-def tag_notes_with_gs_index(measures: list[Measure], gs_index: int):
+def tag_notes_with_gs_index(measures: list[Node], gs_index: int):
     for measure in measures:
-        for note in measure.notes:
-            note.gs_position = gs_index
+        for note in measure.children():
+            note.set_tag("gs_index", gs_index)
 
 
 # PREPARE MEASURES FOR EVENT DETECTION
-events_in_measures: list[list[Measure]] = []
+events_in_measures: list[VirtualNode] = []
 
-for state, section in sorted_sections:
+for section_type, section in sorted_sections:
     # this is true grand stave
-    if state == "in" and len(section) == 2:
+    if section_type == SectionType.IN_GS and len(section) == 2:
         tag_notes_with_gs_index(section[0], 1)
         tag_notes_with_gs_index(section[1], 0)
         events_in_measures.extend(link_measures_inside_grand_stave(section[0], section[1]))
@@ -501,30 +528,45 @@ for state, section in sorted_sections:
             for measure in stave:
                 # list of mesures make it easier to adapt following algorithms
                 # for multiple measures playing at once
-                events_in_measures.append([measure])
+                events_in_measures.append(VirtualNode([measure]))
 
 
-def compute_note_events(measures: list[Measure]) -> list[list[Note]]:
-    all_notes: list[Note] = [n for m in measures for n in m.notes]
-    note_event_threshold = np.mean([n.annot.bbox.width for n in all_notes]) * (1 / 5)
-    return sort_to_strips_with_threshold(all_notes, note_event_threshold, direction=Direction.VERTICAL)
+def compute_note_events(linked_measures: VirtualNode, threshold_factor: float = 1 / 5) -> list[VirtualNode]:
+    """
+    Takes linked measures and computes note events from notes included in these measures.
+    Returns a list of events represented as VirtualNode whose children are given notes.
+
+    Threshold for sorting is computed as a mean of all note widths times the threshold factor.
+
+    :param linked_measures: virtual node representing the linked measures
+    :param threshold_factor: threshold for note sorting to events
+    :return: list of note events
+    """
+    all_notes: list[Node] = [note for measure in linked_measures.children() for note in measure.children()]
+    note_event_threshold = np.mean([n.annot.bbox.width for n in all_notes]) * threshold_factor
+    strips = sort_to_strips_with_threshold(
+        all_notes,
+        note_event_threshold,
+        direction=Direction.VERTICAL,
+        count_intersections=True
+    )
+
+    events: list[VirtualNode] = []
+    for strip in strips:
+        events.append(VirtualNode(strip))
+
+    return events
 
 
-events: list[list[Note]] = []
-events_by_measure: list[list[list[Note]]] = []
+events: list[VirtualNode] = []
+events_by_measure: list[list[VirtualNode]] = []
 for mes in events_in_measures:
-    temp = compute_note_events(mes)
+    print(">>>")
+    temp = compute_note_events(mes, threshold_factor=1 / 5)
     events.extend(temp)
     events_by_measure.append(temp)
 
-event_bbox: list[Node] = []
-for event in events:
-    node = Node(event[0].annot)
-    node._children = event
-    node.update_total_bbox()
-    event_bbox.append(node)
-
-write_numbers_on_image(image_path, [n for e in events for n in e])
+write_numbers_on_image(image_path, [n for e in events for n in e.children()])
 
 temp = draw_rectangles_on_image(
     image_path,
@@ -535,14 +577,14 @@ temp = draw_rectangles_on_image(
 
 temp = draw_rectangles_on_image(
     temp,
-    [n.total_bbox for n in event_bbox],
+    [e.total_bbox for e in events],
     color=(255, 0, 0),
     thickness=2,
     show=True
 )
 
 
-def write_note_heights_to_image(image, measures: list[Note]):
+def write_note_heights_to_image(image, measures: list[Node]):
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     image = Image.fromarray(image)
     draw = ImageDraw.Draw(image)
@@ -553,16 +595,29 @@ def write_note_heights_to_image(image, measures: list[Note]):
         font = ImageFont.load_default()
 
     for note in measures:
-        draw.text((note.annot.bbox.left, note.annot.bbox.top), str(round(note.height)), font=font, fill=(0, 255, 0))
+        draw.text(
+            (note.annot.bbox.left, note.annot.bbox.top),
+            str(round(note.get_tag("height"))),
+            font=font,
+            fill=(0, 255, 0)
+        )
 
     image.show()
 
 
-write_note_heights_to_image(temp, [n for c in events for n in c])
+write_note_heights_to_image(temp, [n for c in events for n in c.children()])
+
+
+def note_node_to_str(note: Node) -> str:
+    if note.get_tag("gs_index") is None:
+        return str(round(note.get_tag("height")))
+    else:
+        return f"{note.get_tag('gs_index')}:{round(note.get_tag('height'))}"
+
 
 repre = " || ".join(
     [" | ".join(
-        [" ".join([n.__str__() for n in event])
+        [" ".join([note_node_to_str(n) for n in event.children()])
          for event in measure])
         for measure in events_by_measure])
 
