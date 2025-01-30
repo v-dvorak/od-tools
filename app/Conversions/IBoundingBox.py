@@ -1,4 +1,10 @@
+from enum import Enum
 from typing import Self
+
+
+class Direction(Enum):
+    VERTICAL = 0
+    HORIZONTAL = 1
 
 
 class IBoundingBox:
@@ -33,6 +39,12 @@ class IBoundingBox:
         """
         raise NotImplementedError()
 
+    def center(self) -> tuple[float, float]:
+        """
+        Returns the height and width coordinates of the center of the bounding box.
+        """
+        raise NotImplementedError()
+
     def intersects(self, other: Self) -> bool:
         """
         Returns true if annotations intersect.
@@ -42,10 +54,13 @@ class IBoundingBox:
         """
         raise NotImplementedError()
 
-    def is_fully_inside(self, other: Self) -> bool:
+    def is_fully_inside(self, other: Self, direction: Direction = None) -> bool:
         """
-        Returns true if THIS bounding box is fully inside other bounding box.
+        Returns true if THIS bounding box is fully inside the OTHER bounding box.
+        If directions is specified, returns true if THIS is inside the vertical/horizontal strip defined by the OHTER.
+
         :param other: "bigger" rectangle
+        :param direction: "vertical", "horizontal" or None (for both)
         :return: rectangle1 is fully inside rectangle2
         """
         raise NotImplementedError()

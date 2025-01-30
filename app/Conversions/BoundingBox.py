@@ -1,6 +1,6 @@
 from typing import Self
 
-from .IBoundingBox import IBoundingBox
+from .IBoundingBox import IBoundingBox, Direction
 
 
 class BoundingBox(IBoundingBox):
@@ -19,6 +19,9 @@ class BoundingBox(IBoundingBox):
 
     def xcycwh(self) -> tuple[int, int, int, int]:
         return self.left + self.width // 2, self.top + self.height // 2, self.width, self.height
+
+    def center(self) -> tuple[float, float]:
+        return self.top + self.height / 2, self.left + self.width / 2
 
     def intersects(self, other: Self) -> bool:
         # check if the annotations overlap both horizontally and vertically
@@ -58,14 +61,24 @@ class BoundingBox(IBoundingBox):
     def from_ltwh(cls, left, top, width, height) -> Self:
         return BoundingBox(left, top, left + width, top + height)
 
-    def is_fully_inside(self, other: Self) -> bool:
-        fully_inside = (
-                self.left >= other.left and
-                self.top >= other.top and
-                self.right <= other.right and
-                self.bottom <= other.bottom
-        )
-        return fully_inside
+    def is_fully_inside(self, other: Self, direction: Direction = None) -> bool:
+        if direction is None:
+            return (
+                    self.left >= other.left and
+                    self.top >= other.top and
+                    self.right <= other.right and
+                    self.bottom <= other.bottom
+            )
+        elif direction == Direction.HORIZONTAL:
+            return (
+                    other.left <= self.left and self.right <= other.right
+            )
+        elif direction == Direction.VERTICAL:
+            return (
+                    other.top <= self.top and self.bottom <= other.bottom
+            )
+        else:
+            raise NotImplementedError()
 
     def intersection_over_union(self, other: Self) -> float:
         int_area = self.intersection_area(other)
