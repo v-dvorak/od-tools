@@ -80,9 +80,50 @@ class BoundingBox(IBoundingBox):
         else:
             raise NotImplementedError()
 
-    def intersection_over_union(self, other: Self) -> float:
-        int_area = self.intersection_area(other)
+    def _2D_iou(self, other: Self) -> float:
+        intersection_area = self.intersection_area(other)
+        if intersection_area == 0:
+            return 0
+
         area1 = self.area()
         area2 = other.area()
 
-        return int_area / (area1 + area2 - int_area)
+        return intersection_area / (area1 + area2 - intersection_area)
+
+    def _horizontal_iou(self, other: Self) -> float:
+        overlap_start = max(self.left, other.left)
+        overlap_end = min(self.right, other.right)
+
+        union_start = min(self.left, other.left)
+        union_end = max(self.right, other.right)
+
+        overlap = overlap_end - overlap_start
+        union = union_end - union_start
+        if overlap <= 0 or union <= 0:
+            return 0
+
+        return overlap / union
+
+    def _vertical_iou(self, other: Self) -> float:
+        overlap_start = max(self.top, other.top)
+        overlap_end = min(self.bottom, other.bottom)
+
+        union_start = min(self.top, other.top)
+        union_end = max(self.bottom, other.bottom)
+
+        overlap = overlap_end - overlap_start
+        union = union_end - union_start
+        if overlap <= 0 or union <= 0:
+            return 0
+
+        return overlap / union
+
+    def intersection_over_union(self, other: Self, direction: Direction = None) -> float:
+        if direction is None:
+            return self._2D_iou(other)
+        elif direction == Direction.HORIZONTAL:
+            return self._horizontal_iou(other)
+        elif direction == Direction.VERTICAL:
+            return self._vertical_iou(other)
+        else:
+            raise NotImplementedError()

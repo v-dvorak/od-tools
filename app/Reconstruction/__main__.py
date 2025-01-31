@@ -19,7 +19,7 @@ image_path = "sheet-test.jpg"
 # not ideal
 image_path = "F:/Studium/4/rocnikac/od-tools/datasets/2024-10-07_proto-dataset/images/81c9f683-28d1-4e73-8e25-e37333408f5a_ac45624e-0846-4c6d-a079-a1f1877e1aea.jpg"
 # ideal
-# image_path = "F:/Studium/4/rocnikac/od-tools/datasets/2024-10-07_proto-dataset/images/bf061840-2322-11eb-979b-005056827e52_2e117f2e-4c19-4bc3-ba6b-5531ca623e22.jpg"
+image_path = "F:/Studium/4/rocnikac/od-tools/datasets/2024-10-07_proto-dataset/images/bf061840-2322-11eb-979b-005056827e52_2e117f2e-4c19-4bc3-ba6b-5531ca623e22.jpg"
 # ideal, more sophisticated
 # image_path = "F:/Studium/4/rocnikac/od-tools/datasets/2024-10-07_proto-dataset/images/81c9f683-28d1-4e73-8e25-e37333408f5a_5b6164cc-5653-494b-b43f-946fbb64d440.jpg"
 # image = "demo/3bb9e322-bc61-4307-856b-6f8fb1a640df_2d5f652c-1df0-474c-ae23-3fb699afe808.jpg"
@@ -169,12 +169,13 @@ class VirtualNode(BaseNode):
         self.update_total_bbox()
 
     def update_total_bbox(self):
-        self.total_bbox = BoundingBox(
-            min(self._children, key=lambda b: b.annot.bbox.left).annot.bbox.left,
-            min(self._children, key=lambda b: b.annot.bbox.top).annot.bbox.top,
-            max(self._children, key=lambda b: b.annot.bbox.right).annot.bbox.right,
-            max(self._children, key=lambda b: b.annot.bbox.bottom).annot.bbox.bottom
-        )
+        if len(self._children) > 0:
+            self.total_bbox = BoundingBox(
+                min(self._children, key=lambda b: b.annot.bbox.left).annot.bbox.left,
+                min(self._children, key=lambda b: b.annot.bbox.top).annot.bbox.top,
+                max(self._children, key=lambda b: b.annot.bbox.right).annot.bbox.right,
+                max(self._children, key=lambda b: b.annot.bbox.bottom).annot.bbox.bottom
+            )
 
     def children(self) -> list[Node]:
         return self._children
@@ -191,10 +192,14 @@ def bbox_center_distance(bbox1: BoundingBox, bbox2: BoundingBox, direction: Dire
         return abs((bbox1.top + bbox1.height / 2) - (bbox2.top + bbox2.height / 2))
 
 
-def assign_to_closest(target: list[Node], source: list[Node]):
+def assign_to_closest(target: list[Node], source: list[Node], upper_limit: float = None):
     """
     Assigns object from source to targets based on their distance from them.
     Modifies the target list in place.
+
+    :param target: list of targets to assign sources to
+    :param source: list of sources to assign to targets
+    :param upper_limit: maximum distance to assign source to target
     """
     for current_source in source:
         best_distance = np.inf
@@ -207,7 +212,7 @@ def assign_to_closest(target: list[Node], source: list[Node]):
                     current_source.annot.bbox,
                     direction=Direction.VERTICAL
                 )
-                if current_distance < best_distance:
+                if (upper_limit is None or current_distance < upper_limit) and current_distance < best_distance:
                     best_distance = current_distance
                     best_target = current_target
 
@@ -239,8 +244,11 @@ for gs in combined.annotations[4]:
     grand_staff.append(Node(gs))
 
 # ASSIGN NOTES TO MEASURES
-assign_to_closest(measures, notehead_full)
-assign_to_closest(measures, notehead_half)
+# the method assigns notes to measures based on center points of detection
+#   * (3 / 2) means +- one whole average measure from top and bottom from chosen measure
+upper_assignment_limit = np.mean([m.annot.bbox.height for m in measures]) * (3 / 2)
+assign_to_closest(measures, notehead_full, upper_limit=upper_assignment_limit)
+assign_to_closest(measures, notehead_half, upper_limit=upper_assignment_limit)
 
 if visualize:
     temp = draw_rectangles_on_image(
@@ -330,9 +338,9 @@ for section_type, measures in sorted_by_gs:
 
 def sort_to_strips_with_threshold(
         nodes: list[Node],
-        threshold: float,
+        iou_threshold: float,
         direction: Direction = Direction.HORIZONTAL,
-        count_intersections: bool = False
+        check_intersections: bool = False
 ) -> list[list[Node]]:
     """
     Sort objects according to the given threshold into strips (rows/columns).
@@ -342,16 +350,19 @@ def sort_to_strips_with_threshold(
     Sorts always from lowest to highest based on the top or left coordinate.
 
     :param nodes: list of objects to sort
-    :param threshold: threshold for sorting, how big there could be between two objects in the same strip
+    :param iou_threshold: threshold for sorting, how big there could be between two objects in the same strip
     :param direction: the direction of sorting
     :return: list of sorted strips
     """
 
-    def _intersects_with_any(row: list[Node], node: Node) -> bool:
+    def _intersects_any(row: list[Node], node: Node):
         for n in row:
-            if n.annot.bbox.intersects(node.annot.bbox):
+            if node.annot.bbox.intersects(n.annot.bbox):
                 return True
         return False
+
+    if len(nodes) == 0:
+        return []
 
     if direction == Direction.HORIZONTAL:
         top_sorted = sorted(nodes, key=lambda n: n.annot.bbox.top)
@@ -362,8 +373,13 @@ def sort_to_strips_with_threshold(
                 row.append(node)
                 continue
 
-            if (abs(node.annot.bbox.top - row[-1].annot.bbox.top) < threshold
-                    or (count_intersections and _intersects_with_any(row, node))):
+            computed_iou = node.annot.bbox.intersection_over_union(
+                row[-1].annot.bbox,
+                direction=Direction.VERTICAL
+            )
+            inter_any = (check_intersections and _intersects_any(row, node))
+
+            if computed_iou > iou_threshold or inter_any:
                 row.append(node)
             else:
                 sorted_rows.append(sorted(row, key=lambda n: n.annot.bbox.left))
@@ -382,8 +398,13 @@ def sort_to_strips_with_threshold(
                 row.append(node)
                 continue
 
-            if (abs(node.annot.bbox.left - row[-1].annot.bbox.left) < threshold
-                    or (count_intersections and _intersects_with_any(row, node))):
+            computed_iou = node.annot.bbox.intersection_over_union(
+                row[-1].annot.bbox,
+                direction=Direction.HORIZONTAL
+            )
+            inter_any = (check_intersections and _intersects_any(row, node))
+
+            if computed_iou > iou_threshold or inter_any:
                 row.append(node)
             else:
                 sorted_rows.append(sorted(row, key=lambda n: n.annot.bbox.top, reverse=True))
@@ -398,11 +419,12 @@ def sort_to_strips_with_threshold(
 
 
 # SORT SECTIONS INTO ROWS OF MEASURES
-measure_row_threshold = np.mean([m.annot.bbox.bottom - m.annot.bbox.top for m in measures]) * (2 / 5)
+measure_row_threshold = 0.5
 
 sorted_sections: list[tuple[SectionType, list[list[Node]]]] = []
 for section_type, data in sorted_by_gs:
-    sorted_sections.append((section_type, sort_to_strips_with_threshold(data, measure_row_threshold)))
+    sorted_sections.append(
+        (section_type, sort_to_strips_with_threshold(data, measure_row_threshold, direction=Direction.HORIZONTAL)))
 
 print(len(sorted_sections))
 for section_type, section in sorted_sections:
@@ -436,22 +458,10 @@ if visualize:
     write_numbers_on_image(image_path, dumped_measures)
 
 
-def horizontal_iou(bbox1: BoundingBox, bbox2: BoundingBox) -> float:
-    overlap_start = max(bbox1.left, bbox2.left)
-    overlap_end = min(bbox1.right, bbox2.right)
-
-    union_start = min(bbox1.left, bbox2.left)
-    union_end = max(bbox1.right, bbox2.right)
-
-    overlap = overlap_end - overlap_start
-    union = union_end - union_start
-    return overlap / union
-
-
 def link_measures_inside_grand_stave(
         top_row: list[Node],
         bottom_row: list[Node],
-        linkage_iou_threshold: float = 0.9
+        linkage_iou_threshold: float = 0.5
 ) -> list[VirtualNode]:
     """
     Takes measures in top and bottom stave of a single grand stave
@@ -476,7 +486,7 @@ def link_measures_inside_grand_stave(
         top_measure = top_row[top_index]
         bottom_measure = bottom_row[bottom_index]
 
-        iou = horizontal_iou(top_measure.annot.bbox, bottom_measure.annot.bbox)
+        iou = top_measure.annot.bbox.intersection_over_union(bottom_measure.annot.bbox, direction=Direction.HORIZONTAL)
         print(f"iou: {iou}")
 
         # linkage found
@@ -535,25 +545,29 @@ for section_type, section in sorted_sections:
                 # for multiple measures playing at once
                 events_in_measures.append(VirtualNode([measure]))
 
+for e in events_in_measures:
+    print(len(e.children()), end=", ")
+print()
 
-def compute_note_events(linked_measures: VirtualNode, threshold_factor: float = 1 / 5) -> list[VirtualNode]:
+
+def compute_note_events(linked_measures: VirtualNode, iou_threshold: float = 0.8) -> list[VirtualNode]:
     """
     Takes linked measures and computes note events from notes included in these measures.
     Returns a list of events represented as VirtualNode whose children are given notes.
 
-    Threshold for sorting is computed as a mean of all note widths times the threshold factor.
+    Threshold is used to determine if the next note is in the same event as the last note
+    based on their horizontal overlap.
 
     :param linked_measures: virtual node representing the linked measures
-    :param threshold_factor: threshold for note sorting to events
+    :param iou_threshold: threshold for note sorting to events
     :return: list of note events
     """
     all_notes: list[Node] = [note for measure in linked_measures.children() for note in measure.children()]
-    note_event_threshold = np.mean([n.annot.bbox.width for n in all_notes]) * threshold_factor
     strips = sort_to_strips_with_threshold(
         all_notes,
-        note_event_threshold,
+        iou_threshold,
         direction=Direction.VERTICAL,
-        count_intersections=True
+        check_intersections=True
     )
 
     events: list[VirtualNode] = []
@@ -566,8 +580,7 @@ def compute_note_events(linked_measures: VirtualNode, threshold_factor: float = 
 events: list[VirtualNode] = []
 events_by_measure: list[list[VirtualNode]] = []
 for mes in events_in_measures:
-    print(">>>")
-    temp = compute_note_events(mes, threshold_factor=1 / 5)
+    temp = compute_note_events(mes, iou_threshold=0.4)
     events.extend(temp)
     events_by_measure.append(temp)
 
@@ -575,6 +588,13 @@ write_numbers_on_image(image_path, [n for e in events for n in e.children()])
 
 temp = draw_rectangles_on_image(
     image_path,
+    [gs.annot.bbox for gs in grand_staff],
+    color=(0, 255, 0),
+    thickness=2,
+)
+
+temp = draw_rectangles_on_image(
+    temp,
     [n.annot.bbox for m in sorted_by_gs for n in m[1]],
     color=(0, 0, 255),
     thickness=2,
