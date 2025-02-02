@@ -1,5 +1,7 @@
 from typing import Self
 
+import numpy as np
+
 from .IBoundingBox import IBoundingBox, Direction
 
 
@@ -127,3 +129,15 @@ class BoundingBox(IBoundingBox):
             return self._vertical_iou(other)
         else:
             raise NotImplementedError()
+
+    def center_distance(self, bbox2: Self, direction: Direction = None) -> float:
+        c_v1, c_h1 = self.center()
+        c_v2, c_h2 = bbox2.center()
+        if direction is None:
+            return np.sqrt((c_v1 - c_v2) ** 2 + (c_h1 - c_h2) ** 2)
+        elif direction == Direction.HORIZONTAL:
+            return abs(c_h1 - c_h2)
+        elif direction == Direction.VERTICAL:
+            return abs(c_v1 - c_v2)
+        else:
+            raise NotImplementedError(f"Not implemented for direction {direction}")

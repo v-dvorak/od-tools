@@ -95,5 +95,8 @@ class IBoundingBox:
     def shift_copy(self, left_shift: int = 0, top_shift: int = 0) -> Self:
         raise NotImplementedError()
 
-    def intersection_over_union(self, other: Self) -> float:
+    def intersection_over_union(self, other: Self, direction: Direction = None) -> float:
+        raise NotImplementedError()
+
+    def center_distance(self, bbox2: Self, direction: Direction = None) -> float:
         raise NotImplementedError()
