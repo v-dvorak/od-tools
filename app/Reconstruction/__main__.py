@@ -4,7 +4,7 @@ import cv2
 from PIL import Image
 from ultralytics import YOLO
 
-from .Node import Node, VirtualNode
+from .Graph.Node import Node, VirtualNode
 from .NoteManipulation import assign_notes_to_measures_and_compute_pitch
 from .PageReconstruction import compute_note_events_for_page, linearize_note_events
 from .VizUtils import visualize_result
@@ -78,25 +78,6 @@ combined = FullPage(
     staff_page.class_names + notehead_page.class_names
 )
 
-# ['system_measures', 'stave_measures', 'staves', 'systems', 'grand_staff', 'noteheadFull', 'noteheadHalf']
-
-if True:
-    viz_data = [
-        ((0, 0, 255), [x.bbox for xs in staff_page.annotations for x in xs]),  # staff
-        ((0, 255, 0), [x.bbox for x in notehead_page.annotations[0]]),
-        ((255, 0, 0), [x.bbox for x in notehead_page.annotations[1]]),
-    ]
-
-    temp = cv2.imread(image_path)
-    for (i, (color, data)) in enumerate(viz_data):
-        temp = draw_rectangles_on_image(
-            temp,
-            data,
-            color=color,
-            thickness=2,
-            show=(i == len(viz_data) - 1)
-        )
-
 # INITIALIZE GRAPH
 notehead_full = []
 for note in combined.annotations[5]:
@@ -113,6 +94,14 @@ for measure in combined.annotations[1]:
 grand_staff = []
 for gs in combined.annotations[4]:
     grand_staff.append(Node(gs))
+
+from .Graph.Tags import NOTEHEAD_TYPE_TAG, NoteheadType
+
+for note in notehead_full:
+    note.set_tag(NOTEHEAD_TYPE_TAG, NoteheadType.FULL)
+
+for note in notehead_half:
+    note.set_tag(NOTEHEAD_TYPE_TAG, NoteheadType.HALF)
 
 from .PageReconstruction import link_measures_based_on_grand_staffs
 
@@ -163,11 +152,14 @@ def reconstruct_note_events(
 
     return events_by_measure
 
+
 from timeit import default_timer as timer
+
 start = timer()
 reconstruct_note_events(
     measures,
     grand_staff,
     notehead_full + notehead_half,
+    verbose=False
 )
 print(timer() - start)

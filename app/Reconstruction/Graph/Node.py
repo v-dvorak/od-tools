@@ -1,8 +1,9 @@
 from typing import Self, Any
+
 import numpy as np
 
-from ..Conversions.Annotations.Annotation import Annotation
-from ..Conversions.BoundingBox import BoundingBox, Direction
+from ...Conversions.Annotations.Annotation import Annotation
+from ...Conversions.BoundingBox import BoundingBox, Direction
 
 
 class BaseNode:
@@ -87,7 +88,12 @@ class VirtualNode(BaseNode):
         return self._children
 
 
-def assign_to_closest(target: list[Node], source: list[Node], upper_limit: float = None):
+def assign_to_closest(
+        target: list[Node],
+        source: list[Node],
+        upper_limit: float = None,
+        verbose: bool = False
+):
     """
     Assigns object from source to targets based on their distance from them.
     Modifies the target list in place.
@@ -95,7 +101,10 @@ def assign_to_closest(target: list[Node], source: list[Node], upper_limit: float
     :param target: list of targets to assign sources to
     :param source: list of sources to assign to targets
     :param upper_limit: maximum distance to assign source to target
+    :param verbose: make script verbose
     """
+    unable_to_add = 0
+
     for current_source in source:
         best_distance = np.inf
         best_target: Node = None
@@ -111,14 +120,21 @@ def assign_to_closest(target: list[Node], source: list[Node], upper_limit: float
                     best_target = current_target
 
         if best_target is None:
-            print(
-                f"Warning: No suitable target found for source: {current_source.annot.bbox}, id {current_source.annot.class_id}")
+            if verbose:
+                print(
+                    "Warning: No suitable target found for source:",
+                    f"{current_source.annot.bbox}, id {current_source.annot.class_id}"
+                )
+            else:
+                unable_to_add += 1
         else:
             best_target.add_child(current_source)
 
+    if not verbose and unable_to_add > 0:
+        print(f"Warning: No suitable target found for {unable_to_add} source objects")
+
     for current_target in target:
         current_target.update_total_bbox()
-
 
 
 def sort_to_strips_with_threshold(

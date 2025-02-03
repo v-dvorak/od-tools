@@ -1,8 +1,8 @@
 import itertools
 from pathlib import Path
 
+from .Graph.Node import Node, VirtualNode, sort_to_strips_with_threshold
 from .MeasureManipulation import SectionType, link_measures_inside_grand_staff
-from .Node import Node, VirtualNode, sort_to_strips_with_threshold
 from .NoteManipulation import _assign_gs_index_to_notes, note_node_to_str
 from .VizUtils import write_numbers_on_image, print_info
 from ..Conversions.BoundingBox import Direction
@@ -81,6 +81,9 @@ def link_measures_based_on_grand_staffs(
         verbose: bool = False,
         visualize: bool = False,
 ) -> list[VirtualNode]:
+    if image_path is None and visualize:
+        raise ValueError("Image path is required when visualize is set to True.")
+
     # SORT MEASURES INTO SECTION IN/OUT OF GRAND STAFF
     sections = sort_page_into_sections(measures, grand_staffs)
 
@@ -178,6 +181,9 @@ def compute_note_events_for_page(
         verbose: bool = False,
         visualize: bool = False
 ) -> list[list[VirtualNode]]:
+    if image_path is None and visualize:
+        raise ValueError("Image path is required when visualize is set to True.")
+    
     events_by_measure: list[list[VirtualNode]] = []
     for mes in linked_measures:
         events_by_measure.append(compute_note_events(mes, neiou_threshold=neiou_treshold))
@@ -211,3 +217,58 @@ def linearize_note_events(events_by_measure: list[list[VirtualNode]]) -> str:
         representation = "|| " + representation + " ||"
 
     return representation
+
+
+from .NoteManipulation import assign_notes_to_measures_and_compute_pitch
+from .VizUtils import visualize_result
+
+
+def reconstruct_note_events(
+        measures: list[Node],
+        grand_staffs: list[Node],
+        notes: list[Node],
+        ual_factor: float = 1.5,
+        mriou_threshold: float = 0.5,
+        neiou_threshold: float = 0.4,
+        image_path: Path = None,
+        verbose: bool = False,
+        visualize: bool = False
+) -> list[list[VirtualNode]]:
+    if image_path is None and visualize:
+        raise ValueError("Image path is required when visualize is set to True.")
+
+    assign_notes_to_measures_and_compute_pitch(
+        measures,
+        notes,
+        ual_factor=ual_factor,
+        image_path=image_path,
+        verbose=verbose,
+        visualize=visualize
+    )
+
+    linked_measures = link_measures_based_on_grand_staffs(
+        measures,
+        grand_staffs,
+        mriou_threshold,
+        image_path=image_path,
+        verbose=verbose,
+        visualize=visualize
+    )
+
+    events_by_measure = compute_note_events_for_page(
+        linked_measures,
+        neiou_threshold,
+        image_path=image_path,
+        verbose=verbose,
+        visualize=visualize
+    )
+
+    if visualize:
+        print("Showing end result...")
+        visualize_result(image_path, measures, [e for es in events_by_measure for e in es], grand_staffs)
+        input("Press enter to continue")
+
+    if verbose:
+        print(linearize_note_events(events_by_measure))
+
+    return events_by_measure

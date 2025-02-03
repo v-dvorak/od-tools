@@ -3,8 +3,8 @@ from pathlib import Path
 import cv2
 from PIL import Image, ImageDraw, ImageFont
 
-from .GraphNodeTags import NOTE_PITCH_TAG
-from .Node import Node, VirtualNode
+from .Graph.Node import Node, VirtualNode
+from .Graph.Tags import NOTE_PITCH_TAG
 from ..Splitting.SplitUtils import draw_rectangles_on_image
 
 
@@ -78,7 +78,6 @@ def visualize_result(
 
 
 def print_info(name: str, header: str, content: list[str], separator: str = "-"):
-    print()
     print(len(header) * separator)
     print(name)
     if header is not None:
@@ -86,3 +85,22 @@ def print_info(name: str, header: str, content: list[str], separator: str = "-")
     print(len(header) * separator)
     print("\n".join(content))
     print(len(header) * separator)
+    print()
+
+
+def visualize_input_data(image_path: Path, measures: list[Node], notehead_full: list[Node], notehead_half: list[Node]):
+    viz_data = [
+        ((0, 0, 255), [m.annot.bbox for m in measures]),
+        ((0, 255, 0), [n.annot.bbox for n in notehead_full]),
+        ((255, 0, 0), [n.annot.bbox for n in notehead_half]),
+    ]
+
+    temp = cv2.imread(str(image_path))
+    for (i, (color, data)) in enumerate(viz_data):
+        temp = draw_rectangles_on_image(
+            temp,
+            data,
+            color=color,
+            thickness=2,
+            show=(i == len(viz_data) - 1)
+        )

@@ -1,6 +1,6 @@
 from enum import Enum
 
-from .Node import Node, VirtualNode
+from .Graph.Node import Node, VirtualNode
 from ..Conversions.BoundingBox import Direction
 
 
@@ -28,7 +28,6 @@ def link_measures_inside_grand_staff(
     """
     top_index = 0
     bottom_index = 0
-    print(len(top_row), len(bottom_row))
 
     linked_measures: list[VirtualNode] = []
 
@@ -38,7 +37,6 @@ def link_measures_inside_grand_staff(
         bottom_measure = bottom_row[bottom_index]
 
         iou = top_measure.annot.bbox.intersection_over_union(bottom_measure.annot.bbox, direction=Direction.HORIZONTAL)
-        print(f"iou: {iou}")
 
         # linkage found
         if iou > linkage_iou_threshold:
