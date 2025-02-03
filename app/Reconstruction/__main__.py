@@ -1,19 +1,14 @@
-import itertools
 from pathlib import Path
 
 import cv2
-import numpy as np
 from PIL import Image
 from ultralytics import YOLO
 
-from .DebugViz import write_note_heights_to_image, write_numbers_on_image, visualize_result
-from .MeasureManipulation import SectionType, sort_page_into_sections
-from .MeasureManipulation import link_measures_inside_grand_stave
-from .Node import Node, VirtualNode, assign_to_closest, sort_to_strips_with_threshold
-from .NoteManipulation import assign_height_to_notes, compute_note_events, note_note_to_str, \
-    assign_gs_index_to_notes
+from .Node import Node, VirtualNode
+from .NoteManipulation import assign_notes_to_measures_and_compute_pitch
+from .PageReconstruction import compute_note_events_for_page, linearize_note_events
+from .VizUtils import visualize_result
 from ..Conversions.Annotations.FullPage import FullPage
-from ..Conversions.BoundingBox import Direction
 from ..Conversions.ConversionUtils import get_num_pixels
 from ..Splitting.SplitUtils import create_split_box_matrix, draw_rectangles_on_image
 from ..Val.Utils import create_split_images
@@ -85,7 +80,7 @@ combined = FullPage(
 
 # ['system_measures', 'stave_measures', 'staves', 'systems', 'grand_staff', 'noteheadFull', 'noteheadHalf']
 
-if visualize:
+if True:
     viz_data = [
         ((0, 0, 255), [x.bbox for xs in staff_page.annotations for x in xs]),  # staff
         ((0, 255, 0), [x.bbox for x in notehead_page.annotations[0]]),
@@ -119,165 +114,60 @@ grand_staff = []
 for gs in combined.annotations[4]:
     grand_staff.append(Node(gs))
 
-
-def _print_info(name: str, header: str, content: list[str], separator: str = "-"):
-    print()
-    print(len(header) * separator)
-    print(name)
-    if header is not None:
-        print(header)
-    print(len(header) * separator)
-    print("\n".join(content))
-    print(len(header) * separator)
+from .PageReconstruction import link_measures_based_on_grand_staffs
 
 
 def reconstruct_note_events(
         measures: list[Node],
-        grand_staff: list[Node],
+        grand_staffs: list[Node],
         notes: list[Node],
-        verbose: bool = False,
-        visualize: bool = False,
-        ual_factor: float = 3 / 2,
+        ual_factor: float = 1.5,
         mriou_threshold: float = 0.5,
+        neiou_threshold: float = 0.4,
+        verbose: bool = False,
+        visualize: bool = False
 ) -> list[list[VirtualNode]]:
-    # ASSIGN NOTES TO MEASURES AND CALCULATE NOTE HEIGHTS
-    # the method assigns notes to measures based on center of the detection
-    # "* (3 / 2)" means +- one whole average measure from top and bottom from chosen measure
-    upper_assignment_limit = np.mean([m.annot.bbox.height for m in measures]) * ual_factor
-    assign_to_closest(measures, notes, upper_limit=upper_assignment_limit)
+    assign_notes_to_measures_and_compute_pitch(
+        measures,
+        notes,
+        ual_factor=ual_factor,
+        image_path=image_path,
+        verbose=verbose,
+        visualize=visualize
+    )
 
-    # ASSIGN HEIGHT TO EACH NOTE
-    for measure in measures:
-        assign_height_to_notes(measure)
+    linked_measures = link_measures_based_on_grand_staffs(
+        measures,
+        grand_staffs,
+        mriou_threshold,
+        image_path=image_path,
+        verbose=verbose,
+        visualize=visualize
+    )
 
-    if visualize:
-        print("Showing note heights...")
-        measure_height_viz = draw_rectangles_on_image(
-            image_path,
-            [m.total_bbox for m in measures]
-        )
-        write_note_heights_to_image(
-            measure_height_viz,
-            [n for m in measures for n in m.children()]
-        )
-        input("Press Enter to continue")
-
-    # SORT MEASURES INTO SECTION IN/OUT OF GRAND STAFF
-    sections = sort_page_into_sections(measures, grand_staff)
-
-    if verbose:
-        _print_info(
-            "Detected sections",
-            "in/out: number of measures",
-            [f"{section_type}: {len(section)}" for section_type, section in sections]
-        )
-
-    # SORT SECTIONS INTO ROWS OF MEASURES
-    sorted_sections: list[tuple[SectionType, list[list[Node]]]] = []
-    for section_type, section in sections:
-        # keep section type and sort measures inside by reading order
-        sorted_sections.append(
-            (section_type,
-             sort_to_strips_with_threshold(
-                 section,
-                 mriou_threshold,
-                 direction=Direction.HORIZONTAL
-             )))
-
-    if verbose:
-        _print_info(
-            "Sections sorted by reading order",
-            "in/out: number of measures in each row",
-            [f"{section_type}: {', '.join([str(len(subsection)) for subsection in s_section])}"
-             for section_type, s_section in sorted_sections]
-        )
+    events_by_measure = compute_note_events_for_page(
+        linked_measures,
+        neiou_threshold,
+        image_path=image_path,
+        verbose=verbose,
+        visualize=visualize
+    )
 
     if visualize:
-        print("Showing sorted measures...")
-        dumped_measures = list(itertools.chain.from_iterable([m for ms in sorted_sections for m in ms[1]]))
-        write_numbers_on_image(image_path, dumped_measures)
-        input("Press Enter to continue")
-
-    # PREPARE MEASURES FOR EVENT DETECTION
-    linked_measures: list[VirtualNode] = []
-
-    for section_type, s_section in sorted_sections:
-        # this is the true grand stave
-        if section_type == SectionType.IN_GS and len(s_section) == 2:
-            # tag staff that belong to it
-            assign_gs_index_to_notes(s_section[0], 1)
-            assign_gs_index_to_notes(s_section[1], 0)
-            # and link individual measures together
-            linked_measures.extend(link_measures_inside_grand_stave(s_section[0], s_section[1]))
-
-        # this is a section of many single staves (or something undefined)
-        else:
-            for stave in s_section:
-                for measure in stave:
-                    # list of mesures makes it easier to adapt the following algorithms
-                    linked_measures.append(VirtualNode([measure]))
-
-    if verbose:
-        print("Linked measures sorted by reading order")
-        print(", ".join([str(len(e.children())) for e in linked_measures]))
-        print()
-
-    events: list[VirtualNode] = []
-    events_by_measure: list[list[VirtualNode]] = []
-    for mes in linked_measures:
-        temp = compute_note_events(mes, iou_threshold=0.4)
-        events.extend(temp)
-        events_by_measure.append(temp)
-
-    if visualize:
-        flat_list: list[Node] = [item for sublist1 in events_by_measure for sublist2 in sublist1 for item in
-                                 sublist2.children()]
-        print("Showing note reading order...")
-        write_numbers_on_image(image_path, flat_list)
-        input("Press enter to continue")
-
         print("Showing end result...")
-        visualize_result(image_path, measures, events, grand_staff)
+        visualize_result(image_path, measures, [e for es in events_by_measure for e in es], grand_staffs)
         input("Press enter to continue")
 
-    repre = " || ".join(
-        [" | ".join(
-            [" ".join([note_note_to_str(n) for n in event.children()])
-             for event in measure])
-            for measure in events_by_measure])
-
-    if len(repre) != 0:
-        repre = "|| " + repre + " ||"
-
-    print(repre)
+    if verbose:
+        print(linearize_note_events(events_by_measure))
 
     return events_by_measure
 
-
-def linearize_note_events(events_by_measure: list[list[VirtualNode]]) -> str:
-    # measure sep
-    repre = " || ".join(
-        # event sep
-        [" | ".join(
-            # note sep
-            [" ".join(
-                [note_note_to_str(n) for n in event.children()]
-            )
-                for event in measure]
-        )
-            for measure in events_by_measure]
-    )
-
-    if len(repre) != 0:
-        repre = "|| " + repre + " ||"
-
-    return repre
-
-
+from timeit import default_timer as timer
+start = timer()
 reconstruct_note_events(
     measures,
     grand_staff,
     notehead_full + notehead_half,
-    verbose=True,
-    visualize=True
 )
+print(timer() - start)
