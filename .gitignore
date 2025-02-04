@@ -1,6 +1,10 @@
 # Datasets
 datasets/*
 
+# Demo
+models/*
+images/*
+
 # Test images
 /*.jpg
 /*.png
