@@ -6,7 +6,7 @@ import numpy as np
 from .Graph.Node import Node, assign_to_closest
 from .Graph.Tags import NOTE_PITCH_TAG, NOTE_GS_INDEX_TAG, NOTEHEAD_TYPE_TAG
 from .VizUtils import write_note_heights_to_image
-from ..Splitting.SplitUtils import draw_rectangles_on_image
+from ..Splitting import draw_rectangles_on_image
 
 
 def _compute_note_pitches(measure: Node):

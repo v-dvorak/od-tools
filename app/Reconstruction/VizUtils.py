@@ -5,7 +5,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 from .Graph.Node import Node, VirtualNode
 from .Graph.Tags import NOTE_PITCH_TAG
-from ..Splitting.SplitUtils import draw_rectangles_on_image
+from ..Splitting import draw_rectangles_on_image
 
 
 def write_numbers_on_image(image_path, measures: list[Node]):

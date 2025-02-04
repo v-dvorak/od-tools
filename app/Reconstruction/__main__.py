@@ -10,15 +10,14 @@ from .PageReconstruction import compute_note_events_for_page, linearize_note_eve
 from .VizUtils import visualize_result
 from ..Conversions.Annotations.FullPage import FullPage
 from ..Conversions.ConversionUtils import get_num_pixels
-from ..Splitting.SplitUtils import create_split_box_matrix, draw_rectangles_on_image
-from ..Val.Utils import create_split_images
+from ..Splitting import create_split_box_matrix, create_split_images, draw_rectangles_on_image
 
 image_path = "demo/30d6c780-c8fe-11e7-9c14-005056827e51_375c6850-f593-11e7-b30f-5ef3fc9ae867.jpg"
 image_path = "sheet-test.jpg"
 # not ideal
 image_path = "F:/Studium/4/rocnikac/od-tools/datasets/2024-10-07_proto-dataset/images/81c9f683-28d1-4e73-8e25-e37333408f5a_ac45624e-0846-4c6d-a079-a1f1877e1aea.jpg"
 # ideal
-# image_path = "F:/Studium/4/rocnikac/od-tools/datasets/2024-10-07_proto-dataset/images/bf061840-2322-11eb-979b-005056827e52_2e117f2e-4c19-4bc3-ba6b-5531ca623e22.jpg"
+image_path = "F:/Studium/4/rocnikac/od-tools/datasets/2024-10-07_proto-dataset/images/bf061840-2322-11eb-979b-005056827e52_2e117f2e-4c19-4bc3-ba6b-5531ca623e22.jpg"
 # ideal, more sophisticated
 # image_path = "F:/Studium/4/rocnikac/od-tools/datasets/2024-10-07_proto-dataset/images/81c9f683-28d1-4e73-8e25-e37333408f5a_5b6164cc-5653-494b-b43f-946fbb64d440.jpg"
 # image = "demo/3bb9e322-bc61-4307-856b-6f8fb1a640df_2d5f652c-1df0-474c-ae23-3fb699afe808.jpg"

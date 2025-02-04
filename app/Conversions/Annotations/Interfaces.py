@@ -334,6 +334,15 @@ class IFullPage:
         :param verbose: make script verbose
         :return: IFullPage
         """
+        raise NotImplementedError()
+
+    def extend_page(self, new_page: Self):
+        """
+        Adds annotations and class names from give page into the page.
+
+        :param new_page: page to source new annotations from
+        """
+        raise NotImplementedError()
 
 
 class ISplitPage:

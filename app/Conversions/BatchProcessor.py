@@ -4,10 +4,10 @@ import cv2
 from tqdm import tqdm
 
 from .Formats import InputFormat, OutputFormat
+from .. import Splitting
 from ..Conversions import ConversionUtils
 from ..Conversions.Annotations import FullPage, SplitPage
-from ..Splitting import SplitUtils
-from ..Splitting.SplitUtils import BoundingBox
+from ..Conversions.BoundingBox import BoundingBox
 
 
 def process_normal_batch(
@@ -102,7 +102,7 @@ def create_splits_from_full_page(
     )
 
     # create splits
-    splits = SplitUtils.create_split_box_matrix(
+    splits = Splitting.create_split_box_matrix(
         page.size,
         window_size=window_size,
         overlap_ratio=overlap_ratio

@@ -12,7 +12,7 @@ from .Annotation import Annotation
 from .Interfaces import IAnnotation, IFullPage, AnnotationType
 from .. import ConversionUtils
 from ..Formats import InputFormat, OutputFormat
-from ...Splitting.SplitUtils import BoundingBox
+from ...Conversions.BoundingBox import BoundingBox
 
 RESOLVE_OVERLAPS_INSIDE_TILE = True
 
@@ -144,7 +144,8 @@ class FullPage(IFullPage):
                     an_type=AnnotationType.PREDICTION
                 )
             )
-        return cls(result.orig_shape, predictions, class_names)
+        # original shape is stored as (height, width) in YOLO
+        return cls((result.orig_shape[1], result.orig_shape[0]), predictions, class_names)
 
     # region Resolve overlaps
     def cut_off_predictions_too_close_to_edge(
@@ -372,9 +373,15 @@ class FullPage(IFullPage):
             for annotation in subpage.all_annotations():
                 completed_annotations[annotation.class_id].append(annotation)
 
-        return FullPage((last_split.left, last_split.bottom), completed_annotations, class_names)
+        return FullPage((last_split.right, last_split.bottom), completed_annotations, class_names)
 
     # endregion
+    def extend_page(self, new_page: Self):
+        if self.size[0] != new_page.size[0] or self.size[1] != new_page.size[1]:
+            raise ValueError(f"Image sizes do not match: {self.size} != {new_page.size}")
+
+        self.annotations += new_page.annotations
+        self.class_names += new_page.class_names
 
 
 class COCOFullPageEncoder(JSONEncoder):
