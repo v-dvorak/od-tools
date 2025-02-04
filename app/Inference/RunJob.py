@@ -13,6 +13,8 @@ def _run_split_prediction_job(job: InferenceJob, verbose: bool = False) -> FullP
     else:
         w, h = job.image.size
 
+    job.split_settings.update_window_size_based_on_tols(w if w > h else h)
+
     # create splits
     splits = Splitting.create_split_box_matrix(
         (h, w),

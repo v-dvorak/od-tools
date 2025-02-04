@@ -1,3 +1,8 @@
+"""
+Takes care of model downloading and updating.
+It provides methods to download and setup images for demo inference.
+"""
+
 from pathlib import Path
 
 import requests
@@ -24,6 +29,14 @@ DEMO_IMAGE_IDS = [
 
 
 def get_path_to_latest_version(tag: str, model_dir: Path = None) -> Path:
+    """
+    Searches given directory for a model that begins with a given tag
+    and returns the path to the latest version of it.
+
+    :param tag: the tag to search for
+    :param model_dir: the directory to search in
+    :return: the path to the latest version of the model
+    """
     if model_dir is None:
         model_dir = DOWNLOAD_DIR
 
@@ -93,6 +106,12 @@ def _download_pt_file(release, download_dir: Path = None):
 
 
 def update_models(model_dir: Path = None):
+    """
+    Checks if models are downloaded and are the newest version available,
+    downloads the newest version if necessary.
+
+    :param model_dir: directory to download models to
+    """
     if model_dir is None:
         model_dir = DOWNLOAD_DIR
 
@@ -129,6 +148,12 @@ def _download_image(
 
 
 def update_demo_images(image_dir: Path = None, verbose: bool = False):
+    """
+    Checks if demo images are downloaded, if not, downloads them.
+
+    :param image_dir: directory with demo images
+    :param verbose: make script verbose
+    """
     print("Fetching demo images")
 
     if image_dir is None:
@@ -144,5 +169,10 @@ def update_demo_images(image_dir: Path = None, verbose: bool = False):
             _download_image(img_id, file_name, image_dir)
 
 
-def load_demo_images():
+def load_demo_images() -> list[Path]:
+    """
+    Returns list of paths to demo images.
+
+    :return: list of paths to demo images
+    """
     return list(IMAGE_DIR.glob("*.jpg"))
