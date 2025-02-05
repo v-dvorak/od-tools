@@ -40,6 +40,7 @@ for image_path in images_to_process:
     # SETUP INFERENCE JOBS
 
     # convert image to bw beforehand
+    # (color to bw conversion from cv2 does not work in this case)
     image = Image.open(image_path)
     bw_image = image.convert("L")
 
