@@ -27,11 +27,11 @@ class OutputFormat(ExtendedEnum):
 
     def to_annotation_extension(self) -> str:
         match self:
-            case InputFormat.MUNG:
+            case OutputFormat.MUNG:
                 return "xml"
-            case InputFormat.COCO:
+            case OutputFormat.COCO:
                 return "json"
-            case InputFormat.YOLO_DETECTION | InputFormat.YOLO_SEGMENTATION:
+            case OutputFormat.YOLO_DETECTION | OutputFormat.YOLO_SEGMENTATION:
                 return "txt"
             case _:
                 raise ValueError
