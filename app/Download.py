@@ -82,7 +82,7 @@ def _download_pt_file(release, download_dir: Path = None):
 
         file_path = download_dir / file_name
         if file_path.exists():
-            print(f"Latest model version {release['tag_name']} already downloaded")
+            print(f"> Latest model version {release['tag_name']} already downloaded")
             return
 
         response = requests.get(download_url, stream=True)
@@ -102,7 +102,7 @@ def _download_pt_file(release, download_dir: Path = None):
                     bar.update(len(chunk))
 
     else:
-        print("Model file not found in the release assets")
+        print("> Model file not found in the release assets")
 
 
 def update_models(model_dir: Path = None):
@@ -123,7 +123,7 @@ def update_models(model_dir: Path = None):
         latest_release = _get_latest_release(tag)
 
         if latest_release:
-            print(f"Latest release for {tag}: {latest_release['tag_name']}")
+            print(f"> Latest release for {tag}: {latest_release['tag_name']}")
             _download_pt_file(latest_release, download_dir=model_dir)
 
         print()
@@ -176,3 +176,16 @@ def load_demo_images() -> list[Path]:
     :return: list of paths to demo images
     """
     return list(IMAGE_DIR.glob("*.jpg"))
+
+
+def update_all_default_resources():
+    print("Downloading latest models and demo images to default folders:")
+    print(f"> Models: {DOWNLOAD_DIR.resolve()}")
+    print(f"> Demo images: {IMAGE_DIR.resolve()}")
+    print()
+    update_models()
+    update_demo_images(verbose=True)
+
+
+if __name__ == "__main__":
+    update_all_default_resources()

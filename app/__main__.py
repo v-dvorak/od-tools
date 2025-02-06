@@ -109,6 +109,10 @@ def main():
     conf_parser.add_argument("config_path", help="Path to config.")
     # endregion
 
+    # region DEFAULT RESOURCES UPDATE
+    update_parser = subparsers.add_parser("update")
+    # endregion
+
     args = parser.parse_args()
 
     # CONFIG VERBOSE CHECK
@@ -119,7 +123,7 @@ def main():
         Utils.get_mapping_and_names_from_config(loaded_config, verbose=True)
         return 0
 
-    # DATASET TRAIN/TEST SPLIT (without any augmentation or image splitting
+    # DATASET TRAIN/TEST SPLIT (without any augmentation or image splitting)
     if args.command == "split":
         Formatter.split_and_save_dataset(
             # directories
@@ -132,8 +136,13 @@ def main():
             verbose=args.verbose
         )
         return 0
+    elif args.command == "update":
+        from .Download import update_all_default_resources
+        update_all_default_resources()
+        return 0
 
     # CONFIG LOADING
+    # later methods need the config loaded
     if args.config is None:
         with open("configs/default.json", "rt") as f:
             loaded_config = json.load(f)
