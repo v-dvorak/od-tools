@@ -27,17 +27,19 @@ class SplitPage(ISplitPage):
             output_dir: Path,
             dato_name: Path | str,
             output_format: OutputFormat,
+            add_tags: str = None
     ) -> None:
         for row in range(len(self.subpages)):
             for col in range(len(self.subpages[0])):
                 self.subpages[row][col].save_to_file(
                     output_dir,
-                    dato_name + f"-{row}-{col}",
+                    "-".join([dato_name, str(row), str(col)]) if add_tags is None
+                    else "-".join([dato_name, str(row), str(col), add_tags]),
                     output_format
                 )
 
     @classmethod
-    def from_coco_full_page(
+    def from_full_page(
             cls,
             full_page: FullPage,
             splits: list[list[BoundingBox]],

@@ -107,6 +107,7 @@ def format_dataset(
         window_size: tuple[int, int] = (640, 640),
         overlap_ratio: float = 0.25,
         image_splitting: bool = False,
+        aug_ratios: list[float] = None,
         verbose: bool = False,
 ) -> None:
     """
@@ -132,8 +133,15 @@ def format_dataset(
     :param overlap_ratio: overlap ratio between two tiles in case of image splitting
     :param image_splitting: whether to split images according to the split ratio and sliding window
 
+    :param aug_ratios: list of augmentation ratios applied to images in case of image splitting
+
     :param verbose: make script verbose
     """
+    if not image_splitting and aug_ratios is not None:
+        raise NotImplementedError("Cannot augment data without image splitting")
+
+    print(aug_ratios)
+
     data = _load_data_from_paths(
         image_source_dir, f"*.{image_format}",
         annot_source_dir, f"*.{input_format.to_annotation_extension()}"
@@ -155,7 +163,8 @@ def format_dataset(
                 output_format,
                 image_format=image_format,
                 window_size=window_size,
-                overlap_ratio=overlap_ratio
+                overlap_ratio=overlap_ratio,
+                aug_ratios=aug_ratios,
             )
         else:
             BatchProcessor.process_normal_batch(
@@ -197,7 +206,8 @@ def format_dataset(
                 output_format,
                 image_format=image_format,
                 window_size=window_size,
-                overlap_ratio=overlap_ratio
+                overlap_ratio=overlap_ratio,
+                aug_ratios=aug_ratios,
             )
 
             BatchProcessor.process_split_batch(
@@ -210,7 +220,8 @@ def format_dataset(
                 output_format,
                 image_format=image_format,
                 window_size=window_size,
-                overlap_ratio=overlap_ratio
+                overlap_ratio=overlap_ratio,
+                aug_ratios=aug_ratios
             )
         else:
             BatchProcessor.process_normal_batch(

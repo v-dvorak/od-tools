@@ -34,6 +34,7 @@ def main():
     form_parser.add_argument("--resize", type=int, default=None,
                              help="Resizes images so that the longer side is this many pixels long.")
     form_parser.add_argument("--image_splitting", action="store_true", help="Split images into smaller ones.")
+    form_parser.add_argument("-a", "--augmentation", nargs="+", default=None, help="Zoom in/out augmentations.")
 
     # global arguments
     form_parser.add_argument("-v", "--verbose", action="store_true", help="Make script verbose")
@@ -110,6 +111,7 @@ def main():
 
     args = parser.parse_args()
 
+    # CONFIG VERBOSE CHECK
     if args.command == "confcheck":
         with open(args.config_path, "r", encoding="utf8") as f:
             loaded_config = json.load(f)
@@ -117,6 +119,7 @@ def main():
         Utils.get_mapping_and_names_from_config(loaded_config, verbose=True)
         return 0
 
+    # DATASET TRAIN/TEST SPLIT (without any augmentation or image splitting
     if args.command == "split":
         Formatter.split_and_save_dataset(
             # directories
@@ -130,7 +133,7 @@ def main():
         )
         return 0
 
-    # load config
+    # CONFIG LOADING
     if args.config is None:
         with open("configs/default.json", "rt") as f:
             loaded_config = json.load(f)
@@ -140,9 +143,26 @@ def main():
 
     class_id_mapping, class_output_names = Utils.get_mapping_and_names_from_config(loaded_config)
 
+    # DATASET FORMATTING
     if args.command == "form":
+        # input preprocessing
         input_f = InputFormat.from_string(args.input_format)
         output_f = OutputFormat.from_string(args.output_format)
+
+        if not args.image_splitting and args.augmentation is not None:
+            raise ValueError("Cannot augment data without image splitting")
+
+        if args.augmentation is not None:
+            args.augmentation = [float(a) for a in args.augmentation]
+
+            if 1.0 not in args.augmentation:
+                print("Warning: Adding 1.0 to augmentation ratios")
+                args.augmentation.append(1.0)
+
+            args.augmentation = sorted(args.augmentation)
+
+            if args.verbose:
+                print(f"Augmentation ratios: {args.augmentation}")
 
         Formatter.format_dataset(
             # directories
@@ -162,10 +182,13 @@ def main():
             window_size=(loaded_config["window_size"][0], loaded_config["window_size"][1]),
             overlap_ratio=loaded_config["overlap_ratio"],
             image_splitting=args.image_splitting,
+            # augmentation
+            aug_ratios=args.augmentation,
             # others
             seed=args.seed,
             verbose=args.verbose
         )
+    # DATASET STATISTICS
     elif args.command == "stats":
         Plots.load_and_plot_stats(
             # directories
@@ -182,6 +205,7 @@ def main():
             summarize=args.sum,
             verbose=args.verbose
         )
+    # MODEL VALIDATION
     elif args.command == "val":
         EvalJob.run_f1_scores_vs_iou(
             # input paths
