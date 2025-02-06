@@ -2,6 +2,10 @@
 
 Configuration file stores setting for dataset processing that would be near impossible to pass to the provided scripts via command line arguments or settings that do not change often.
 
+- [Class mapping](#class-mapping)
+- [Window size](#window-size)
+- [Overlap ratio](#overlap-ratio)
+
 ## Class mapping
 
 Makes it possible to map class IDs to class names and the other way. Class ID has to be a number, other variables have to be strings. Three formats are available:
