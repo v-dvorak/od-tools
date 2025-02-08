@@ -183,8 +183,11 @@ def update_all_default_resources():
     print(f"> Models: {DOWNLOAD_DIR.resolve()}")
     print(f"> Demo images: {IMAGE_DIR.resolve()}")
     print()
-    update_models()
-    update_demo_images(verbose=True)
+    try:
+        update_models()
+        update_demo_images(verbose=True)
+    except requests.exceptions.ConnectionError as e:
+        print(f"Error: {e}")
 
 
 if __name__ == "__main__":
