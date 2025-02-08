@@ -5,10 +5,10 @@ from pathlib import Path
 from tqdm import tqdm
 from ultralytics import YOLO
 
-from . import Utils
 from ..Conversions import ConversionUtils
 from ..Conversions.Annotations import FullPage, Annotation
 from ..Conversions.Formats import InputFormat
+from ..Splitting import SplitScripts
 from ..Splitting import SplitUtils
 from ..Val import FScores
 
@@ -173,8 +173,8 @@ def predict_yolo_split(
     width, height = ConversionUtils.get_num_pixels(image_path)
 
     # prepare images for inference
-    splits = SplitUtils.create_split_box_matrix((width, height), overlap_ratio=overlap)
-    tiles = Utils.create_split_images(image_path, splits)
+    splits = SplitScripts.create_split_box_matrix((width, height), overlap_ratio=overlap)
+    tiles = SplitScripts.create_split_images(image_path, splits)
     # predict
     results = model.predict(tiles)
 
