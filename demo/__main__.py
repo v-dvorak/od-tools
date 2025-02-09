@@ -4,11 +4,11 @@ from timeit import default_timer as timer
 
 import cv2
 from PIL import Image
-from ultralytics import YOLO
 
 from app.Download import get_path_to_latest_version, update_models, OLA_TAG, NOTA_TAG
 from app.Download import update_demo_images, load_demo_images
-from app.Inference import InferenceJob, SplitSettings, run_multiple_prediction_jobs, ModelType
+from app.Inference import InferenceJob, SplitSettings, run_multiple_prediction_jobs
+from app.Inference.ModelWrappers import YOLODetectionModelWrapper
 from app.Reconstruction import preprocess_annots_for_reconstruction, reconstruct_note_events
 
 parser = argparse.ArgumentParser(
@@ -23,8 +23,8 @@ args = parser.parse_args()
 
 # LOAD MODELS
 update_models()
-notehead_detector = YOLO(get_path_to_latest_version(NOTA_TAG))
-staff_detector = YOLO(get_path_to_latest_version(OLA_TAG))
+notehead_detector = YOLODetectionModelWrapper(get_path_to_latest_version(NOTA_TAG))
+staff_detector = YOLODetectionModelWrapper(get_path_to_latest_version(OLA_TAG))
 
 # LOAD IMAGES
 if args.image_path:
@@ -47,8 +47,7 @@ for image_path in images_to_process:
     # staff
     staff_job = InferenceJob(
         image=bw_image,
-        model=staff_detector,
-        model_type=ModelType.YOLO_DETECTION,
+        model_wrapper=staff_detector,
         # retrieve only measures and grand staffs
         wanted_ids=[1, 4]
     )
@@ -56,8 +55,7 @@ for image_path in images_to_process:
     # noteheads
     notehead_job = InferenceJob(
         image=cv2.imread(image_path),
-        model=notehead_detector,
-        model_type=ModelType.YOLO_DETECTION,
+        model_wrapper=notehead_detector,
         split_settings=SplitSettings(
             width=640,
             height=640,

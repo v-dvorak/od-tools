@@ -1,7 +1,6 @@
 import numpy as np
 
 from .InferenceJob import InferenceJob
-from .ModelType import ModelType
 from .. import Splitting
 from ..Conversions.Annotations.FullPage import FullPage
 
@@ -24,12 +23,7 @@ def _run_split_prediction_job(job: InferenceJob, verbose: bool = False) -> FullP
     tiles = Splitting.create_split_images(job.image, splits)
 
     # predict
-    match job.model_type:
-        case ModelType.YOLO_DETECTION:
-            from .Impl.YOLODetection import yolo_multiple_detection
-            subpages = yolo_multiple_detection(job, tiles, verbose=verbose)
-        case _:
-            raise NotImplementedError(f"Model type {job.model_type} not supported")
+    subpages: list[FullPage] = job.model.predict_multiple(tiles, wanted_ids=job.wanted_ids, verbose=verbose)
 
     # resolve
     resolved = FullPage.combine_multiple_pages_and_resolve(
@@ -44,13 +38,7 @@ def _run_split_prediction_job(job: InferenceJob, verbose: bool = False) -> FullP
 
 
 def _run_normal_prediction_job(job: InferenceJob, verbose: bool = False) -> FullPage:
-    # predict
-    match job.model_type:
-        case ModelType.YOLO_DETECTION:
-            from .Impl.YOLODetection import yolo_single_detection
-            return yolo_single_detection(job, verbose=verbose)
-        case _:
-            raise NotImplementedError(f"Model type {job.model_type} not supported")
+    return job.model.predict_single(job.image, wanted_ids=job.wanted_ids, verbose=verbose)
 
 
 def run_prediction_job(job: InferenceJob, verbose: bool = False) -> FullPage:
