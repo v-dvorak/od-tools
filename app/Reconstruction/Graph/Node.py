@@ -1,10 +1,11 @@
+from abc import abstractmethod
 from typing import Self, Any
 
 import numpy as np
 
+from .Names import NodeName
 from ...Conversions.Annotations.Annotation import Annotation
 from ...Conversions.BoundingBox import BoundingBox, Direction
-from .Names import NodeName
 
 
 class BaseNode:
@@ -31,6 +32,7 @@ class BaseNode:
     def set_tag(self, key: str, value: Any):
         self._tags[key] = value
 
+    @abstractmethod
     def update_total_bbox(self):
         raise NotImplementedError()
 

@@ -1,3 +1,4 @@
+from abc import abstractmethod
 from enum import Enum
 from pathlib import Path
 from typing import Generator
@@ -29,6 +30,7 @@ class IAnnotation:
     def __str__(self):
         return f"({self.class_id=}, {self.bbox.left}, {self.bbox.top}, {self.bbox.width}, {self.bbox.height}, {self.bbox.segmentation})"
 
+    @abstractmethod
     def adjust_position_copy(self, left_shift: int, top_shift: int) -> Self:
         """
         Creates a new Annotation object with adjusted position.
@@ -37,8 +39,9 @@ class IAnnotation:
         :param top_shift: pixel shift to the top
         :return: new Annotation object with adjusted coordinates
         """
-        raise NotImplementedError()
+        pass
 
+    @abstractmethod
     def adjust_position(self, left_shift: int, top_shift: int) -> None:
         """
         Adjusts classes position in place.
@@ -46,9 +49,10 @@ class IAnnotation:
         :param left_shift: pixel shift to the left
         :param top_shift: pixel shift to the top
         """
-        raise NotImplementedError()
+        pass
 
     @classmethod
+    @abstractmethod
     def from_mung_node(cls, class_id: int, node: Node) -> Self:
         """
         Creates a new Annotation object from Mung Node.
@@ -57,17 +61,19 @@ class IAnnotation:
         :param node: Mung Node
         :return: new Annotation object
         """
-        raise NotImplementedError()
+        pass
 
+    @abstractmethod
     def intersects(self, other: Self) -> bool:
         """
         Returns true if two Annotation objects intersect, else false.
 
         :param other: other Annotation object
         """
-        raise NotImplementedError()
+        pass
 
     @staticmethod
+    @abstractmethod
     def bounding_box_from_segmentation(segm: list[tuple[int, int]]) -> IBoundingBox:
         """
         Returns the bounding box of the given segmentation.
@@ -75,9 +81,10 @@ class IAnnotation:
         :param segm: list of segmentation coordinates
         :return: IBoundingBox
         """
-        raise NotImplementedError()
+        pass
 
     @staticmethod
+    @abstractmethod
     def segmentation_from_bounding_box(bbox: IBoundingBox) -> list[tuple[int, int]]:
         """
         Returns the segmentation coordinates of the given bounding box.
@@ -85,31 +92,34 @@ class IAnnotation:
         :param bbox: bounding box
         :return: segmentation as list[tuple[int, int]]
         """
-        raise NotImplementedError()
+        pass
 
+    @abstractmethod
     def set_image_name(self, image_name: str):
         """
         Sets the image name.
 
         :param image_name: unique image name
         """
-        raise NotImplementedError()
+        pass
 
+    @abstractmethod
     def get_image_name(self) -> str:
         """
         Gets the image name.
 
         :return: image name
         """
-        raise NotImplementedError()
+        pass
 
+    @abstractmethod
     def get_class_id(self) -> int:
         """
         Gets the class id.
 
         :return: class id
         """
-        raise NotImplementedError()
+        pass
 
 
 class IFullPage:
@@ -135,6 +145,7 @@ class IFullPage:
     def __str__(self):
         return f"({self.class_names=}, {self.size=}, {self.annotations})"
 
+    @abstractmethod
     def save_to_file(self, output_dir: Path, dato_name: Path | str, output_format: OutputFormat) -> None:
         """
         Based on OutputFormat saves FullPage to the output directory.
@@ -143,9 +154,10 @@ class IFullPage:
         :param dato_name: output file name, without extension
         :param output_format: output format
         """
-        raise NotImplementedError()
+        pass
 
     @classmethod
+    @abstractmethod
     def from_list_of_coco_annotations(cls, image_size: tuple[int, int], annotations: list[IAnnotation],
                                       class_names: list[str]) -> Self:
         """
@@ -156,8 +168,9 @@ class IFullPage:
         :param class_names: list of class names
         :return: new FullPage object
         """
-        raise NotImplementedError()
+        pass
 
+    @abstractmethod
     def cut_off_predictions_too_close_to_edge(
             self,
             edge_offset: int = 20,
@@ -171,8 +184,9 @@ class IFullPage:
         :param edge_tile: boolean indicating if the edge should be removed, (left, top, right, bottom) edges
         :param verbose: boolean indicating if the edge should be removed
         """
-        raise NotImplementedError()
+        pass
 
+    @abstractmethod
     def adjust_position_for_all_annotations(self, shift_left: int = 0, shift_top: int = 0) -> None:
         """
         Adjusts the position of all annotations by given left and top shift.
@@ -180,23 +194,26 @@ class IFullPage:
         :param shift_left: left shift of the annotations
         :param shift_top: top shift of the annotations
         """
-        raise NotImplementedError()
+        pass
 
+    @abstractmethod
     def all_annotations(self) -> Generator[IAnnotation, None, None]:
         """
         Creates a generator of all Annotations in FullPage.
 
         :return: generator of Annotations
         """
-        raise NotImplementedError()
+        pass
 
+    @abstractmethod
     def annotation_count(self) -> int:
         """
         Returns the total number of annotations.
         """
-        raise NotImplementedError()
+        pass
 
     @classmethod
+    @abstractmethod
     def from_yolo_result(cls, result: Results, wanted_ids: list[int] = None) -> Self:
         """
         Transforms YOLO predictions into an FullPage object.
@@ -205,8 +222,9 @@ class IFullPage:
         :param wanted_ids: list of class IDs that will be retrieved, if None all are retrieved
         :return: FullPage object
         """
-        raise NotImplementedError()
+        pass
 
+    @abstractmethod
     def resolve_overlaps_with_other_page(
             self,
             other: Self,
@@ -223,8 +241,9 @@ class IFullPage:
         :param iou_threshold: how big IoU has to be to trigger resolving
         :param verbose: make script verbose
         """
-        raise NotImplementedError()
+        pass
 
+    @abstractmethod
     def resolve_overlaps_inside_self(
             self,
             inside_threshold: float = 0.0,
@@ -239,9 +258,10 @@ class IFullPage:
         :param iou_threshold: how big IoU has to be to trigger resolving
         :param verbose: make script verbose
         """
-        raise NotImplementedError()
+        pass
 
     @staticmethod
+    @abstractmethod
     def resolve_matrix_of_pages(
             subpages=list[list[Self]],
             inside_threshold: float = 0.0,
@@ -256,9 +276,10 @@ class IFullPage:
         :param iou_threshold: how big IoU has to be to trigger resolving
         :param verbose: make script verbose
         """
-        raise NotImplementedError()
+        pass
 
     @classmethod
+    @abstractmethod
     def load_from_file(
             cls,
             annot_path: Path,
@@ -277,9 +298,10 @@ class IFullPage:
         :param input_format: input format
         :return: IFullPage
         """
-        raise NotImplementedError()
+        pass
 
     @classmethod
+    @abstractmethod
     def from_yolo_detection(
             cls,
             annot_path: Path,
@@ -296,9 +318,10 @@ class IFullPage:
         :param class_output_names: class output names
         :return: IFullPage
         """
-        raise NotImplementedError()
+        pass
 
     @staticmethod
+    @abstractmethod
     def from_yolo_segmentation(
             annot_path: Path,
             image_path: Path,
@@ -314,9 +337,10 @@ class IFullPage:
         :param class_output_names: class output names
         :return: IFullPage
         """
-        raise NotImplementedError()
+        pass
 
     @classmethod
+    @abstractmethod
     def combine_multiple_pages_and_resolve(
             cls,
             subpages: list[Self],
@@ -335,15 +359,16 @@ class IFullPage:
         :param verbose: make script verbose
         :return: IFullPage
         """
-        raise NotImplementedError()
+        pass
 
+    @abstractmethod
     def extend_page(self, new_page: Self):
         """
         Adds annotations and class names from give page into the page.
 
         :param new_page: page to source new annotations from
         """
-        raise NotImplementedError()
+        pass
 
 
 class ISplitPage:
