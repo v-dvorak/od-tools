@@ -1,9 +1,12 @@
 import itertools
+from decimal import Decimal, ROUND_HALF_UP
 from pathlib import Path
 
+from .Graph.Names import NodeName
 from .Graph.Node import Node, VirtualNode, sort_to_strips_with_threshold
+from .Graph.Tags import SYMBOL_PITCH_TAG, NOTEHEAD_TYPE_TAG, SYMBOL_GS_INDEX_TAG, ACCIDENTAL_TYPE_TAG
 from .MeasureManipulation import SectionType, link_measures_inside_grand_staff
-from .NoteManipulation import _assign_gs_index_to_notes, note_node_to_str
+from .NoteManipulation import _assign_gs_index_to_notes
 from .VizUtils import write_numbers_on_image, print_info
 from ..Conversions.BoundingBox import Direction
 
@@ -81,6 +84,23 @@ def link_measures_based_on_grand_staffs(
         verbose: bool = False,
         visualize: bool = False,
 ) -> list[VirtualNode]:
+    """
+    Sorts symbols from given measures into groups based on measure relationships.
+    Returns a list of ``VirtualNode`` named `measure group` where all the symbols
+    are played on the same instrument during a single measure.
+    (Groups are either formed from symbols from simple measures or from grand staff measures.)
+
+    MRIoU (measure reading IoU) determines if the next measure is in the same staff as the last measure
+    based on their vertical overlap.
+
+    :param measures: list of measures to sort
+    :param grand_staffs: list of grand staff
+    :param mriou_threshold: "measure reading" IoU, determines whether two measures belong to the same staff based on IoU
+    :param image_path: path to image
+    :param verbose: make script verbose
+    :param visualize: show visualizations
+    :return: list of symbols grouped by measures
+    """
     if image_path is None and visualize:
         raise ValueError("Image path is required when visualize is set to True.")
 
@@ -144,24 +164,29 @@ def link_measures_based_on_grand_staffs(
             [f"{section_type}: {len(section)}" for section_type, section in sections]
         )
 
-    return linked_measures
+    measure_grouping: list[VirtualNode] = []
+    for lm in linked_measures:
+        # dump all group symbols into one
+        measure_grouping.append(
+            VirtualNode([c for measure in lm.children() for c in measure.children()], name=NodeName.SYMBOL_GROUP))
+
+    return measure_grouping
 
 
-def compute_note_events(linked_measures: VirtualNode, neiou_threshold: float = 0.8) -> list[VirtualNode]:
+def compute_note_events(note_group: list[Node], neiou_threshold: float = 0.8) -> list[VirtualNode]:
     """
-    Takes linked measures and computes note events from notes included in these measures.
+    Takes group of notes (noteheads) and computes note events from notes included in these measures.
     Returns a list of events represented as VirtualNode whose children are given notes.
 
     Threshold is used to determine if the next note is in the same event as the last note
     based on their horizontal overlap.
 
-    :param linked_measures: virtual node representing the linked measures
+    :param note_group: virtual node representing the linked measures
     :param neiou_threshold: threshold for note sorting to events
     :return: list of note events
     """
-    all_notes: list[Node] = [note for measure in linked_measures.children() for note in measure.children()]
     strips = sort_to_strips_with_threshold(
-        all_notes,
+        note_group,
         neiou_threshold,
         direction=Direction.VERTICAL,
         check_intersections=True
@@ -169,7 +194,7 @@ def compute_note_events(linked_measures: VirtualNode, neiou_threshold: float = 0
 
     events: list[VirtualNode] = []
     for strip in strips:
-        events.append(VirtualNode(strip))
+        events.append(VirtualNode(strip, name=NodeName.NOTE_EVENT))
 
     return events
 
@@ -180,43 +205,93 @@ def compute_note_events_for_page(
         image_path: Path = None,
         verbose: bool = False,
         visualize: bool = False
-) -> list[list[VirtualNode]]:
+) -> list[VirtualNode]:
     if image_path is None and visualize:
         raise ValueError("Image path is required when visualize is set to True.")
-    
-    events_by_measure: list[list[VirtualNode]] = []
+
+    measure_groups: list[VirtualNode] = []
     for mes in linked_measures:
-        events_by_measure.append(compute_note_events(mes, neiou_threshold=neiou_treshold))
+        events_in_measure = compute_note_events(
+            # filter out notes
+            [note for note in mes.children() if note.name == NodeName.NOTEHEAD],
+            neiou_threshold=neiou_treshold
+        )
+        group_symbols = sorted(
+            events_in_measure + [symbol for symbol in mes.children() if symbol.name != NodeName.NOTEHEAD],
+            key=lambda x: x.total_bbox.left
+        )
+
+        measure_groups.append(
+            VirtualNode(group_symbols,
+                        name=NodeName._MEASURER_GROUP))
 
     if visualize:
-        flat_list: list[Node] = [item for sublist1 in events_by_measure
-                                 for sublist2 in sublist1
-                                 for item in sublist2.children()]
+        flat_list: list[Node] = [note for group in measure_groups
+                                 for event in group.children()
+                                 for note in event.children()
+                                 if event.name == NodeName.NOTE_EVENT]
         print("Showing note reading order...")
         write_numbers_on_image(image_path, flat_list)
         input("Press enter to continue")
 
-    return events_by_measure
+    return measure_groups
 
 
-def linearize_note_events(events_by_measure: list[list[VirtualNode]]) -> str:
-    # measure sep
-    representation = " || ".join(
-        # event sep
-        [" | ".join(
-            # note sep
-            [" ".join(
-                [note_node_to_str(n) for n in event.children()]
-            )
-                for event in measure]
-        )
-            for measure in events_by_measure]
-    )
+def _symbol_pitch_to_str(note: Node) -> int:
+    # skip python default rounding (0.5 should be rounded to 1)
+    return int(Decimal(note.get_tag(SYMBOL_PITCH_TAG)).to_integral(ROUND_HALF_UP))
 
-    if len(representation) != 0:
-        representation = "|| " + representation + " ||"
 
-    return representation
+def _notehead_to_string(note: Node) -> str:
+    gs_index = note.get_tag(SYMBOL_GS_INDEX_TAG)
+    pitch = _symbol_pitch_to_str(note)
+    if gs_index is not None:
+        return f"{gs_index}{note.get_tag(NOTEHEAD_TYPE_TAG)}{pitch}"
+    else:
+        return f"{note.get_tag(NOTEHEAD_TYPE_TAG)}{pitch}"
+
+
+def _accident_to_string(note: Node) -> str:
+    gs_index = note.get_tag(SYMBOL_GS_INDEX_TAG)
+    pitch = _symbol_pitch_to_str(note)
+    if gs_index is not None:
+        return f"{gs_index}{note.get_tag(ACCIDENTAL_TYPE_TAG)}{pitch}"
+    else:
+        return f"{note.get_tag(ACCIDENTAL_TYPE_TAG)}{pitch}"
+
+
+def symbol_to_str(note: Node) -> str:
+    match note.name:
+        case NodeName.NOTEHEAD:
+            return _notehead_to_string(note)
+        case NodeName.ACCIDENTAL:
+            return _accident_to_string(note)
+        case _:
+            raise ValueError(f"Unknown symbol type {note.name}")
+
+
+def linearize_note_events(measure_groups: list[VirtualNode]) -> str:
+    measure_presentation: list[str] = []
+
+    for measure in measure_groups:
+        mr = []
+        event_with_acc: list[str] = []
+        for child in measure.children():
+            # process note event
+            if child.name == NodeName.NOTE_EVENT:
+                event_with_acc.extend([symbol_to_str(note) for note in child.children()])
+                mr.append(" ".join(event_with_acc))
+                event_with_acc = []
+            # process accidental
+            elif child.name == NodeName.ACCIDENTAL:
+                child: Node
+                event_with_acc.append(symbol_to_str(child))
+            else:
+                raise ValueError(f"Unknown node type \"{child.name}\"")
+
+        measure_presentation.append(" | ".join(mr))
+
+    return " || ".join(measure_presentation)
 
 
 from .NoteManipulation import assign_notes_to_measures_and_compute_pitch
@@ -226,20 +301,20 @@ from .VizUtils import visualize_result
 def reconstruct_note_events(
         measures: list[Node],
         grand_staffs: list[Node],
-        notes: list[Node],
+        symbols_with_pitch: list[Node],
         ual_factor: float = 1.5,
         mriou_threshold: float = 0.5,
         neiou_threshold: float = 0.4,
         image_path: Path = None,
         verbose: bool = False,
         visualize: bool = False
-) -> list[list[VirtualNode]]:
+) -> list[VirtualNode]:
     if image_path is None and visualize:
         raise ValueError("Image path is required when visualize is set to True.")
 
     assign_notes_to_measures_and_compute_pitch(
         measures,
-        notes,
+        symbols_with_pitch,
         ual_factor=ual_factor,
         image_path=image_path,
         verbose=verbose,
@@ -255,7 +330,7 @@ def reconstruct_note_events(
         visualize=visualize
     )
 
-    events_by_measure = compute_note_events_for_page(
+    measure_groups = compute_note_events_for_page(
         linked_measures,
         neiou_threshold,
         image_path=image_path,
@@ -265,10 +340,15 @@ def reconstruct_note_events(
 
     if visualize:
         print("Showing end result...")
-        visualize_result(image_path, measures, [e for es in events_by_measure for e in es], grand_staffs)
+        visualize_result(
+            image_path,
+            measures,
+            [ob for group in measure_groups for ob in group.children()],
+            grand_staffs
+        )
         input("Press enter to continue")
 
     if verbose:
-        print(linearize_note_events(events_by_measure))
+        print(linearize_note_events(measure_groups))
 
-    return events_by_measure
+    return measure_groups

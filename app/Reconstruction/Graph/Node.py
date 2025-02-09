@@ -4,15 +4,18 @@ import numpy as np
 
 from ...Conversions.Annotations.Annotation import Annotation
 from ...Conversions.BoundingBox import BoundingBox, Direction
+from .Names import NodeName
 
 
 class BaseNode:
+    name: NodeName
     total_box: BoundingBox
     _children: list[Self]
     _tags: dict[str, Any]
 
-    def __init__(self, tags: dict[str, Any] = None):
+    def __init__(self, tags: dict[str, Any] = None, name: NodeName = None):
         self.total_bbox = None
+        self.name = name
         self._children = []
         self._tags: dict[str, Any] = tags if tags is not None else {}
 
@@ -38,8 +41,8 @@ class Node(BaseNode):
     """
     annot: Annotation
 
-    def __init__(self, base: Annotation, tags: dict[str, Any] = None):
-        super().__init__(tags)
+    def __init__(self, base: Annotation, tags: dict[str, Any] = None, name: NodeName = None):
+        super().__init__(tags=tags, name=name)
         self.annot = base
         self.total_bbox = base.bbox
 
@@ -68,23 +71,23 @@ class VirtualNode(BaseNode):
     """
     Virtual object without a bounding box in a scene.
     """
-    _children: list[Node]
+    _children: list[BaseNode]
 
-    def __init__(self, children: list[Node], tags: dict[str, Any] = None):
-        super().__init__(tags)
-        self._children: list[Node] = children
+    def __init__(self, children: list[BaseNode], tags: dict[str, Any] = None, name: NodeName = None):
+        super().__init__(tags=tags, name=name)
+        self._children: list[BaseNode] = children
         self.update_total_bbox()
 
     def update_total_bbox(self):
         if len(self._children) > 0:
             self.total_bbox = BoundingBox(
-                min(self._children, key=lambda b: b.annot.bbox.left).annot.bbox.left,
-                min(self._children, key=lambda b: b.annot.bbox.top).annot.bbox.top,
-                max(self._children, key=lambda b: b.annot.bbox.right).annot.bbox.right,
-                max(self._children, key=lambda b: b.annot.bbox.bottom).annot.bbox.bottom
+                min(self._children, key=lambda b: b.total_bbox.left).total_bbox.left,
+                min(self._children, key=lambda b: b.total_bbox.top).total_bbox.top,
+                max(self._children, key=lambda b: b.total_bbox.right).total_bbox.right,
+                max(self._children, key=lambda b: b.total_bbox.bottom).total_bbox.bottom
             )
 
-    def children(self) -> list[Node]:
+    def children(self) -> list[BaseNode]:
         return self._children
 
 

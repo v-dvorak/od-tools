@@ -3,8 +3,9 @@ from pathlib import Path
 import cv2
 from PIL import Image, ImageDraw, ImageFont
 
+from .Graph.Names import NodeName
 from .Graph.Node import Node, VirtualNode
-from .Graph.Tags import NOTE_PITCH_TAG
+from .Graph.Tags import SYMBOL_PITCH_TAG
 from ..Splitting import draw_rectangles_on_image
 
 
@@ -36,7 +37,7 @@ def write_note_heights_to_image(image, measures: list[Node]):
     for note in measures:
         draw.text(
             (note.annot.bbox.left, note.annot.bbox.top),
-            str(round(note.get_tag(NOTE_PITCH_TAG))),
+            str(round(note.get_tag(SYMBOL_PITCH_TAG))),
             font=font,
             fill=(0, 255, 0)
         )
@@ -74,7 +75,9 @@ def visualize_result(
         thickness=2
     )
 
-    write_note_heights_to_image(canvas, [n for c in events for n in c.children()])
+    write_note_heights_to_image(
+        canvas,
+        [n for c in events for n in c.children()] + [acc for acc in events if acc.name == NodeName.ACCIDENTAL])
 
 
 def print_info(name: str, header: str, content: list[str], separator: str = "-"):

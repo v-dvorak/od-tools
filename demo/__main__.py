@@ -9,7 +9,7 @@ from ultralytics import YOLO
 from app.Download import get_path_to_latest_version, update_models, OLA_TAG, NOTA_TAG
 from app.Download import update_demo_images, load_demo_images
 from app.Inference import InferenceJob, SplitSettings, run_multiple_prediction_jobs, ModelType
-from app.Reconstruction import NoteheadType, prepare_annots_for_reconstruction, reconstruct_note_events
+from app.Reconstruction import preprocess_annots_for_reconstruction, reconstruct_note_events
 
 parser = argparse.ArgumentParser(
     prog="Notehead experiments demo"
@@ -77,30 +77,52 @@ for image_path in images_to_process:
     time_spent_inference += timer() - start
 
     # INITIALIZE GRAPH
+    from app.Reconstruction.Graph import NOTEHEAD_TYPE_TAG, NoteheadType, ACCIDENTAL_TYPE_TAG, AccidentalType
+    from app.Reconstruction.Graph import NodeName
+
+    prepro_def = [
+        (
+            NodeName.NOTEHEAD, [NOTEHEAD_TYPE_TAG],
+            [
+                (combined.annotations[5], [NoteheadType.FULL]),
+                (combined.annotations[6], [NoteheadType.HALF])
+            ]
+        ),
+        (
+            NodeName.ACCIDENTAL, [ACCIDENTAL_TYPE_TAG],
+            [
+                (combined.annotations[-3], [AccidentalType.FLAT]),
+                (combined.annotations[-2], [AccidentalType.NATURAL]),
+                (combined.annotations[-1], [AccidentalType.SHARP])
+            ]
+        ),
+        (
+            NodeName.MEASURE, combined.annotations[1]
+        ),
+        (
+            NodeName.GRAND_STAFF, combined.annotations[4]
+        )
+    ]
+
     start = timer()
-    measures, grand_staff, notehead_full, notehead_half = prepare_annots_for_reconstruction(
-        combined.annotations[1],
-        combined.annotations[4],
-        [
-            (NoteheadType.FULL, combined.annotations[5]),
-            (NoteheadType.HALF, combined.annotations[6])
-        ]
-    )
+
+    noteheads, accidentals, measures, grand_staffs = preprocess_annots_for_reconstruction(prepro_def)
 
     # RECONSTRUCT PAGE
     events = reconstruct_note_events(
         measures,
-        grand_staff,
-        notehead_full + notehead_half,
+        grand_staffs,
+        noteheads + accidentals,
         image_path=Path(image_path),
         neiou_threshold=0.4,
-        verbose=args.verbose
+        verbose=args.verbose,
+        visualize=args.visualize
     )
     time_spent_reconstruction += timer() - start
 
     from app.Reconstruction.VizUtils import visualize_result
 
-    visualize_result(Path(image_path), measures, [e for es in events for e in es], grand_staff)
+    visualize_result(Path(image_path), measures, [ob for group in events for ob in group.children()], grand_staffs)
 
 if len(images_to_process) > 0:
     print()

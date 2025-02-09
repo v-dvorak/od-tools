@@ -1,10 +1,9 @@
-from decimal import Decimal, ROUND_HALF_UP
 from pathlib import Path
 
 import numpy as np
 
 from .Graph.Node import Node, assign_to_closest
-from .Graph.Tags import NOTE_PITCH_TAG, NOTE_GS_INDEX_TAG, NOTEHEAD_TYPE_TAG
+from .Graph.Tags import SYMBOL_PITCH_TAG, SYMBOL_GS_INDEX_TAG
 from .VizUtils import write_note_heights_to_image
 from ..Splitting import draw_rectangles_on_image
 
@@ -18,24 +17,13 @@ def _compute_note_pitches(measure: Node):
     for note in measure.children():
         x_center, _ = note.annot.bbox.center()
         distance_from_zero = measure.annot.bbox.bottom - x_center
-        note.set_tag(NOTE_PITCH_TAG, distance_from_zero / half_line_height)
+        note.set_tag(SYMBOL_PITCH_TAG, distance_from_zero / half_line_height)
 
 
 def _assign_gs_index_to_notes(measures: list[Node], gs_index: int):
     for measure in measures:
         for note in measure.children():
-            note.set_tag(NOTE_GS_INDEX_TAG, gs_index)
-
-
-def note_node_to_str(note: Node) -> str:
-    # skip python default rounding (0.5 should round to 1)
-    pitch = Decimal(note.get_tag(NOTE_PITCH_TAG)).to_integral(ROUND_HALF_UP)
-    pitch_and_type = str(note.get_tag(NOTEHEAD_TYPE_TAG)) + str(pitch)
-    gs_index = note.get_tag(NOTE_GS_INDEX_TAG)
-    if gs_index is None:
-        return pitch_and_type
-    else:
-        return str(gs_index) + pitch_and_type
+            note.set_tag(SYMBOL_GS_INDEX_TAG, gs_index)
 
 
 def assign_notes_to_measures_and_compute_pitch(
