@@ -49,6 +49,8 @@ for image_path in images_to_process:
         image=bw_image,
         model=staff_detector,
         model_type=ModelType.YOLO_DETECTION,
+        # retrieve only measures and grand staffs
+        wanted_ids=[1, 4]
     )
 
     # noteheads
@@ -76,37 +78,41 @@ for image_path in images_to_process:
     )
     time_spent_inference += timer() - start
 
+    if args.verbose:
+        print(f"Class names: {', '.join(combined.class_names)}")
+        print()
+
     # INITIALIZE GRAPH
     from app.Reconstruction.Graph import NOTEHEAD_TYPE_TAG, NoteheadType, ACCIDENTAL_TYPE_TAG, AccidentalType
     from app.Reconstruction.Graph import NodeName
 
     prepro_def = [
         (
+            NodeName.MEASURE, combined.annotations[0]
+        ),
+        (
+            NodeName.GRAND_STAFF, combined.annotations[1]
+        ),
+        (
             NodeName.NOTEHEAD, [NOTEHEAD_TYPE_TAG],
             [
-                (combined.annotations[5], [NoteheadType.FULL]),
-                (combined.annotations[6], [NoteheadType.HALF])
+                (combined.annotations[2], [NoteheadType.FULL]),
+                (combined.annotations[3], [NoteheadType.HALF])
             ]
         ),
         (
             NodeName.ACCIDENTAL, [ACCIDENTAL_TYPE_TAG],
             [
-                (combined.annotations[-3], [AccidentalType.FLAT]),
-                (combined.annotations[-2], [AccidentalType.NATURAL]),
-                (combined.annotations[-1], [AccidentalType.SHARP])
+                (combined.annotations[4], [AccidentalType.FLAT]),
+                (combined.annotations[5], [AccidentalType.NATURAL]),
+                (combined.annotations[6], [AccidentalType.SHARP])
             ]
         ),
-        (
-            NodeName.MEASURE, combined.annotations[1]
-        ),
-        (
-            NodeName.GRAND_STAFF, combined.annotations[4]
-        )
     ]
 
     start = timer()
 
-    noteheads, accidentals, measures, grand_staffs = preprocess_annots_for_reconstruction(prepro_def)
+    measures, grand_staffs, noteheads, accidentals = preprocess_annots_for_reconstruction(prepro_def)
 
     # RECONSTRUCT PAGE
     events = reconstruct_note_events(

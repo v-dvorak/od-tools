@@ -120,30 +120,47 @@ class FullPage(IFullPage):
                 raise NotImplementedError()
 
     @classmethod
-    def from_yolo_result(cls, result: Results) -> Self:
-        class_count = len(result.names)
+    def from_yolo_result(cls, result: Results, wanted_ids: list[int] = None) -> Self:
+        if wanted_ids is None:
+            class_count = len(result.names)
+            class_names = [result.names[i] for i in range(class_count)]
+        else:
+            class_count = len(wanted_ids)
+            class_names = [result.names[i] for i in wanted_ids]
+            # map wanted IDs to indexes in output list
+            id_mapping = {w_id: index for index, w_id in enumerate(wanted_ids)}
+
         predictions = [[] for _ in range(class_count)]
-        class_names = [result.names[i] for i in range(class_count)]
+
         for i in range(len(result.boxes.xywh)):
-            x_center, y_center, width, height = (
-                float(result.boxes.xywh[i, 0]),
-                float(result.boxes.xywh[i, 1]),
-                float(result.boxes.xywh[i, 2]),
-                float(result.boxes.xywh[i, 3])
-            )
-            predictions[int(result.boxes.cls[i])].append(
-                Annotation(
-                    int(result.boxes.cls[i]),
-                    round(x_center - width / 2),
-                    round(y_center - height / 2),
-                    round(width),
-                    round(height),
-                    # TODO: what to do with segmentation?
-                    segmentation=None,
-                    confidence=float(result.boxes.conf[i]),
-                    an_type=AnnotationType.PREDICTION
+            class_id = int(result.boxes.cls[i])
+            # check if this particular prediction should be further processed based on its ID
+            if wanted_ids is None or class_id in wanted_ids:
+                x_center, y_center, width, height = (
+                    float(result.boxes.xywh[i, 0]),
+                    float(result.boxes.xywh[i, 1]),
+                    float(result.boxes.xywh[i, 2]),
+                    float(result.boxes.xywh[i, 3])
                 )
-            )
+                # get index in output list
+                if wanted_ids is None:
+                    output_index = class_id
+                else:
+                    output_index = id_mapping[class_id]
+
+                predictions[output_index].append(
+                    Annotation(
+                        int(result.boxes.cls[i]),
+                        round(x_center - width / 2),
+                        round(y_center - height / 2),
+                        round(width),
+                        round(height),
+                        # TODO: what to do with segmentation?
+                        segmentation=None,
+                        confidence=float(result.boxes.conf[i]),
+                        an_type=AnnotationType.PREDICTION
+                    )
+                )
         # original shape is stored as (height, width) in YOLO
         return cls((result.orig_shape[1], result.orig_shape[0]), predictions, class_names)
 

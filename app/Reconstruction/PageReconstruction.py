@@ -7,6 +7,8 @@ from .Graph.Node import Node, VirtualNode, sort_to_strips_with_threshold
 from .Graph.Tags import SYMBOL_PITCH_TAG, NOTEHEAD_TYPE_TAG, SYMBOL_GS_INDEX_TAG, ACCIDENTAL_TYPE_TAG
 from .MeasureManipulation import SectionType, link_measures_inside_grand_staff
 from .NoteManipulation import _assign_gs_index_to_notes
+from .NoteManipulation import assign_notes_to_measures_and_compute_pitch
+from .VizUtils import visualize_result
 from .VizUtils import write_numbers_on_image, print_info
 from ..Conversions.BoundingBox import Direction
 
@@ -291,11 +293,10 @@ def linearize_note_events(measure_groups: list[VirtualNode]) -> str:
 
         measure_presentation.append(" | ".join(mr))
 
-    return " || ".join(measure_presentation)
-
-
-from .NoteManipulation import assign_notes_to_measures_and_compute_pitch
-from .VizUtils import visualize_result
+    repre = " || ".join(measure_presentation)
+    if len(repre) > 0:
+        return "|| " + repre + " ||"
+    return repre
 
 
 def reconstruct_note_events(

@@ -197,11 +197,12 @@ class IFullPage:
         raise NotImplementedError()
 
     @classmethod
-    def from_yolo_result(cls, result: Results) -> Self:
+    def from_yolo_result(cls, result: Results, wanted_ids: list[int] = None) -> Self:
         """
         Transforms YOLO predictions into an FullPage object.
 
         :param result: YOLO predictions
+        :param wanted_ids: list of class IDs that will be retrieved, if None all are retrieved
         :return: FullPage object
         """
         raise NotImplementedError()
