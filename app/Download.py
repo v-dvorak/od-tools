@@ -58,7 +58,7 @@ def _get_latest_release(tag: str):
     releases = response.json()
 
     # filter releases by the given tag and extract the versions
-    relevant_releases = [release for release in releases if release["tag_name"].startswith(tag)]
+    relevant_releases = [release for release in releases if release["tag_name"].startswith(f"{tag}-")]
 
     if not relevant_releases:
         print(f"No releases found for tag: {tag}")
