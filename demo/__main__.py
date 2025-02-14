@@ -11,11 +11,15 @@ from app.Inference import InferenceJob, SplitSettings, run_multiple_prediction_j
 from app.Inference.ModelWrappers import YOLODetectionModelWrapper
 from app.Reconstruction import preprocess_annots_for_reconstruction, reconstruct_note_events
 
+from app.Reconstruction.PageReconstruction import linearize_note_events_to_lmx
+from app.Linearize.lmx_to_musicxml import lmx_to_musicxml
+
 parser = argparse.ArgumentParser(
     prog="Notehead experiments demo"
 )
 
 parser.add_argument("-i", "--image_path", type=str, help="Path to image")
+parser.add_argument("-o", "--output_dir", type=str, help="Path to output directory")
 parser.add_argument("-v", "--verbose", action="store_true", help="Make script verbose")
 parser.add_argument("--visualize", action="store_true", help="Visualize every step of inference")
 
@@ -26,9 +30,17 @@ update_models()
 notehead_detector = YOLODetectionModelWrapper(get_path_to_latest_version(NOTA_TAG))
 staff_detector = YOLODetectionModelWrapper(get_path_to_latest_version(OLA_TAG))
 
+if args.output_dir:
+    args.output_dir = Path(args.output_dir)
+    args.output_dir.mkdir(exist_ok=True, parents=True)
+
 # LOAD IMAGES
 if args.image_path:
-    images_to_process = [Path(args.image_path)]
+    args.image_path = Path(args.image_path)
+    if args.image_path.is_dir():
+        images_to_process = list(args.image_path.iterdir())
+    else:
+        images_to_process = [Path(args.image_path)]
 else:
     update_demo_images(verbose=args.verbose)
     images_to_process = load_demo_images()
@@ -112,6 +124,17 @@ for image_path in images_to_process:
 
     measures, grand_staffs, noteheads, accidentals = preprocess_annots_for_reconstruction(prepro_def)
 
+    if len(measures) == 0:
+        print("Warning: No measures were found")
+
+    # from app.Reconstruction.VizUtils import visualize_input_data
+    # visualize_input_data(
+    #     image_path,
+    #     measures,
+    #     notehead_full=noteheads,
+    #     notehead_half=accidentals
+    # )
+
     # RECONSTRUCT PAGE
     events = reconstruct_note_events(
         measures,
@@ -124,9 +147,17 @@ for image_path in images_to_process:
     )
     time_spent_reconstruction += timer() - start
 
-    from app.Reconstruction.VizUtils import visualize_result
+    # print(linearize_note_events_to_lmx(events, human_readable=False))
+    if args.output_dir:
+        with open(args.output_dir / (image_path.stem + ".musicxml"), "w", encoding="utf8") as f:
+            predicted_lmx = linearize_note_events_to_lmx(events, human_readable=False)
+            print(predicted_lmx)
+            f.write(lmx_to_musicxml(predicted_lmx))
 
-    visualize_result(Path(image_path), measures, [ob for group in events for ob in group.children()], grand_staffs)
+
+    from app.Reconstruction.VizUtils import visualize_result
+    #
+    visualize_result(Path(image_path), measures, [ob for row in events for group in row for ob in group.children()], grand_staffs)
 
 if len(images_to_process) > 0:
     print()
