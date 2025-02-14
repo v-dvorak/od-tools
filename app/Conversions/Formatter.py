@@ -49,6 +49,10 @@ def _load_data_from_paths(
 ) -> list[tuple[Path, Path]]:
     images = sorted(list(images_dir.rglob(images_search_regex)))
     annotations = sorted(list(annotations_dir.rglob(annotations_search_regex)))
+
+    if len(images) != len(annotations):
+        raise ValueError("Number of images and annotations do not match")
+
     return list(zip(images, annotations))
 
 
@@ -139,8 +143,6 @@ def format_dataset(
     """
     if not image_splitting and aug_ratios is not None:
         raise NotImplementedError("Cannot augment data without image splitting")
-
-    print(aug_ratios)
 
     data = _load_data_from_paths(
         image_source_dir, f"*.{image_format}",
