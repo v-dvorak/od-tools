@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import cv2
+import matplotlib.pyplot as plt
 import numpy as np
 from scipy.signal import find_peaks
 
@@ -17,7 +18,7 @@ def binarize_image_from_array(img: np.ndarray, threshold=200) -> np.ndarray:
     :param threshold: threshold to use for binarization
     :return: binarized image
     """
-    binary = np.where(img < threshold, 255, 0).astype(np.uint8)
+    binary = np.where(img > threshold, 255, 0).astype(np.uint8)
     return binary
 
 
@@ -25,7 +26,7 @@ def find_peaks_binary(binary_img: np.ndarray) -> np.ndarray:
     """
     Find peaks in rows of binary image.
     """
-    black_pixel_counts = np.sum(binary_img == 255, axis=1)
+    black_pixel_counts = np.sum(binary_img == 0, axis=1)
     # find peaks (suspicious regions) using scipy
     valleys, properties = find_peaks(black_pixel_counts, prominence=100)
 
@@ -36,8 +37,8 @@ def find_peaks_binary(binary_img: np.ndarray) -> np.ndarray:
     # np.size(valleys) >= 5
     else:
         valleys: np.ndarray
-        top5_indices = np.argpartition(properties["prominences"], -5)[-5:]
-        deepest_valleys = valleys[top5_indices]
+        top_indices = np.argpartition(properties["prominences"], -5)[-5:]
+        deepest_valleys = valleys[top_indices]
 
     return np.sort(deepest_valleys)
 
@@ -97,13 +98,49 @@ def check_proposed_staff_lines(
         return False
 
 
+def _refactor_single_measure_viz(
+        cropped_image: np.ndarray,
+        staff_y: np.ndarray,
+        fig_width: int = 12
+):
+    height, width = cropped_image.shape
+    # fixed aspect ratio
+    fig_height = fig_width * (height / width)
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(fig_width, fig_height), sharey=True)
+
+    # left plot, binarized image
+    ax1.imshow(cropped_image, cmap="gray", origin="upper", aspect="auto")
+    ax1.set_title("Binarized Image")
+
+    # right plot, black pixel count
+    black_pixel_counts = np.sum(cropped_image == 0, axis=1)
+    x = np.arange(len(black_pixel_counts))
+    ax2.plot(black_pixel_counts, x, color="blue")
+    ax2.scatter(black_pixel_counts[staff_y], staff_y, color="red")
+    ax2.set_title("Detected Staff Lines")
+    ax2.grid(True)
+
+    # horizontal red lines
+    for valley in staff_y:
+        ax2.axhline(y=valley, color="r", linestyle="-")
+        ax1.axhline(y=valley, color="r", linestyle="-")
+
+    # fix axis rotation and alignment
+    ax1.set_ylim(0, height)
+    ax2.set_ylim(0, height)
+    ax2.invert_yaxis()  # match cv2 coordinate system
+
+    plt.show()
+
+
 def refactor_single_measure(
         measure_annot: Annotation,
         cropped_image: np.ndarray,
         bin_threshold: int = 200,
         space_stddev_threshold: float = 0.02,
         shift_threshold_factor: float = 0.25,
-        verbose: bool = False
+        verbose: bool = False,
+        visualize: bool = False
 ):
     """
     Refactors single measure according to detected staff lines.
@@ -114,6 +151,7 @@ def refactor_single_measure(
     :param space_stddev_threshold: found staff lines with stddev of their spaces above this threshold will be ignored
     :param shift_threshold_factor: shifts larger than this fraction of the measure height will be ignored
     :param verbose: make script verbose
+    :param visualize: visualize process
     """
     bbox = measure_annot.bbox
     crop_height = bbox.height
@@ -131,6 +169,8 @@ def refactor_single_measure(
 
         if verbose:
             print(f"Refactoring {bbox} to {new_bbox}")
+        if visualize:
+            _refactor_single_measure_viz(binary, staff_y)
 
 
 def refactor_measures_on_page(
@@ -139,7 +179,8 @@ def refactor_measures_on_page(
         bin_threshold: int = 200,
         space_stddev_threshold: float = 0.02,
         shift_threshold_factor: float = 0.25,
-        verbose: bool = False
+        verbose: bool = False,
+        visualize: bool = False
 ):
     """
     Goes over all given measures and refactors them according to detected staff lines.
@@ -150,6 +191,7 @@ def refactor_measures_on_page(
     :param space_stddev_threshold: found staff lines with stddev of their spaces above this threshold will be ignored
     :param shift_threshold_factor: shifts larger than this fraction of the measure height will be ignored
     :param verbose: make script verbose
+    :param visualize: visualize process
     """
     # skip loading image when no measures were found
     if len(measures) == 0:
@@ -169,5 +211,6 @@ def refactor_measures_on_page(
             bin_threshold=bin_threshold,
             space_stddev_threshold=space_stddev_threshold,
             shift_threshold_factor=shift_threshold_factor,
-            verbose=verbose
+            verbose=verbose,
+            visualize=visualize
         )

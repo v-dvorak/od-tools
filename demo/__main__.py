@@ -19,6 +19,7 @@ VIZ_LEVEL_OUTPUT = 1
 VIZ_LEVEL_DETECTED = 2
 VIZ_LEVEL_REFACTORED = 2
 VIZ_LEVEL_ASSEMBLY = 3
+VIZ_LEVEL_STAFF_DETECTION = 4
 
 parser = argparse.ArgumentParser(
     prog="Notehead experiments demo"
@@ -127,7 +128,7 @@ for image_path in images_to_process:
 
     measures, grand_staffs, noteheads = preprocess_annots_for_reconstruction(prepro_def)
 
-    if args.visualize == VIZ_LEVEL_DETECTED:
+    if args.visualize >= VIZ_LEVEL_DETECTED:
         visualize_input_data(
             image_path,
             measures,
@@ -141,7 +142,8 @@ for image_path in images_to_process:
     refactor_measures_on_page(
         measures,
         image_path,
-        verbose=args.verbose
+        verbose=args.verbose,
+        visualize=(args.visualize >= VIZ_LEVEL_STAFF_DETECTION)
     )
     time_spent_measure_refactoring += timer() - start
 
@@ -150,7 +152,7 @@ for image_path in images_to_process:
     if len(measures) == 0:
         print("Warning: No measures were found")
 
-    if args.visualize == VIZ_LEVEL_REFACTORED:
+    if args.visualize >= VIZ_LEVEL_REFACTORED:
         visualize_input_data(
             image_path,
             measures,
@@ -166,7 +168,7 @@ for image_path in images_to_process:
         image_path=Path(image_path),
         neiou_threshold=0.4,
         verbose=args.verbose,
-        visualize=(args.visualize == VIZ_LEVEL_ASSEMBLY)
+        visualize=(args.visualize >= VIZ_LEVEL_ASSEMBLY)
     )
     time_spent_reconstruction += timer() - start
 
@@ -179,7 +181,7 @@ for image_path in images_to_process:
 
     from app.Reconstruction.VizUtils import visualize_result
 
-    if args.visualize == VIZ_LEVEL_OUTPUT:
+    if args.visualize >= VIZ_LEVEL_OUTPUT:
         visualize_result(
             Path(image_path),
             measures,
