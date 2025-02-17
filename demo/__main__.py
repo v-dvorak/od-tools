@@ -28,7 +28,7 @@ parser = argparse.ArgumentParser(
 parser.add_argument("-i", "--image_path", type=str, help="Path to image")
 parser.add_argument("-o", "--output_dir", type=str, help="Path to output directory")
 parser.add_argument("-v", "--verbose", action="store_true", help="Make script verbose")
-parser.add_argument("--visualize", type=int, help="Visualize inference and assembly steps")
+parser.add_argument("--visualize", type=int, default=0, help="Visualize inference and assembly steps")
 parser.add_argument("--update", action="store_true", help="Update models and demo images")
 
 args = parser.parse_args()
