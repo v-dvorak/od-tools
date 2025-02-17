@@ -261,6 +261,9 @@ def reconstruct_note_events(
     if image_path is None and visualize:
         raise ValueError("Image path is required when visualize is set to True.")
 
+    if len(measures) == 0:
+        return [[]]
+
     # this assigns symbol to measures and computes their pitches
     assign_notes_to_measures_and_compute_pitch(
         measures,
