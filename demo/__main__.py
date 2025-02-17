@@ -5,14 +5,20 @@ from timeit import default_timer as timer
 import cv2
 from PIL import Image
 
-from app.Download import get_path_to_latest_version, update_models, OLA_TAG, NOTA_TAG
-from app.Download import update_demo_images, load_demo_images
+from app.Download import get_path_to_latest_version, update_models, OLA_TAG, NOTA_TAG, update_demo_images, \
+    load_demo_images
 from app.Inference import InferenceJob, SplitSettings, run_multiple_prediction_jobs
 from app.Inference.ModelWrappers import YOLODetectionModelWrapper
+from app.Linearize import lmx_to_musicxml
 from app.Reconstruction import preprocess_annots_for_reconstruction, reconstruct_note_events
+from app.Reconstruction import refactor_measures_on_page, linearize_note_events_to_lmx
+from app.Reconstruction.Graph import NOTEHEAD_TYPE_TAG, NoteheadType, NodeName, Node
+from app.Reconstruction.VizUtils import visualize_input_data
 
-from app.Reconstruction.PageReconstruction import linearize_note_events_to_lmx
-from app.Linearize.lmx_to_musicxml import lmx_to_musicxml
+VIZ_LEVEL_OUTPUT = 1
+VIZ_LEVEL_DETECTED = 2
+VIZ_LEVEL_REFACTORED = 2
+VIZ_LEVEL_ASSEMBLY = 3
 
 parser = argparse.ArgumentParser(
     prog="Notehead experiments demo"
@@ -21,12 +27,15 @@ parser = argparse.ArgumentParser(
 parser.add_argument("-i", "--image_path", type=str, help="Path to image")
 parser.add_argument("-o", "--output_dir", type=str, help="Path to output directory")
 parser.add_argument("-v", "--verbose", action="store_true", help="Make script verbose")
-parser.add_argument("--visualize", action="store_true", help="Visualize every step of inference")
+parser.add_argument("--visualize", type=int, help="Visualize inference and assembly steps")
+parser.add_argument("--update", action="store_true", help="Update models and demo images")
 
 args = parser.parse_args()
 
 # LOAD MODELS
-update_models()
+if args.update:
+    update_models()
+
 notehead_detector = YOLODetectionModelWrapper(get_path_to_latest_version(NOTA_TAG))
 staff_detector = YOLODetectionModelWrapper(get_path_to_latest_version(OLA_TAG))
 
@@ -42,15 +51,19 @@ if args.image_path:
     else:
         images_to_process = [Path(args.image_path)]
 else:
-    update_demo_images(verbose=args.verbose)
+    if args.update:
+        update_demo_images(verbose=args.verbose)
     images_to_process = load_demo_images()
 
 time_spent_inference = 0
 time_spent_reconstruction = 0
+time_spent_measure_refactoring = 0
 
 for image_path in images_to_process:
-    # SETUP INFERENCE JOBS
+    if args.verbose:
+        print(f">>> {image_path}")
 
+    # SETUP INFERENCE JOBS
     # convert image to bw beforehand
     # (color to bw conversion from cv2 does not work in this case)
     image = Image.open(image_path)
@@ -66,8 +79,10 @@ for image_path in images_to_process:
 
     # noteheads
     notehead_job = InferenceJob(
-        image=cv2.imread(image_path),
+        image=cv2.imread(str(image_path)),
         model_wrapper=notehead_detector,
+        # retrieve only full and empty noteheads
+        wanted_ids=[0, 1],
         split_settings=SplitSettings(
             width=640,
             height=640,
@@ -93,8 +108,6 @@ for image_path in images_to_process:
         print()
 
     # INITIALIZE GRAPH
-    from app.Reconstruction.Graph import NOTEHEAD_TYPE_TAG, NoteheadType, ACCIDENTAL_TYPE_TAG, AccidentalType
-    from app.Reconstruction.Graph import NodeName
 
     prepro_def = [
         (
@@ -110,40 +123,50 @@ for image_path in images_to_process:
                 (combined.annotations[3], [NoteheadType.HALF])
             ]
         ),
-        (
-            NodeName.ACCIDENTAL, [ACCIDENTAL_TYPE_TAG],
-            [
-                (combined.annotations[4], [AccidentalType.FLAT]),
-                (combined.annotations[5], [AccidentalType.NATURAL]),
-                (combined.annotations[6], [AccidentalType.SHARP])
-            ]
-        ),
     ]
 
+    measures, grand_staffs, noteheads = preprocess_annots_for_reconstruction(prepro_def)
+
+    if args.visualize == VIZ_LEVEL_DETECTED:
+        visualize_input_data(
+            image_path,
+            measures,
+            notehead_full=noteheads,
+            notehead_half=[]
+        )
+
+    measures: list[Node]
     start = timer()
 
-    measures, grand_staffs, noteheads, accidentals = preprocess_annots_for_reconstruction(prepro_def)
+    refactor_measures_on_page(
+        measures,
+        image_path,
+        verbose=args.verbose
+    )
+    time_spent_measure_refactoring += timer() - start
+
+    start = timer()
 
     if len(measures) == 0:
         print("Warning: No measures were found")
 
-    # from app.Reconstruction.VizUtils import visualize_input_data
-    # visualize_input_data(
-    #     image_path,
-    #     measures,
-    #     notehead_full=noteheads,
-    #     notehead_half=accidentals
-    # )
+    if args.visualize == VIZ_LEVEL_REFACTORED:
+        visualize_input_data(
+            image_path,
+            measures,
+            notehead_full=noteheads,
+            notehead_half=[]
+        )
 
     # RECONSTRUCT PAGE
     events = reconstruct_note_events(
         measures,
         grand_staffs,
-        noteheads + accidentals,
+        noteheads,
         image_path=Path(image_path),
         neiou_threshold=0.4,
         verbose=args.verbose,
-        visualize=args.visualize
+        visualize=(args.visualize == VIZ_LEVEL_ASSEMBLY)
     )
     time_spent_reconstruction += timer() - start
 
@@ -154,12 +177,18 @@ for image_path in images_to_process:
             print(predicted_lmx)
             f.write(lmx_to_musicxml(predicted_lmx))
 
-
     from app.Reconstruction.VizUtils import visualize_result
-    #
-    visualize_result(Path(image_path), measures, [ob for row in events for group in row for ob in group.children()], grand_staffs)
+
+    if args.visualize == VIZ_LEVEL_OUTPUT:
+        visualize_result(
+            Path(image_path),
+            measures,
+            [ob for row in events for group in row for ob in group.children()],
+            grand_staffs
+        )
 
 if len(images_to_process) > 0:
     print()
     print(f"Average time spent inference: {time_spent_inference / len(images_to_process)}")
+    print(f"Average time spent measure refactoring: {time_spent_measure_refactoring / len(images_to_process)}")
     print(f"Average time spent reconstruction: {time_spent_reconstruction / len(images_to_process)}")

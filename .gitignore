@@ -5,9 +5,13 @@ datasets/*
 models/*
 images/*
 
-# Test images
+# Test files
 /*.jpg
+/*.jpeg
 /*.png
+/*.musicxml
+/*.xml
+/*.lmx
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
