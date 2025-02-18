@@ -129,7 +129,7 @@ def update_models(model_dir: Path = None):
         print()
 
 
-def _download_image(
+def download_image(
         img_id: str,
         file_name: Path,
         output_dir: Path
@@ -166,7 +166,7 @@ def update_demo_images(image_dir: Path = None, verbose: bool = False):
         if (image_dir / file_name).exists():
             continue
         else:
-            _download_image(img_id, file_name, image_dir)
+            download_image(img_id, file_name, image_dir)
 
 
 def load_demo_images() -> list[Path]:
