@@ -1,8 +1,8 @@
 from decimal import Decimal, ROUND_HALF_UP
 
 from .Tokens import (G_CLEF_ZERO_PITCH_INDEX, F_CLEF_ZERO_PITCH_INDEX, PITCH_TOKENS, NOTE_TOKEN, INDENTATION,
-                    CHORD_TOKEN, GS_CLEF_TOKEN, BASE_TIME_BEAT_TOKEN, STAFF_TOKEN, DEFAULT_STEM_TOKEN, MEASURE_TOKEN,
-                    DEFAULT_KEY_TOKEN)
+                     CHORD_TOKEN, GS_CLEF_TOKEN, BASE_TIME_BEAT_TOKEN, STAFF_TOKEN, DEFAULT_STEM_TOKEN, MEASURE_TOKEN,
+                     DEFAULT_KEY_TOKEN)
 from ..Reconstruction.Graph.Names import NodeName
 from ..Reconstruction.Graph.Node import Node, VirtualNode
 from ..Reconstruction.Graph.Tags import (NOTEHEAD_TYPE_TAG, ACCIDENTAL_TYPE_TAG, SYMBOL_GS_INDEX_TAG, SYMBOL_PITCH_TAG)

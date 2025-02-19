@@ -4,8 +4,8 @@ from typing import Self, Any
 import numpy as np
 
 from .Names import NodeName
-from ...Conversions.Annotations.Annotation import Annotation
-from ...Conversions.BoundingBox import BoundingBox, Direction
+from odtools.Conversions.Annotations.Annotation import Annotation
+from odtools.Conversions.BoundingBox import BoundingBox, Direction
 
 
 class BaseNode:

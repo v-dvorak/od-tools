@@ -1,16 +1,14 @@
 import itertools
-from decimal import Decimal, ROUND_HALF_UP
 from pathlib import Path
 
+from odtools.Conversions.BoundingBox import Direction
 from .Graph.Names import NodeName
 from .Graph.Node import Node, VirtualNode, sort_to_strips_with_threshold
-from .Graph.Tags import NOTEHEAD_TYPE_TAG, ACCIDENTAL_TYPE_TAG
 from .MeasureManipulation import SectionType, link_measures_inside_grand_staff
 from .NoteManipulation import _assign_gs_index_to_notes
 from .NoteManipulation import assign_notes_to_measures_and_compute_pitch
 from .VizUtils import visualize_result
 from .VizUtils import write_numbers_on_image, print_info
-from ..Conversions.BoundingBox import Direction
 
 
 def sort_page_into_sections(
@@ -246,7 +244,7 @@ def compute_note_events_for_row(
 
     return measure_groups
 
-from ..Linearize.GraphToLMX import linearize_note_events_to_lmx
+
 def reconstruct_note_events(
         measures: list[Node],
         grand_staffs: list[Node],
@@ -305,6 +303,5 @@ def reconstruct_note_events(
             grand_staffs
         )
         input("Press enter to continue")
-
 
     return row_measure_events

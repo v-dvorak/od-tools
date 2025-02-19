@@ -2,7 +2,7 @@ from typing import Any
 
 from .Graph.Names import NodeName
 from .Graph.Node import Node
-from ..Conversions.Annotations.Annotation import Annotation
+from odtools.Conversions.Annotations.Annotation import Annotation
 
 
 def _preprocess_annots_without_tags(node_name: NodeName, annots: list[Annotation]) -> list[Node]:

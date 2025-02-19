@@ -5,9 +5,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.signal import find_peaks
 
-from ..Conversions.Annotations.Annotation import Annotation
-from ..Conversions.BoundingBox import BoundingBox
-from ..Reconstruction.Graph import Node
+from odtools.Conversions.Annotations.Annotation import Annotation
+from odtools.Conversions.BoundingBox import BoundingBox
+from tonic.Reconstruction.Graph import Node
 
 
 def binarize_image_from_array(img: np.ndarray, threshold=200) -> np.ndarray:

@@ -4,7 +4,7 @@ from mung.io import Node
 
 from .Interfaces import IAnnotation, AnnotationType
 from .. import ConversionUtils
-from ..BoundingBox import BoundingBox
+from ..BoundingBox import BoundingBox, Direction
 
 
 class Annotation(IAnnotation):
@@ -15,6 +15,26 @@ class Annotation(IAnnotation):
         self.bbox = BoundingBox.from_ltwh(left, top, width, height)  # Python shenanigans
         if segmentation is None:
             self.segmentation = self.segmentation_from_bounding_box(self.bbox)
+
+    @classmethod
+    def from_bbox(
+            cls,
+            class_id: int,
+            bbox: BoundingBox,
+            segmentation: list[tuple[int, int]] | None = None,
+            confidence: float = 1.0,
+            an_type: AnnotationType = AnnotationType.GROUND_TRUTH
+    ) -> Self:
+        return cls(
+            class_id,
+            bbox.left,
+            bbox.top,
+            bbox.width,
+            bbox.height,
+            segmentation=segmentation,
+            confidence=confidence,
+            an_type=an_type
+        )
 
     def set_image_name(self, image_name: str):
         self.image_name = image_name
@@ -51,9 +71,12 @@ class Annotation(IAnnotation):
         x1, y1, x2, y2 = bbox.xyxy()
         return [(x1, y1), (x2, y1), (x2, y2), (x1, y2)]
 
-    def intersects(self, other: Self) -> bool:
+    def intersects(self, other: Self, direction: Direction = None) -> bool:
         other: Annotation
-        return self.bbox.intersects(other.bbox)
+        return self.bbox.intersects(other.bbox, direction=direction)
+
+    def intersection_over_union(self, other: Self, direction: Direction = None) -> float:
+        return self.bbox.intersection_over_union(other.bbox, direction=direction)
 
     def adjust_position(self, left_shift: int = 0, top_shift: int = 0) -> None:
         self.bbox.shift(left_shift, top_shift)

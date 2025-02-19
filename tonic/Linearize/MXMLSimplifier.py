@@ -3,6 +3,7 @@ from pathlib import Path
 import smashcima as sc
 from smashcima import Clef, Event, Note, Score, StaffSemantic
 
+from .LMXWrapper import LMXWrapper
 from .Tokens import G_CLEF_ZERO_PITCH_INDEX, F_CLEF_ZERO_PITCH_INDEX
 from .Tokens import (NOTE_TOKEN, CHORD_TOKEN, GS_CLEF_TOKEN, BASE_TIME_BEAT_TOKEN, STAFF_TOKEN, MEASURE_TOKEN,
                      DEFAULT_KEY_TOKEN, DEFAULT_STEM_TOKEN, PITCH_TOKENS)
@@ -56,7 +57,13 @@ def _event_to_lmx(event: Event) -> list[str]:
     return sequence
 
 
-def scene_to_lmx(score: Score) -> str:
+def smashcima_score_to_lmx(score: Score) -> LMXWrapper:
+    """
+    Takes Smashcima Score and turns it into LMX Event by Event.
+
+    :param score: Smashcima Score
+    :return: LMX
+    """
     sequence: list[str] = []
 
     sequence.append(MEASURE_TOKEN)
@@ -72,17 +79,25 @@ def scene_to_lmx(score: Score) -> str:
             for event in measure.events:
                 sequence.extend(_event_to_lmx(event))
 
-    return " ".join(sequence)
+    return LMXWrapper(sequence)
 
 
-def complex_musicxml_file_to_lmx(file_path: Path) -> str:
+def complex_musicxml_file_to_lmx(file_path: Path) -> LMXWrapper:
+    """
+    Converts given complex MusicXML file into a simplified LMX score.
+
+    :param file_path: path to MusicXML file
+    :return: simplified LMX score
+    """
     score = sc.loading.load_score(file_path)
-    return scene_to_lmx(score)
+    lmx_w = smashcima_score_to_lmx(score)
+    lmx_w.standardize()
+    return lmx_w
 
 
 def simplify_musicxml_file(input_path: Path, output_path: Path):
-    output_lmx = complex_musicxml_file_to_lmx(input_path)
-    output_xml = lmx_to_musicxml(output_lmx)
+    lmx_w = complex_musicxml_file_to_lmx(input_path)
+    output_xml = lmx_w.to_musicxml()
 
     with open(output_path, "w", encoding="utf8") as f:
         f.write(output_xml)

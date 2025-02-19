@@ -51,11 +51,12 @@ class IBoundingBox(ABC):
         pass
 
     @abstractmethod
-    def intersects(self, other: Self) -> bool:
+    def intersects(self, other: Self, direction: Direction = None) -> bool:
         """
         Returns true if annotations intersect.
 
         :param other: other rectangle to check intersection with
+        :param direction: direction
         :return: True if annotations intersect
         """
         pass

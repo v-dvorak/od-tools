@@ -1,7 +1,7 @@
 from enum import Enum
 
 from .Graph.Node import Node, VirtualNode
-from ..Conversions.BoundingBox import Direction
+from odtools.Conversions.BoundingBox import Direction
 
 
 class SectionType(Enum):

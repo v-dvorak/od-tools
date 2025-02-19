@@ -6,7 +6,7 @@ from PIL import Image, ImageDraw, ImageFont
 from .Graph.Names import NodeName
 from .Graph.Node import Node, VirtualNode, BaseNode
 from .Graph.Tags import SYMBOL_PITCH_TAG
-from ..Splitting import draw_rectangles_on_image
+from odtools.Splitting import draw_rectangles_on_image
 
 
 def write_numbers_on_image(image_path, measures: list[Node]):

@@ -25,14 +25,28 @@ class BoundingBox(IBoundingBox):
     def center(self) -> tuple[float, float]:
         return self.top + self.height / 2, self.left + self.width / 2
 
-    def intersects(self, other: Self) -> bool:
+    def intersects(self, other: Self, direction: Direction = None) -> bool:
         # check if the annotations overlap both horizontally and vertically
-        return (
-                self.left <= other.right
-                and self.right >= other.left
-                and self.top <= other.bottom
-                and self.bottom >= other.top
-        )
+        match direction:
+            case None:
+                return (
+                        self.left <= other.right
+                        and self.right >= other.left
+                        and self.top <= other.bottom
+                        and self.bottom >= other.top
+                )
+            case Direction.VERTICAL:
+                return (
+                        self.top <= other.bottom
+                        and self.bottom >= other.top
+                )
+            case Direction.HORIZONTAL:
+                return (
+                        self.left <= other.right
+                        and self.right >= other.left
+                )
+            case _:
+                raise TypeError(f"Invalid direction: {direction}")
 
     def intersection_area(self, other: Self) -> int:
         dx = min(self.right, other.right) - max(self.left, other.left)

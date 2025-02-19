@@ -8,8 +8,7 @@ from mung.node import Node
 from ultralytics.engine.results import Results
 
 from ..Formats import OutputFormat, InputFormat
-from ..IBoundingBox import IBoundingBox
-
+from ..IBoundingBox import IBoundingBox, Direction
 
 class AnnotationType(Enum):
     GROUND_TRUTH = 1
@@ -64,12 +63,16 @@ class IAnnotation:
         pass
 
     @abstractmethod
-    def intersects(self, other: Self) -> bool:
+    def intersects(self, other: Self, direction: Direction = None) -> bool:
         """
         Returns true if two Annotation objects intersect, else false.
 
         :param other: other Annotation object
         """
+        pass
+
+    @abstractmethod
+    def intersection_over_union(self, other: Self, direction: Direction = None) -> float:
         pass
 
     @staticmethod
