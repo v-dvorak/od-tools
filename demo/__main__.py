@@ -10,8 +10,7 @@ from odtools.Download import get_path_to_latest_version, update_models, OLA_TAG,
 from odtools.Inference import InferenceJob, SplitSettings, run_multiple_prediction_jobs
 from odtools.Inference.ModelWrappers import YOLODetectionModelWrapper
 from stalix import refactor_measures_on_page
-from tonic.Linearize import lmx_to_musicxml
-from tonic.Reconstruction import linearize_note_events_to_lmx
+from tonic.Linearize.GraphToLMX import linearize_note_events_to_lmx
 from tonic.Reconstruction import preprocess_annots_for_reconstruction, reconstruct_note_events
 from tonic.Reconstruction.Graph import NOTEHEAD_TYPE_TAG, NoteheadType, NodeName, Node
 from tonic.Reconstruction.VizUtils import visualize_input_data
@@ -177,9 +176,9 @@ for image_path in images_to_process:
     # print(linearize_note_events_to_lmx(events, human_readable=False))
     if args.output_dir:
         with open(args.output_dir / (image_path.stem + ".musicxml"), "w", encoding="utf8") as f:
-            predicted_lmx = linearize_note_events_to_lmx(events, human_readable=False)
+            predicted_lmx = linearize_note_events_to_lmx(events)
             print(predicted_lmx)
-            f.write(lmx_to_musicxml(predicted_lmx))
+            f.write(predicted_lmx.to_musicxml())
 
     if args.visualize >= VIZ_LEVEL_OUTPUT:
         visualize_result(

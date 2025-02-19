@@ -1,8 +1,10 @@
 from decimal import Decimal, ROUND_HALF_UP
 
-from .Tokens import (G_CLEF_ZERO_PITCH_INDEX, F_CLEF_ZERO_PITCH_INDEX, PITCH_TOKENS, NOTE_TOKEN, INDENTATION,
-                     CHORD_TOKEN, GS_CLEF_TOKEN, BASE_TIME_BEAT_TOKEN, STAFF_TOKEN, DEFAULT_STEM_TOKEN, MEASURE_TOKEN,
+from .Tokens import (G_CLEF_ZERO_PITCH_INDEX, F_CLEF_ZERO_PITCH_INDEX, PITCH_TOKENS, NOTE_TOKEN, CHORD_TOKEN,
+                     GS_CLEF_BIG_TOKEN, BASE_TIME_BEAT_BIG_TOKEN, STAFF_TOKEN, DEFAULT_STEM_TOKEN,
+                     MEASURE_TOKEN,
                      DEFAULT_KEY_TOKEN)
+from ..Linearize.LMXWrapper import LMXWrapper
 from ..Reconstruction.Graph.Names import NodeName
 from ..Reconstruction.Graph.Node import Node, VirtualNode
 from ..Reconstruction.Graph.Tags import (NOTEHEAD_TYPE_TAG, ACCIDENTAL_TYPE_TAG, SYMBOL_GS_INDEX_TAG, SYMBOL_PITCH_TAG)
@@ -55,72 +57,57 @@ def get_note_pitch(note: Node) -> str:
     return PITCH_TOKENS[pitch_index]
 
 
-def _note_to_lmx(note: Node) -> str:
+def _note_to_lmx(note: Node) -> list[str]:
     gs_tag = note.get_tag(SYMBOL_GS_INDEX_TAG)
     pitch_token = get_note_pitch(note)
 
-    return " ".join(
-        [pitch_token, NOTE_TOKEN, DEFAULT_STEM_TOKEN, f"{STAFF_TOKEN}:{gs_tag if gs_tag is not None else 1}"])
+    return [
+        pitch_token,
+        NOTE_TOKEN,
+        DEFAULT_STEM_TOKEN,
+        f"{STAFF_TOKEN}:{gs_tag if gs_tag is not None else 1}"
+    ]
 
 
-def _linearize_note_event_to_lmx(event: VirtualNode, human_readable: bool = True) -> str:
-    if human_readable:
-        output: str = ""
-        first = True
-        for note in event.children():
-            output += INDENTATION
-            if first:
-                output += (len(CHORD_TOKEN) + 1) * " "
-                first = False
-            else:
-                output += CHORD_TOKEN + " "
+def _linearize_note_event_to_lmx(event: VirtualNode) -> list[str]:
+    sequence: list[str] = []
+    first = True
+    for note in event.children():
+        note: Node
 
-            output += _note_to_lmx(note)
-            output += "\n"
-        return output
+        if first:
+            first = False
+        else:
+            sequence.append(CHORD_TOKEN)
 
-    else:
-        output: list[str] = []
-        first = True
-        for note in event.children():
-            note: Node
+        sequence.extend(_note_to_lmx(note))
 
-            if first:
-                first = False
-            else:
-                output.append(CHORD_TOKEN)
-
-            output.append(_note_to_lmx(note))
-
-        return " ".join(output)
+    return sequence
 
 
-def linearize_note_events_to_lmx(measure_groups: list[list[VirtualNode]], human_readable: bool = True) -> str:
+def linearize_note_events_to_lmx(measure_groups: list[list[VirtualNode]]) -> LMXWrapper:
     note_written = False
-    output: list[str] = []
+    sequence: list[str] = []
     first = True
     for row in measure_groups:
 
         for measure in row:
 
-            output.append(MEASURE_TOKEN)
+            sequence.append(MEASURE_TOKEN)
             if first:
-                output.append(DEFAULT_KEY_TOKEN)
-                output.append(INDENTATION + BASE_TIME_BEAT_TOKEN if human_readable else BASE_TIME_BEAT_TOKEN)
-                output.append(INDENTATION + GS_CLEF_TOKEN if human_readable else GS_CLEF_TOKEN)
+                sequence.append(DEFAULT_KEY_TOKEN)
+                sequence.extend(BASE_TIME_BEAT_BIG_TOKEN.split())
+                sequence.extend(GS_CLEF_BIG_TOKEN.split())
                 first = False
 
             for child in measure.children():
                 child: VirtualNode
                 if child.name == NodeName.NOTE_EVENT:
-                    output.append(_linearize_note_event_to_lmx(child, human_readable=human_readable))
+                    sequence.extend(_linearize_note_event_to_lmx(child))
                     note_written = True
 
     if note_written:
-        if human_readable:
-            return "\n".join(output)
-        else:
-            return " ".join(output)
+        return LMXWrapper(sequence)
     else:
         print("Warning: No note events were written.")
-        return ""
+        return LMXWrapper(sequence)

@@ -5,9 +5,8 @@ from smashcima import Clef, Event, Note, Score, StaffSemantic
 
 from .LMXWrapper import LMXWrapper
 from .Tokens import G_CLEF_ZERO_PITCH_INDEX, F_CLEF_ZERO_PITCH_INDEX
-from .Tokens import (NOTE_TOKEN, CHORD_TOKEN, GS_CLEF_TOKEN, BASE_TIME_BEAT_TOKEN, STAFF_TOKEN, MEASURE_TOKEN,
+from .Tokens import (NOTE_TOKEN, CHORD_TOKEN, GS_CLEF_BIG_TOKEN, BASE_TIME_BEAT_BIG_TOKEN, STAFF_TOKEN, MEASURE_TOKEN,
                      DEFAULT_KEY_TOKEN, DEFAULT_STEM_TOKEN, PITCH_TOKENS)
-from .lmx_to_musicxml import lmx_to_musicxml
 
 
 def _get_note_relative_pitch_to_first_staff_line(note: Note) -> int:
@@ -68,8 +67,8 @@ def smashcima_score_to_lmx(score: Score) -> LMXWrapper:
 
     sequence.append(MEASURE_TOKEN)
     sequence.append(DEFAULT_KEY_TOKEN)
-    sequence.append(BASE_TIME_BEAT_TOKEN)
-    sequence.append(GS_CLEF_TOKEN)
+    sequence.extend(BASE_TIME_BEAT_BIG_TOKEN.split())
+    sequence.extend(GS_CLEF_BIG_TOKEN.split())
     first = True
     for part in score.parts:
         for measure in part.measures:
