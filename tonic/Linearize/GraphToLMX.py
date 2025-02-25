@@ -1,7 +1,7 @@
 from decimal import Decimal, ROUND_HALF_UP
 
-from .Tokens import (G_CLEF_ZERO_PITCH_INDEX, F_CLEF_ZERO_PITCH_INDEX, PITCH_TOKENS, NOTE_TOKEN, CHORD_TOKEN,
-                     GS_CLEF_BIG_TOKEN, BASE_TIME_BEAT_BIG_TOKEN, STAFF_TOKEN, DEFAULT_STEM_TOKEN,
+from .Tokens import (G_CLEF_ZERO_PITCH_INDEX, F_CLEF_ZERO_PITCH_INDEX, PITCH_TOKENS, NOTE_QUARTER_TOKEN, CHORD_TOKEN,
+                     GS_CLEF_LARGE_TOKEN, BASE_TIME_BEAT_LARGE_TOKEN, STAFF_TOKEN, DEFAULT_STEM_TOKEN,
                      MEASURE_TOKEN,
                      DEFAULT_KEY_TOKEN)
 from ..Linearize.LMXWrapper import LMXWrapper
@@ -63,7 +63,7 @@ def _note_to_lmx(note: Node) -> list[str]:
 
     return [
         pitch_token,
-        NOTE_TOKEN,
+        NOTE_QUARTER_TOKEN,
         DEFAULT_STEM_TOKEN,
         f"{STAFF_TOKEN}:{gs_tag if gs_tag is not None else 1}"
     ]
@@ -96,8 +96,8 @@ def linearize_note_events_to_lmx(measure_groups: list[list[VirtualNode]]) -> LMX
             sequence.append(MEASURE_TOKEN)
             if first:
                 sequence.append(DEFAULT_KEY_TOKEN)
-                sequence.extend(BASE_TIME_BEAT_BIG_TOKEN.split())
-                sequence.extend(GS_CLEF_BIG_TOKEN.split())
+                sequence.extend(BASE_TIME_BEAT_LARGE_TOKEN.split())
+                sequence.extend(GS_CLEF_LARGE_TOKEN.split())
                 first = False
 
             for child in measure.children():

@@ -5,7 +5,7 @@ from smashcima import Clef, Event, Note, Score, StaffSemantic
 
 from .LMXWrapper import LMXWrapper
 from .Tokens import G_CLEF_ZERO_PITCH_INDEX, F_CLEF_ZERO_PITCH_INDEX
-from .Tokens import (NOTE_TOKEN, CHORD_TOKEN, GS_CLEF_BIG_TOKEN, BASE_TIME_BEAT_BIG_TOKEN, STAFF_TOKEN, MEASURE_TOKEN,
+from .Tokens import (NOTE_QUARTER_TOKEN, CHORD_TOKEN, GS_CLEF_LARGE_TOKEN, BASE_TIME_BEAT_LARGE_TOKEN, STAFF_TOKEN, MEASURE_TOKEN,
                      DEFAULT_KEY_TOKEN, DEFAULT_STEM_TOKEN, PITCH_TOKENS)
 
 
@@ -36,7 +36,7 @@ def _note_to_lmx(note: Note) -> str:
     else:
         raise NotImplementedError(f"Unsupported staff index \"{staff_index}\"")
 
-    return " ".join([PITCH_TOKENS[pitch_index], NOTE_TOKEN, DEFAULT_STEM_TOKEN,
+    return " ".join([PITCH_TOKENS[pitch_index], NOTE_QUARTER_TOKEN, DEFAULT_STEM_TOKEN,
                      f"{STAFF_TOKEN}:{staff_index}"])
 
 
@@ -67,8 +67,8 @@ def smashcima_score_to_lmx(score: Score) -> LMXWrapper:
 
     sequence.append(MEASURE_TOKEN)
     sequence.append(DEFAULT_KEY_TOKEN)
-    sequence.extend(BASE_TIME_BEAT_BIG_TOKEN.split())
-    sequence.extend(GS_CLEF_BIG_TOKEN.split())
+    sequence.extend(BASE_TIME_BEAT_LARGE_TOKEN.split())
+    sequence.extend(GS_CLEF_LARGE_TOKEN.split())
     first = True
     for part in score.parts:
         for measure in part.measures:

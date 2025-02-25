@@ -77,6 +77,18 @@ class BoundingBox(IBoundingBox):
     def from_ltwh(cls, left, top, width, height) -> Self:
         return BoundingBox(left, top, left + width, top + height)
 
+    @classmethod
+    def from_list_of_boxes(cls, bboxes: list[Self]) -> Self:
+        if len(bboxes) == 0:
+            raise ValueError("Empty list")
+
+        return BoundingBox(
+            min(bboxes, key=lambda b: b.left).left,
+            min(bboxes, key=lambda b: b.top).top,
+            max(bboxes, key=lambda b: b.right).right,
+            max(bboxes, key=lambda b: b.bottom).bottom
+        )
+
     def is_fully_inside(self, other: Self, direction: Direction = None) -> bool:
         if direction is None:
             return (

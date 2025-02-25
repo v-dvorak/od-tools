@@ -22,6 +22,19 @@ class IBoundingBox(ABC):
         self.width = self.right - self.left
         self.height = self.bottom - self.top
 
+    def __eq__(self, other):
+        if isinstance(other, self.__class__):
+            return (
+                    self.left == other.left
+                    and self.top == other.top
+                    and self.right == other.right
+                    and self.bottom == other.bottom
+            )
+        return False
+
+    def __hash__(self):
+        return hash((self.left, self.top, self.right, self.bottom))
+
     @abstractmethod
     def coordinates(self) -> tuple[int, int, int, int]:
         """
@@ -99,6 +112,16 @@ class IBoundingBox(ABC):
     @classmethod
     @abstractmethod
     def from_ltwh(cls, left, top, width, height) -> Self:
+        pass
+
+    @classmethod
+    @abstractmethod
+    def from_list_of_boxes(cls, bboxes: list[Self]) -> Self:
+        """
+        Returns a bounding box that encapsulates all the given bounding boxes.
+
+        :param bboxes: list of bounding boxes
+        """
         pass
 
     @abstractmethod

@@ -9,7 +9,7 @@ from odtools.Download import get_path_to_latest_version, update_models, OLA_TAG,
     load_demo_images
 from odtools.Inference import InferenceJob, SplitSettings, run_multiple_prediction_jobs
 from odtools.Inference.ModelWrappers import YOLODetectionModelWrapper
-from stalix import refactor_measures_on_page
+from tonic.Reconstruction.StaLiXWrapper import refactor_measures_on_page
 from tonic.Linearize.GraphToLMX import linearize_note_events_to_lmx
 from tonic.Reconstruction import preprocess_annots_for_reconstruction, reconstruct_note_events
 from tonic.Reconstruction.Graph import NOTEHEAD_TYPE_TAG, NoteheadType, NodeName, Node
