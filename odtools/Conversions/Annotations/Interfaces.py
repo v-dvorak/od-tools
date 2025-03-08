@@ -137,7 +137,7 @@ class IFullPage:
         The subpages are stored in a list of lists
         where each list corresponds to single class id.
 
-        :param image_size: path_to_image image_size, (width, height)
+        :param image_size: image size, (width, height)
         :param annotations: list of Annotation
         :param class_names: list of class names
         """
