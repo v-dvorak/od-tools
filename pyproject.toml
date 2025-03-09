@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "odtools"
+authors = [
+    { name = "Vojtech Dvorak", email = "dvorak@ufal.mff.cuni.cz" },
+]
+dependencies = [
+    "matplotlib",
+    "mung",
+    "numpy",
+    "opencv_python",
+    "packaging",
+    "Pillow",
+    "prettytable",
+    "PyYAML",
+    "Requests",
+    "seaborn",
+    "smashcima",
+    "tqdm",
+    "ultralytics"
+]
+description = "Object Detection Tools"
+readme = "README.md"
+requires-python = ">=3.11"
+version = "1.0.0"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://github.com/v-dvorak/od-tools"
+Source = "https://github.com/v-dvorak/od-tools"
+Issues = "https://github.com/v-dvorak/od-tools/issues"
+
+[tool.setuptools.packages.find]
+include = ["odtools"]
