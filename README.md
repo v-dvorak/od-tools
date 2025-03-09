@@ -1,8 +1,6 @@
 # Object Detection Tools (ODT)
 
-ODT is a Python library and framework designed for handling annotations used as both inputs and outputs in object
-detection models. It provides a streamlined way to work with detection data, making it easier to preprocess, analyze,
-and utilize annotations in OD workflows.
+ODT is a Python library and framework designed for handling annotations used as both inputs and outputs in object detection models. It provides a streamlined way to work with detection data, making it easier to preprocess, analyze, and utilize annotations in OD workflows.
 
 For usage details, check out [TonIC](https://github.com/v-dvorak/tonic).
 
@@ -26,19 +24,15 @@ For usage details, check out [TonIC](https://github.com/v-dvorak/tonic).
 
 ### Image splitting with overlaps with annotations adjusted accordingly
 
-When a model has a fixed input resolution, objects that are too small in the original image may be lost due to
-downscaling and compression during preprocessing. This can negatively impact detection performance.
+When a model has a fixed input resolution, objects that are too small in the original image may be lost due to downscaling and compression during preprocessing. This can negatively impact detection performance.
 
-That's where image splitting and stitching comes in. The **ODT** library allows the user to specify input tile size,
-overlap ratio between tiles (to which the input image is split), based on these parameters, predictions are made for
-each tile separately and detected annotations are automatically merged and resolved as if the splitting never happened.
+That's where image splitting and stitching comes in. The **ODT** library allows the user to specify input tile size, overlap ratio between tiles (to which the input image is split), based on these parameters, predictions are made for each tile separately and detected annotations are automatically merged and resolved as if the splitting never happened.
 
 ![](docs/splitviz/unique-viz.jpg)
 
 ### Easy-to-setup pipeline
 
-Loaded models, transformed images, and split settings are encapsulated in an `InferenceJob`, which is passed to a method
-that returns the finalized predictions:
+Loaded models, transformed images, and split settings are encapsulated in an `InferenceJob`, which is passed to a method that returns the finalized predictions:
 
 ```python
 import cv2
@@ -61,21 +55,17 @@ job = InferenceJob(
 result = run_multiple_prediction_jobs([job])
 ```
 
-This job processes an image using a loaded model (`notehead_detector`). The image is divided into `640 × 640` pixel
-tiles with a `10%` overlap (`64 px`) between neighboring tiles.
-`wanted_ids` are used to tell the method to not bother with conversion of annotations that won't be used later.
+This job processes an image using a loaded model (`notehead_detector`). The image is divided into `640 × 640` pixel tiles with a `10%` overlap (`64 px`) between neighboring tiles. `wanted_ids` are used to tell the method to not bother with conversion of annotations that won't be used later.
 
 When merging detected annotations:
 
-- Detections too close to the edge (within `4%` of the tile’s side length) are removed to avoid partially detected
-  objects interfering when removing duplicates.
+- Detections too close to the edge (within `4%` of the tile’s side length) are removed to avoid partially detected objects interfering when removing duplicates.
 - Annotations with an IoU greater than `0.25` are considered duplicates and are filtered out.
 
 Example of output of multiple models merged and resolved. In this case two models were used:
 
 - Layout detector without splitting
-- Notehead detector with image splitting, noteheads are just too small to be detected after compressing the image
-  to `640 * 640` px
+- Notehead detector with image splitting, noteheads are just too small to be detected after compressing the image to `640 * 640` px
 
 ![](docs/analysis-showcase.png)
 
@@ -103,7 +93,4 @@ Example of output of multiple models merged and resolved. In this case two model
 
 <img src="https://ufal.mff.cuni.cz/~hajicj/2024/images/logo-large.png" width="600px" alt="PMCG logo">
 
-Developed and maintained
-by [Vojtěch Dvořák](https://github.com/v-dvorak) ([dvorak@ufal.mff.cuni.cz](mailto:dvorak@ufal.mff.cuni.cz)) as part of
-the [Prague Music Computing Group](https://ufal.mff.cuni.cz/pmcg) lead
-by [Jan Hajič jr.](https://ufal.mff.cuni.cz/jan-hajic-jr) ([hajicj@ufal.mff.cuni.cz](mailto:hajicj@ufal.mff.cuni.cz)).
+Developed and maintained by [Vojtěch Dvořák](https://github.com/v-dvorak) ([dvorak@ufal.mff.cuni.cz](mailto:dvorak@ufal.mff.cuni.cz)) as part of the [Prague Music Computing Group](https://ufal.mff.cuni.cz/pmcg) lead by [Jan Hajič jr.](https://ufal.mff.cuni.cz/jan-hajic-jr) ([hajicj@ufal.mff.cuni.cz](mailto:hajicj@ufal.mff.cuni.cz)).
