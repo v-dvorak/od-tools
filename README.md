@@ -87,13 +87,15 @@ Example of output of multiple models merged and resolved. In this case two model
 
 [//]: # (TODO:)
 
-## Acknowledgments
+## References
 
-The evaluation module is based on the **Object Detection Metrics** by Rafael Padilla. Available at [GitHub](https://github.com/rafaelpadilla/review_object_detection_metrics). Published as:
+### Object Detection Metrics
 
-> Padilla, Rafael and Passos, Wesley L. and Dias, Thadeu L. B. and Netto, Sergio L. and da Silva, Eduardo A. B. A Comparative Analysis of Object Detection Metrics with a Companion Open-Source Toolkit. Journal Electronics, 2021. doi:10.3390/electronics10030279
+The evaluation module is based on the **Object Detection Metrics** by Rafael Padilla. Published as:
 
-### Image sources
+> Padilla, Rafael and Passos, Wesley L. and Dias, Thadeu L. B. and Netto, Sergio L. and da Silva, Eduardo A. B. A Comparative Analysis of Object Detection Metrics with a Companion Open-Source Toolkit. Journal Electronics, 2021. [GitHub](https://github.com/rafaelpadilla/review_object_detection_metrics), [DOI](https://doi.org/10.3390/electronics10030279)
+
+### Images
 
 > ROLLE, Johann Heinrich, Karl Friedrich Wilhelm HERROSEE a Eduard ZACHARIÄ. Gedor, oder das Erwachen zum bessern Leben: von Herrosee, Prediger in Berlin. Leipzig: Auf Kosten der Wittwe des Autors, und in Commision bey Schwickert, 1787, p. 2. Available online at: [https://www.digitalniknihovna.cz/mzk/uuid/uuid:2d5f652c-1df0-474c-ae23-3fb699afe808](https://www.digitalniknihovna.cz/mzk/uuid/uuid:2d5f652c-1df0-474c-ae23-3fb699afe808)
 
