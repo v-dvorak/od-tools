@@ -83,7 +83,17 @@ Example of output of multiple models merged and resolved. In this case two model
 
 **ODT** is designed primarily for use with YOLO models. However, it can be extended to support other architectures, such as Fast R-CNN or U-Net. To integrate a different model, users simply need to implement a custom wrapper class that inherits from the abstract class [`IModelWrapper`](odtools/Inference/ModelWrappers/ModelWrapper.py) and define its two methods: `predict_single` and `predict_multiple`.
 
-## Image sources
+[//]: # (### Model validation)
+
+[//]: # (TODO:)
+
+## Acknowledgments
+
+The evaluation module is based on the **Object Detection Metrics** by Rafael Padilla. Available at [GitHub](https://github.com/rafaelpadilla/review_object_detection_metrics). Published as:
+
+> Padilla, Rafael and Passos, Wesley L. and Dias, Thadeu L. B. and Netto, Sergio L. and da Silva, Eduardo A. B. A Comparative Analysis of Object Detection Metrics with a Companion Open-Source Toolkit. Journal Electronics, 2021. doi:10.3390/electronics10030279
+
+### Image sources
 
 > ROLLE, Johann Heinrich, Karl Friedrich Wilhelm HERROSEE a Eduard ZACHARIÄ. Gedor, oder das Erwachen zum bessern Leben: von Herrosee, Prediger in Berlin. Leipzig: Auf Kosten der Wittwe des Autors, und in Commision bey Schwickert, 1787, p. 2. Available online at: [https://www.digitalniknihovna.cz/mzk/uuid/uuid:2d5f652c-1df0-474c-ae23-3fb699afe808](https://www.digitalniknihovna.cz/mzk/uuid/uuid:2d5f652c-1df0-474c-ae23-3fb699afe808)
 
