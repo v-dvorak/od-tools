@@ -40,6 +40,9 @@ def split_section_to_starts(
 
     # maximum number of sections based on the minimal overlap
     number_of_sections = math.ceil((total_length - min_overlap) / (section_length - min_overlap))
+
+    if number_of_sections < 2:
+        return [0]
     # calculate the step
     step = (total_length - section_length) / (number_of_sections - 1)
     # generate positions
