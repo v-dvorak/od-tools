@@ -78,7 +78,7 @@ class IBoundingBox(ABC):
     def is_fully_inside(self, other: Self, direction: Direction = None) -> bool:
         """
         Returns true if THIS bounding box is fully inside the OTHER bounding box.
-        If directions is specified, returns true if THIS is inside the vertical/horizontal strip defined by the OHTER.
+        If directions is specified, returns true if THIS is inside the vertical/horizontal strip defined by the OTHER.
 
         :param other: "bigger" rectangle
         :param direction: "vertical", "horizontal" or None (for both)
