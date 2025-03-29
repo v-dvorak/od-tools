@@ -65,10 +65,17 @@ class ExtendedEnum(Enum):
         return [e.value for e in cls]
 
     @classmethod
-    def from_string(cls, token: str) -> Self:
-        token = token.lower()
-        for e in cls:
-            if e.value == token:
-                return e
+    def from_string(cls, token: str, lower: bool = True, from_name: bool = False) -> Self:
+        if lower:
+            token = token.lower()
 
-        return ValueError(f"Invalid input format: \"{token}\"")
+        if from_name:
+            for e in cls:
+                if e.name == token:
+                    return e
+        else:
+            for e in cls:
+                if e.value == token:
+                    return e
+
+        raise ValueError(f"Invalid input format: \"{token}\"")
