@@ -113,6 +113,19 @@ def main():
     update_parser = subparsers.add_parser("update")
     # endregion
 
+    # region K-FOLD ARGUMENTS
+    kfold_parser = subparsers.add_parser("kfold")
+    kfold_parser.add_argument("output", help="Split dataset destination.")
+    kfold_parser.add_argument("image_dir", help="Path to images.")
+    kfold_parser.add_argument("annot_dir", help="Path to annotations.")
+    kfold_parser.add_argument("-f", "--folds", type=int, default=3, help="Number of folds.")
+    kfold_parser.add_argument("-p", "--pout", type=int, default=1, help="Leave p out.")
+
+    # global arguments
+    kfold_parser.add_argument("-v", "--verbose", action="store_true", help="Make script verbose")
+    kfold_parser.add_argument("--seed", type=int, default=42, help="Seed for dataset shuffling.")
+    # endregion
+
     args = parser.parse_args()
 
     # CONFIG VERBOSE CHECK
@@ -136,9 +149,25 @@ def main():
             verbose=args.verbose
         )
         return 0
+
+    # UPDATE RESOURCES
     elif args.command == "update":
         from .Download import update_all_default_resources
         update_all_default_resources()
+        return 0
+
+    # RUN K-FOLD ON DATASET
+    elif args.command == "kfold":
+        from .KFold import kfold_dataset
+        kfold_dataset(
+            Path(args.output),
+            Path(args.image_dir),
+            Path(args.annot_dir),
+            folds=args.folds,
+            pout=args.pout,
+            seed=args.seed,
+            verbose=args.verbose
+        )
         return 0
 
     # CONFIG LOADING
