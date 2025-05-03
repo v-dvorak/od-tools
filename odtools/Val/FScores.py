@@ -36,10 +36,13 @@ def plot_f_scores(
     plt.figure(figsize=(10, 6))
 
     plt.xticks(np.arange(min(iou_thresholds), max(iou_thresholds) + 0.05, 0.05))
+    plt.yticks(np.arange(0, 1 + 0.02, 0.05))
 
-    # Plot F1 score for each class
-    for i, f1_scores in enumerate(f1_scores_per_class):
-        plt.plot(iou_thresholds, f1_scores, marker='o', label=class_labels[i])
+    # Plot F1 score for each class, reverse ordering with zorder
+    zorder = len(f1_scores_per_class)
+    for class_name, f1_scores in zip(class_labels, f1_scores_per_class):
+        plt.plot(iou_thresholds, f1_scores, marker='o', label=class_name, zorder=zorder)
+        zorder -= 1
 
     # Labels and title
     plt.title('F1 Scores for Different IoU Thresholds')
