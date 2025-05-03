@@ -66,6 +66,8 @@ def main():
     stats_parser.add_argument('-j', '--jobs', nargs='+', help="Specify jobs to run, if None, all jobs will be run.",
                               choices=StatJob.get_all_value())
 
+    stats_parser.add_argument("--image_format", default="jpg", help="Input image format.")
+
     # global arguments
     stats_parser.add_argument("-v", "--verbose", action="store_true", help="Make script verbose")
     stats_parser.add_argument("--config", default=None,
@@ -236,7 +238,7 @@ def main():
             # class ids etc.
             class_reference_table=class_id_mapping,
             class_output_names=class_output_names,
-            image_format="jpg",
+            image_format=args.image_format,
             jobs=[StatJob.from_string(job) for job in args.jobs] if args.jobs else None,
             # others
             output_dir=Path(args.output_dir) if args.output_dir is not None else None,
