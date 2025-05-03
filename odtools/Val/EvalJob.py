@@ -4,6 +4,8 @@ from pathlib import Path
 
 from tqdm import tqdm
 from ultralytics import YOLO
+from prettytable import PrettyTable, MARKDOWN
+from PIL import Image
 
 from ..Conversions import ConversionUtils
 from ..Conversions.Annotations import FullPage, Annotation
@@ -35,6 +37,7 @@ class ModelType(Enum):
 
 
 GLOBAL_IOU_THRESHOLDS = [0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0]
+F1_SCORES_FILE_NAME = "f1-scores"
 
 
 def run_f1_scores_vs_iou(
@@ -97,11 +100,36 @@ def run_f1_scores_vs_iou(
         summation=summarize,
     )
 
+    # setup output dir
+    if output_dir is not None:
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+    def table_from_scores(scores: list[list[float]], ious: list[float]) -> PrettyTable:
+        column_names = ["ID"] + [str(iou) for iou in ious]
+        table = PrettyTable(column_names)
+        for col in column_names:
+            table.align[col] = "r"
+        
+        for i, score in enumerate(scores):
+            table.add_row([str(i)] + [f"{s:.4f}" for s in score])
+
+        return table
+    
+    # generate table
+    save_table = table_from_scores(scores, GLOBAL_IOU_THRESHOLDS)
+    if verbose:
+        save_table.set_style(MARKDOWN)
+        print(save_table)
+
+    if output_dir is not None:
+        with open(output_dir / f"{F1_SCORES_FILE_NAME}.txt", "w") as output_file:
+            output_file.write(save_table.get_csv_string())
+
     FScores.plot_f_scores(
         GLOBAL_IOU_THRESHOLDS,
         scores,
         class_output_names + ["all"] if summarize else class_output_names,
-        output_path=output_dir / "f1-scores.png" if output_dir is not None else None,
+        output_path=output_dir / f"{F1_SCORES_FILE_NAME}.png" if output_dir is not None else None,
     )
 
 
@@ -170,6 +198,8 @@ def predict_yolo_split(
     :param debug: show loaded annotations as rectangles on image
     :return: list of predictions
     """
+    from timeit import default_timer as timer
+    start = timer()
     width, height = ConversionUtils.get_num_pixels(image_path)
 
     # prepare images for inference
@@ -186,6 +216,14 @@ def predict_yolo_split(
         subpages.append(res)
 
     resolved = FullPage.combine_multiple_pages_and_resolve(subpages, splits, iou_threshold=iou_threshold)
+    print(timer() - start)
+    return list(resolved.all_annotations())
+
+    image = Image.open(image_path)
+    bw_image = image.convert("L")
+
+    resolved = FullPage.from_yolo_result(model.predict(bw_image)[0])
+
 
     if debug:
         SplitUtils.draw_rectangles_on_image(
@@ -200,6 +238,7 @@ def predict_yolo_split(
     for annot in resolved.all_annotations():
         annot.set_image_name(str(index))
 
+    print(timer() - start)
     return list(resolved.all_annotations())
 
 
