@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
-
 import numpy as np
+from typing import Optional
 
 from ...Conversions.Annotations.FullPage import FullPage
 
@@ -14,7 +14,7 @@ class IModelWrapper(ABC):
     def predict_multiple(
             self,
             tiles: list[np.ndarray],
-            wanted_ids: list[int] = None,
+            wanted_ids: Optional[list[int]] = None,
             verbose: bool = False
     ) -> list[FullPage]:
         pass
@@ -23,7 +23,7 @@ class IModelWrapper(ABC):
     def predict_single(
             self,
             image: np.ndarray,
-            wanted_ids: list[int] = None,
+            wanted_ids: Optional[list[int]] = None,
             verbose: bool = False
     ) -> FullPage:
         pass

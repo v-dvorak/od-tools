@@ -62,7 +62,7 @@ class SplitPage:
                         #     print("reject")
 
                         if (annotation.bbox.intersects(cutout) and
-                                annotation.bbox.intersection_area(cutout) / annotation.bbox.area() >= inside_threshold):
+                                annotation.bbox.intersection_area(cutout) / annotation.bbox.area >= inside_threshold):
                             class_annots.append(annotation.adjust_position_copy(- cutout.left, - cutout.top)) # type: ignore
                     intersecting_annotations.append(class_annots)
 

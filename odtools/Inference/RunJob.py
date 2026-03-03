@@ -25,7 +25,7 @@ def _run_split_prediction_job(job: InferenceJob, verbose: bool = False) -> FullP
     tiles = Splitting.create_split_images(job.image, splits)
 
     # predict
-    subpages: list[FullPage] = job.model.predict_multiple(tiles, wanted_ids=job.wanted_ids, verbose=verbose)
+    subpages: list[FullPage] = job.model_wrapper.predict_multiple(tiles, wanted_ids=job.wanted_ids, verbose=verbose)
 
     # resolve
     resolved = FullPage.combine_multiple_pages_and_resolve(
@@ -40,7 +40,7 @@ def _run_split_prediction_job(job: InferenceJob, verbose: bool = False) -> FullP
 
 
 def _run_normal_prediction_job(job: InferenceJob, verbose: bool = False) -> FullPage:
-    return job.model.predict_single(job.image, wanted_ids=job.wanted_ids, verbose=verbose)
+    return job.model_wrapper.predict_single(job.image, wanted_ids=job.wanted_ids, verbose=verbose)
 
 
 def run_prediction_job(job: InferenceJob, verbose: bool = False) -> FullPage:
