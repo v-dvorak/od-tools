@@ -17,10 +17,12 @@ For usage details, check out [TonIC](https://github.com/v-dvorak/tonic).
 
 | from \ to | MuNG | COCO | YOLOd | YOLOs |
 |-----------|------|------|-------|-------|
-| **MuNG**  | ➖    | ✅    | ✅     | ✅     |
-| **COCO**  | ❌    | ➖    | ✅     | ✅     |
-| **YOLOd** | ❌    | ✅    | ➖     | ✅     |
-| **YOLOs** | ❌    | ✅    | ✅     | ➖     |
+| **MuNG**  | ☑️    | ✅    | ✅     | ✅     |
+| **COCO**  | ✅    | ✅    | ✅     | ✅     |
+| **YOLOd** | ✅    | ✅    | ✅     | ✅     |
+| **YOLOs** | ✅    | ✅    | ✅     | ✅     |
+
+> ☑️ - With loss of information (inlinks, outlinks).
 
 ### Image splitting with overlaps with annotations adjusted accordingly
 
