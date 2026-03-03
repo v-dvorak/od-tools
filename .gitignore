@@ -1,9 +1,11 @@
 # Datasets
-datasets/*
+datasets
 
 # Demo
-models/*
-images/*
+models
+images
+logs
+runs
 
 # Test files
 /*.jpg
@@ -22,6 +24,7 @@ __pycache__/
 *.so
 
 # IDE
+.vscode
 .idea
 
 # Distribution / packaging
