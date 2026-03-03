@@ -1,4 +1,5 @@
 import numpy as np
+from typing import Iterable
 
 from .InferenceJob import InferenceJob
 from .. import Splitting
@@ -43,7 +44,28 @@ def _run_normal_prediction_job(job: InferenceJob, verbose: bool = False) -> Full
     return job.model_wrapper.predict_single(job.image, wanted_ids=job.wanted_ids, verbose=verbose)
 
 
-def run_prediction_job(job: InferenceJob, verbose: bool = False) -> FullPage:
+def run_prediction_jobs(jobs: Iterable[InferenceJob] | InferenceJob, verbose: bool = False) -> FullPage:
+    """
+    Runs given inference jobs and combines all outputs into a single FullPage.
+
+    :param jobs: inference jobs
+    :param verbose: make script verbose
+    :return: predicted FullPage
+    """
+    if isinstance(jobs, InferenceJob):
+        jobs = [jobs]
+    
+    fp: FullPage = None
+    for job in jobs:
+        result = _run_prediction_job(job, verbose=verbose)
+        if fp is None:
+            fp = result
+        else:
+            fp.extend_page(result)
+
+    return fp
+
+def _run_prediction_job(job: InferenceJob, verbose: bool = False) -> FullPage:
     """
     Runs given inference job.
 
@@ -55,22 +77,3 @@ def run_prediction_job(job: InferenceJob, verbose: bool = False) -> FullPage:
         return _run_normal_prediction_job(job, verbose=verbose)
     else:
         return _run_split_prediction_job(job, verbose=verbose)
-
-
-def run_multiple_prediction_jobs(jobs: list[InferenceJob], verbose: bool = False) -> FullPage:
-    """
-    Runs given inference jobs and combines all outputs into a single FullPage.
-
-    :param jobs: inference jobs
-    :param verbose: make script verbose
-    :return: predicted FullPage
-    """
-    fp: FullPage = None
-    for job in jobs:
-        result = run_prediction_job(job, verbose=verbose)
-        if fp is None:
-            fp = result
-        else:
-            fp.extend_page(result)
-
-    return fp

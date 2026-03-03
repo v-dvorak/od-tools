@@ -7,7 +7,7 @@ from PIL import Image
 
 from odtools.Download import (get_path_to_latest_version, update_models, update_demo_images, load_demo_images,
                               OLA_TAG, NOTA_TAG)
-from odtools.Inference import InferenceJob, SplitSettings, run_multiple_prediction_jobs
+from odtools.Inference import InferenceJob, SplitSettings, run_prediction_jobs
 from odtools.Inference.ModelWrappers import YOLODetectionModelWrapper
 from odtools.Splitting.SplitUtils import draw_rectangles_on_image
 
@@ -83,7 +83,7 @@ for image_path in images_to_process:
 
     # RUN INFERENCE JOBS
     start = timer()
-    combined = run_multiple_prediction_jobs(
+    combined = run_prediction_jobs(
         [
             staff_job,
             notehead_job,
