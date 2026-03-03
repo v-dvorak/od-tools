@@ -1,40 +1,37 @@
 from pathlib import Path
-from typing import Self
+from typing import Self, Optional
 
 from .FullPage import FullPage
-from .Interfaces import ISplitPage
 from ..BoundingBox import BoundingBox
 from ..Formats import OutputFormat
 
 
-class SplitPage(ISplitPage):
+class SplitPage:
     def __init__(
             self,
             image_size: tuple[int, int],
             subpages: list[list[FullPage]],
             class_names: list[str],
-            splits: list[list[BoundingBox]]
-    ):
-        super().__init__(
-            image_size,
-            subpages,
-            class_names,
             splits
-        )
+    ):
+        self.size = image_size
+        self.subpages = subpages
+        self.class_names = class_names
+        self.splits = splits
 
     def save_to_file(
             self,
             output_dir: Path,
             dato_name: Path | str,
             output_format: OutputFormat,
-            add_tags: str = None
+            add_tags: Optional[str] = None
     ) -> None:
         for row in range(len(self.subpages)):
             for col in range(len(self.subpages[0])):
                 self.subpages[row][col].save_to_file(
                     output_dir,
-                    "-".join([dato_name, str(row), str(col)]) if add_tags is None
-                    else "-".join([dato_name, str(row), str(col), add_tags]),
+                    "-".join([str(dato_name), str(row), str(col)]) if add_tags is None
+                    else "-".join([str(dato_name), str(row), str(col), add_tags]),
                     output_format
                 )
 
@@ -66,7 +63,7 @@ class SplitPage(ISplitPage):
 
                         if (annotation.bbox.intersects(cutout) and
                                 annotation.bbox.intersection_area(cutout) / annotation.bbox.area() >= inside_threshold):
-                            class_annots.append(annotation.adjust_position_copy(- cutout.left, - cutout.top))
+                            class_annots.append(annotation.adjust_position_copy(- cutout.left, - cutout.top)) # type: ignore
                     intersecting_annotations.append(class_annots)
 
                 cutout_row.append(FullPage(

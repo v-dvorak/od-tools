@@ -1,4 +1,5 @@
 import numpy as np
+from typing import Optional
 from ultralytics import YOLO
 from pathlib import Path
 
@@ -11,7 +12,7 @@ class YOLODetectionModelWrapper(IModelWrapper):
     Implementation of YOLO detection model wrapper.
     """
 
-    def __init__(self, model: YOLO | Path):
+    def __init__(self, model: YOLO | Path | str):
         if isinstance(model, Path) or isinstance(model, str):
             self.model = YOLO(model)
         else:
@@ -20,7 +21,7 @@ class YOLODetectionModelWrapper(IModelWrapper):
     def predict_multiple(
             self,
             tiles: list[np.ndarray],
-            wanted_ids: list[int] = None,
+            wanted_ids: Optional[list[int]] = None,
             verbose: bool = False
     ) -> list[FullPage]:
         predictions = self.model.predict(tiles, save=False, save_txt=False, verbose=verbose)
@@ -32,7 +33,7 @@ class YOLODetectionModelWrapper(IModelWrapper):
     def predict_single(
             self,
             image: np.ndarray,
-            wanted_ids: list[int] = None,
+            wanted_ids: Optional[list[int]] = None,
             verbose: bool = False
     ) -> FullPage:
         prediction = self.model.predict(image, save=False, save_txt=False, verbose=verbose)

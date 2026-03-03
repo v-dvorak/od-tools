@@ -7,6 +7,8 @@ from ..Conversions.Annotations.FullPage import FullPage
 
 def _run_split_prediction_job(job: InferenceJob, verbose: bool = False) -> FullPage:
     # get image dimensions
+    assert job.split_settings is not None
+    
     if isinstance(job.image, np.ndarray):
         w, h = job.image.shape[:2]
     else:
