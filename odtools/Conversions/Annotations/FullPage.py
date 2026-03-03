@@ -14,12 +14,27 @@ from .. import ConversionUtils
 from ..Formats import InputFormat, OutputFormat
 from ...Conversions.BoundingBox import BoundingBox
 
-RESOLVE_OVERLAPS_INSIDE_TILE = True
 
 
 class FullPage(IFullPage):
-    def __init__(self, image_size: tuple[int, int], annotations: list[list[IAnnotation]], class_names: list[str]):
-        super().__init__(image_size, annotations, class_names)
+    def __init__(
+            self,
+            image_size: tuple[int, int],
+            annotations: list[list[Annotation]],
+            class_names: list[str]
+    ):
+        """
+        Stores all subpages inside a single page (path_to_image).
+        The subpages are stored in a list of lists
+        where each list corresponds to single class id.
+
+        :param image_size: image size, (width, height)
+        :param annotations: list of Annotation
+        :param class_names: list of class names
+        """
+        self.size = image_size
+        self.class_names = class_names
+        self.annotations: list[list[Annotation]] = annotations
 
     @staticmethod
     def _sort_annotations_by_class(annotations: list[Annotation], class_count: int) -> list[list[Annotation]]:
@@ -116,6 +131,25 @@ class FullPage(IFullPage):
                     self,
                     output_dir / f"{dato_name}.{output_format.to_annotation_extension()}",
                 )
+            case OutputFormat.MUNG:
+                from mung.graph import Node
+                from mung.io import write_nodes_to_file
+                from itertools import chain
+                nodes = []
+                id_ = 0
+                for annot in chain.from_iterable(self.annotations):
+                    nodes.append(Node(
+                        id_,
+                        self.class_names[annot.class_id],
+                        top=annot.bbox.top,
+                        left=annot.bbox.left,
+                        width=annot.bbox.width,
+                        height=annot.bbox.height,
+                        mask=np.ones((annot.bbox.height, annot.bbox.width)),
+                        data={"confidence": annot.confidence}
+                    ))
+                    id_ += 1
+                write_nodes_to_file(nodes, str(output_dir / f"{dato_name}.{output_format.to_annotation_extension()}"))
             case _:
                 raise NotImplementedError()
 
@@ -189,156 +223,13 @@ class FullPage(IFullPage):
                 # else: cut it
             new_annotations.append(new_c_a)
 
-        if verbose:
-            old_count = self.annotation_count()
+        old_count = self.annotation_count()
 
-        # important, should not be affected by verbose
         self.annotations = new_annotations
 
         if verbose:
             print(f"Cut off {old_count - self.annotation_count()} out of {old_count}")
 
-    def resolve_overlaps_with_other_page(
-            self,
-            other: Self,
-            inside_threshold: float = 0.0,
-            iou_threshold: float = 0.25,
-            verbose: bool = False
-    ) -> None:
-        other: FullPage
-        for class_id in range(len(self.annotations)):
-            resolved1, resolved2 = FullPage._resolve_overlaps_smart(
-                self.annotations[class_id],
-                other.annotations[class_id],
-                inside_threshold=inside_threshold,
-                iou_threshold=iou_threshold,
-                verbose=verbose,
-            )
-            self.annotations[class_id] = resolved1
-            other.annotations[class_id] = resolved2
-
-    def resolve_overlaps_inside_self(
-            self,
-            inside_threshold: float = 0.0,
-            iou_threshold: float = 0.25,
-            verbose: bool = False
-    ):
-        # for every class of annotations
-        for i, class_annotations in enumerate(self.annotations):
-            cleared_annotations = []
-            # take one annotation
-            for current_annot in sorted(class_annotations, key=lambda x: x.confidence, reverse=True):
-                # and check if it does not intersect with already chosen annotations
-                intersects = False
-                for chosen_annot in cleared_annotations:
-                    if current_annot.bbox.intersects(chosen_annot.bbox) and (
-                            (
-                                    # detects if IoU of two bboxes is greater than limit
-                                    # eliminates duplicated bboxes
-                                    0 < iou_threshold < current_annot.bbox.intersection_over_union(chosen_annot.bbox)
-                            ) or (
-                                    # detects if currently investigated bbox is mostly inside other annotation
-                                    # eliminates splitting of bbox into multiple smaller ones
-                                    0 < inside_threshold <
-                                    current_annot.bbox.intersection_area(chosen_annot.bbox) / current_annot.bbox.area()
-                            )
-                    ):
-                        intersects = True
-                        if verbose:
-                            print("------INTERSECTION---------")
-                            print(current_annot.bbox)
-                            print(chosen_annot.bbox)
-                            print(f"{current_annot.confidence} vs {chosen_annot.confidence}")
-
-                        break
-
-                if not intersects:
-                    cleared_annotations.append(current_annot)
-
-            self.annotations[i] = cleared_annotations
-
-    @staticmethod
-    def resolve_matrix_of_pages(
-            subpages=list[list["FullPage"]],
-            inside_threshold: float = 0.0,
-            iou_threshold: float = 0.25,
-            verbose: bool = False,
-    ) -> None:
-        subpages: list[list[FullPage]]
-
-        vectors = [(1, 0), (1, 1), (0, 1)]
-        for row in range(len(subpages)):
-            for col in range(len(subpages[0])):
-                for dx, dy in vectors:
-                    if row + dx < len(subpages) and col + dy < len(subpages[0]):
-                        subpages[row][col].resolve_overlaps_with_other_page(
-                            subpages[row + dx][col + dy],
-                            inside_threshold=inside_threshold,
-                            iou_threshold=iou_threshold,
-                            verbose=verbose,
-                        )
-
-    @staticmethod
-    def _resolve_overlaps_smart(
-            first: list[Annotation],
-            second: list[Annotation],
-            inside_threshold: float = 0.0,
-            iou_threshold: float = 0.25,
-            verbose: bool = False,
-    ) -> tuple[list[Annotation], list[Annotation]]:
-        if len(first) == 0 or len(second) == 0:
-            return first, second
-
-        # create vector of indexes
-        look_up = np.vstack((np.column_stack((np.zeros(len(first), dtype=int), np.arange(len(first)))),
-                             np.column_stack((np.ones(len(second), dtype=int), np.arange(len(second))))))
-
-        sorted_indexes = np.argsort([-annot.confidence for annot in (first + second)])
-
-        look_up = look_up[sorted_indexes]
-
-        cleared_annotations1 = []
-        cleared_annotations2 = []
-
-        for index in look_up:
-            box_id, annot_id = index[0], index[1]
-
-            intersects = False
-            if box_id == 0:
-                to_compare = cleared_annotations2
-                to_save = cleared_annotations1
-                current_annot = first[annot_id]
-            else:
-                to_compare = cleared_annotations1
-                to_save = cleared_annotations2
-                current_annot = second[annot_id]
-
-            for other_annot in to_compare:
-                if current_annot.bbox.intersects(other_annot.bbox) and (
-                        (
-                                # detects if IoU of two bboxes is greater than limit
-                                # eliminates duplicated bboxes
-                                0 < iou_threshold < current_annot.bbox.intersection_over_union(other_annot.bbox)
-                        ) or (
-                                # detects if currently investigated bbox is mostly inside other annotation
-                                # eliminates splitting of bbox into multiple smaller ones
-                                0 < inside_threshold <
-                                current_annot.bbox.intersection_area(other_annot.bbox) / current_annot.bbox.area()
-                        )
-                ):
-                    intersects = True
-                    if verbose:
-                        print("------INTERSECTION---------")
-                        print(current_annot.bbox)
-                        print(other_annot.bbox)
-                        print(f"{current_annot.confidence} vs {other_annot.confidence}")
-
-                    break
-
-            if not intersects:
-                to_save.append(current_annot)
-
-        return cleared_annotations1, cleared_annotations2
 
     @classmethod
     def combine_multiple_pages_and_resolve(
@@ -348,7 +239,8 @@ class FullPage(IFullPage):
             edge_offset: int = 20,
             iou_threshold: float = 0.25,
             verbose: bool = False,
-    ) -> Self:
+    ) -> "FullPage":
+
         for i, (subpage, split) in enumerate(zip(subpages, [x for xs in splits for x in xs])):
             subpage: FullPage
             split: BoundingBox
@@ -366,10 +258,6 @@ class FullPage(IFullPage):
                     ),
                     verbose=verbose
                 )
-            # remove overlaps inside tiles
-            if RESOLVE_OVERLAPS_INSIDE_TILE:
-                subpage.resolve_overlaps_inside_self(inside_threshold=0, iou_threshold=iou_threshold, verbose=verbose)
-
             # shift annotations based in their absolute position in image
             subpage.adjust_position_for_all_annotations(split.left, split.top)
 
@@ -380,17 +268,34 @@ class FullPage(IFullPage):
         # we can retrieve image image_size from here,
         last_split: BoundingBox = splits[-1][-1]
 
-        # resolve overlaps
-        matrix = list(np.reshape(subpages, (len(splits), len(splits[0]))))
-        FullPage.resolve_matrix_of_pages(matrix, inside_threshold=0, iou_threshold=iou_threshold, verbose=verbose)
+        def _apply_nms_single_class(annotations: list[Annotation], iou_threshold: float) -> list[Annotation]:
+            annotations = sorted(annotations, key=lambda a: a.confidence, reverse=True)
+            kept = []
 
-        # dump all annotations into a single matrix
+            while annotations:
+                current = annotations.pop(0)
+                kept.append(current)
+
+                annotations = [
+                    a for a in annotations
+                    if current.intersection_over_union(a) < iou_threshold
+                ]
+
+            return kept
+
         completed_annotations = [[] for _ in range(len(class_names))]
         for subpage in subpages:
             for annotation in subpage.all_annotations():
                 completed_annotations[annotation.class_id].append(annotation)
+        
+        complete_page = FullPage((last_split.right, last_split.bottom), completed_annotations, class_names)
 
-        return FullPage((last_split.right, last_split.bottom), completed_annotations, class_names)
+        complete_page.annotations = [
+            _apply_nms_single_class(annots, iou_threshold)
+            for annots in complete_page.annotations
+        ]
+
+        return complete_page
 
     # endregion
     def extend_page(self, new_page: Self):
