@@ -203,19 +203,8 @@ def save_split_page_image(
     for row in range(len(splits)):
         for col in range(len(splits[0])):
             # save subpage images
-
             cutout = splits[row][col]
             sub_img = img[cutout.top:cutout.bottom, cutout.left:cutout.right]
 
-            # DEBUG viz
-            # SplitUtils.draw_rectangles_on_image(
-            #     sub_img,
-            #     [SplitUtils.BoundingBox.from_coco_annotation(a) for a in full_page.subpages[row][col].annotations[0]],
-            #     thickness=2,
-            #     loaded=True,
-            #     color=(255, 0, 0),
-            # )
-
-            # input("..")
             file_name = _create_image_name(dato_name, row, col, image_format, add_tags=add_tags)
             cv2.imwrite((output_dir / file_name).__str__(), sub_img)
