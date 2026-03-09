@@ -19,10 +19,10 @@ class BoundingBox:
     segmentation: Optional[object] = field(default=None, compare=False)
 
     def __post_init__(self) -> None:
-        if self.right < self.left:
-            raise ValueError("right must be >= left")
-        if self.bottom < self.top:
-            raise ValueError("bottom must be >= top")
+        assert self.left >= 0 and self.top >= 0, "left and top must be >= 0"
+        assert self.right > self.left, "right must be > left"
+        assert self.bottom > self.top, "bottom must be > top"
+        pass
 
     @property
     def width(self) -> int:

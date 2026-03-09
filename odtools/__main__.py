@@ -29,6 +29,7 @@ def main():
     form_parser.add_argument("--image_format", default="jpg", help="Input image format.")
 
     form_parser.add_argument("-s", "--split", type=float, default=1.0, help="Train/test split ratio.")
+    form_parser.add_argument("--split_config", type=Path, default=None, help="Train/test split config.")
 
     form_parser.add_argument("--seed", type=int, default=42, help="Seed for dataset shuffling.")
     form_parser.add_argument("--resize", type=int, default=None,
@@ -216,6 +217,7 @@ def main():
             input_format=input_f,
             output_format=output_f,
             split_ratio=args.split,
+            split_config=args.split_config,
             resize=args.resize,
             image_format=args.image_format,
             # image splitting settings

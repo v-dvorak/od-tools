@@ -1,6 +1,6 @@
 import shutil
 from pathlib import Path
-
+from typing import Optional
 import yaml
 from tqdm import tqdm
 
@@ -106,6 +106,7 @@ def format_dataset(
         output_format: OutputFormat,
         image_format: str = "jpg",
         split_ratio: float = 0.9,
+        split_config: Optional[Path] = None,
         resize: int = None,
         seed: int = 42,
         window_size: tuple[int, int] = (640, 640),
@@ -129,6 +130,7 @@ def format_dataset(
     :param output_format: defines output annot_format
 
     :param split_ratio: train/test split ratio
+    :param split_config: file with predefined train/test split
     :param resize: resizes images so that the longer side is this many pixels long
     :param seed: seed for dataset shuffling
     :param image_format: format in which the images are saved
@@ -150,7 +152,7 @@ def format_dataset(
     )
 
     # dump everything into one directory
-    if split_ratio == 1.0:
+    if split_ratio == 1.0 and split_config is None:
         # set up folders
         out_image_dir, out_annot_dir = _setup_no_split_dirs(output_dir)
 
@@ -195,7 +197,12 @@ def format_dataset(
         train_image_dir, val_image_dir, train_annot_dir, val_annot_dir = _setup_split_dirs(output_dir)
 
         # split
-        train_data, val_data = ConversionUtils.split_dataset(data, split_ratio=split_ratio, seed=seed)
+        train_data, val_data = ConversionUtils.split_dataset(
+            data,
+            split_ratio=split_ratio,
+            seed=seed,
+            split_config=split_config
+        )
 
         if image_splitting:
             BatchProcessor.process_split_batch(

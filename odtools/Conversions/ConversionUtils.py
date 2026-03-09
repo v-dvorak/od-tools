@@ -2,8 +2,9 @@ import random
 import shutil
 import warnings
 from pathlib import Path
-
+from typing import Optional
 import cv2
+import json
 import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image
@@ -17,7 +18,8 @@ def get_num_pixels(filepath):
 def split_dataset(
         data: list[tuple[Path, Path]],
         split_ratio=0.9,
-        seed=42
+        seed=42,
+        split_config: Optional[Path] = None
 ) -> tuple[list[tuple[Path, Path]], list[tuple[Path, Path]]]:
     """
     Split dataset into train and test sets based on given ratio.
@@ -25,17 +27,38 @@ def split_dataset(
     :param data: The dataset to be split.
     :param split_ratio: The ratio of train and test sets.
     :param seed: Seed for the random number generator.
+    :param split_config: File with predefined train/test split.
     :return: Train and test sets as two lists of tuples (image, annotation).
     """
-    # shuffle by given seed
-    random.Random(seed).shuffle(data)
-    # actually split the dataset
-    split_index = int(len(data) * split_ratio)
-    train_data = data[:split_index]
-    val_data = data[split_index:]
+    if split_config is None:
+        # shuffle by given seed
+        random.Random(seed).shuffle(data)
+        # actually split the dataset
+        split_index = int(len(data) * split_ratio)
+        train_data = data[:split_index]
+        val_data = data[split_index:]
 
-    return train_data, val_data
+        return train_data, val_data
+    
+    else:
+        train_data: list[tuple[Path, Path]] = []
+        val_data: list[tuple[Path, Path]] = []
 
+        with open(split_config, "r", encoding="utf8") as f:
+            c = json.load(f)
+            train, test = set(c["train"]), set(c["test"])
+
+        for dat in data:
+            name = dat[0].name.split(".")[0]
+            if name in train:
+                train_data.append(dat)
+            elif name in test:
+                val_data.append(dat)
+            else:
+                raise ValueError(f"File name {name} of file {dat[0]} not found in given split config {split_config}")
+        
+        return train_data, val_data
+    
 
 def find_convex_hull(binary_array: np.ndarray, show_plot: bool = False) -> list:
     """
