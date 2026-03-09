@@ -6,12 +6,13 @@ class InputFormat(ExtendedEnum):
     COCO = "coco"
     YOLO_DETECTION = "yolod"
     YOLO_SEGMENTATION = "yolos"
+    DOLORES_COCO = "dolores"
 
     def to_annotation_extension(self) -> str:
         match self:
             case InputFormat.MUNG:
                 return "xml"
-            case InputFormat.COCO:
+            case InputFormat.COCO | InputFormat.DOLORES_COCO:
                 return "json"
             case InputFormat.YOLO_DETECTION | InputFormat.YOLO_SEGMENTATION:
                 return "txt"

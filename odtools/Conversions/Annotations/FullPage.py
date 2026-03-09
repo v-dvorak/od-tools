@@ -26,8 +26,22 @@ class FullPage:
         :param class_names: list of class names
         """
         self.size = image_size
+        assert self.size[0] > 0 and self.size[1] > 0
         self.class_names = class_names
         self.annotations: list[list[Annotation]] = annotations
+        
+        self._check_annotations_in_bounds()
+    
+    def _check_annotations_in_bounds(self) -> None:
+        width, height = self.size
+        for annot in self.all_annotations():
+            if (
+                annot.bbox.left > width
+                or annot.bbox.right > width
+                or annot.bbox.top > height
+                or annot.bbox.bottom > height
+            ):
+                raise ValueError(f"Bbox {annot.bbox} out of bounds (0, 0) x {self.size}")
 
     def __str__(self):
         return f"({self.class_names=}, {self.size=}, {self.annotations})"
@@ -136,6 +150,13 @@ class FullPage:
                     class_output_names,
                     an_type=an_type
                 )
+            case InputFormat.DOLORES_COCO:
+                return _COCOHelper.from_dolores_coco_file(
+                    annot_path,
+                    class_reference_table,
+                    class_output_names,
+                    an_type=an_type
+                )
             case _:
                 raise ValueError(f"Unsupported input format: {input_format}")
 
@@ -144,6 +165,7 @@ class FullPage:
             output_dir: Path,
             dato_name: Path | str,
             output_format: OutputFormat,
+            with_confidence: bool = False
     ) -> None:
         """
         Based on OutputFormat saves FullPage to the output directory.
@@ -151,6 +173,7 @@ class FullPage:
         :param output_dir: output directory
         :param dato_name: output file name, without extension
         :param output_format: output format
+        :param with_confidence: add confidence to each annotation in the output
         """
         match output_format:
             case OutputFormat.COCO:
@@ -162,6 +185,7 @@ class FullPage:
                 _YOLOHelper.save_yolo_detection(
                     self,
                     output_dir / f"{dato_name}.{output_format.to_annotation_extension()}",
+                    with_confidence
                 )
             case OutputFormat.MUNG:
                 _MuNGHelper.save_annotation(

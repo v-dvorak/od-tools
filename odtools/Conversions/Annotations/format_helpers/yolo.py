@@ -124,16 +124,23 @@ class _YOLOHelper:
     def save_yolo_detection(
             page: "FullPage",
             output_path: Path,
+            with_confidence: bool
     ) -> None:
         with open(output_path, "w") as file:
             for annotation in page.all_annotations():
-                file.write(_YOLOHelper._serialize_detection(page.size, annotation))
+                file.write(_YOLOHelper._serialize_detection(page.size, annotation, with_confidence))
                 file.write("\n")
 
     @staticmethod
-    def _serialize_detection(image_size: tuple[int, int], annotation: Annotation) -> str:
+    def _serialize_detection(
+        image_size: tuple[int, int],
+        annotation: Annotation,
+        with_confidence: bool
+    ) -> str:
         """
         Return normalized YOLO detection format: `class_id x_center y_center width height`.
+        
+        If `with_confidence` is true, add `confidence` as a sixth value.
 
         :param image_size: image size (width, height)
         :param annotation: annotation
@@ -141,6 +148,16 @@ class _YOLOHelper:
         """
         im_width, im_height = image_size
         xc, yc, w, h = annotation.bbox.xcycwh()
-        return f"{annotation.class_id} {xc / im_width:.6f} {yc / im_height:.6f} {w / im_width:.6f} {h / im_height:.6f}"
+        if with_confidence:
+            return (
+                f"{annotation.class_id} "
+                f"{xc / im_width:.6f} {yc / im_height:.6f} {w / im_width:.6f} {h / im_height:.6f} "
+                f"{annotation.confidence:.6f}"
+            )
+        else:
+            return (
+                f"{annotation.class_id} "
+                f"{xc / im_width:.6f} {yc / im_height:.6f} {w / im_width:.6f} {h / im_height:.6f}"
+            )
 
 # endregion
