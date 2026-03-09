@@ -1,7 +1,7 @@
-from ..Utils import ExtendedEnum
+from enum import StrEnum
 
 
-class InputFormat(ExtendedEnum):
+class InputFormat(StrEnum):
     MUNG = "mung"
     COCO = "coco"
     YOLO_DETECTION = "yolod"
@@ -20,7 +20,7 @@ class InputFormat(ExtendedEnum):
                 raise ValueError
 
 
-class OutputFormat(ExtendedEnum):
+class OutputFormat(StrEnum):
     MUNG = "mung"
     COCO = "coco"
     YOLO_DETECTION = "yolod"
