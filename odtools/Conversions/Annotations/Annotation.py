@@ -1,11 +1,12 @@
-from typing import Self, Optional
+from typing import Self, Optional, Any
+import numpy as np
 
 from mung.io import Node
 
 from .annotation_type import AnnotationType
 from .. import ConversionUtils
 from ..BoundingBox import BoundingBox, Direction
-from typing import Any
+
 
 
 class Annotation:
@@ -16,7 +17,7 @@ class Annotation:
         top: int,
         width: int,
         height: int,
-        segmentation: list[tuple[int, int]] | None,
+        mask: np.ndarray | None,
         confidence: float = 1.0,
         an_type: AnnotationType = AnnotationType.GROUND_TRUTH,
     ):
@@ -24,7 +25,7 @@ class Annotation:
         self.bbox: BoundingBox = BoundingBox.from_ltwh(
             left=left, top=top, width=width, height=height
         )
-        self.segmentation = segmentation
+        self.mask = mask
         self.confidence = confidence
         self.an_type = an_type
         self.image_name: str = None # type: ignore
@@ -38,7 +39,7 @@ class Annotation:
         cls,
         class_id: int,
         bbox: BoundingBox,
-        segmentation: list[tuple[int, int]] | None = None,
+        segmentation: np.ndarray | None = None,
         confidence: float = 1.0,
         an_type: AnnotationType = AnnotationType.GROUND_TRUTH,
     ) -> Self:
@@ -48,7 +49,7 @@ class Annotation:
             bbox.top,
             bbox.width,
             bbox.height,
-            segmentation=segmentation,
+            mask=segmentation,
             confidence=confidence,
             an_type=an_type,
         )
@@ -82,7 +83,7 @@ class Annotation:
             node.top,
             node.width,
             node.height,
-            ConversionUtils.mung_segmentation_to_absolute_coordinates(node),
+            mask=node.mask,
             an_type=an_type,
         )
 
@@ -141,12 +142,12 @@ class Annotation:
         :param top_shift: pixel shift to the top
         :return: new Annotation object with adjusted coordinates
         """
-        if self.segmentation is not None:
-            new_segmentation = [
-                (x + left_shift, y + top_shift) for x, y in self.segmentation
-            ]
-        else:
-            new_segmentation = None
+        # if self.mask is not None:
+        #     new_segmentation = [
+        #         (x + left_shift, y + top_shift) for x, y in self.mask
+        #     ]
+        # else:
+        #     new_segmentation = None
 
         return Annotation(
             self.class_id,
@@ -154,7 +155,7 @@ class Annotation:
             self.bbox.top + top_shift,
             self.bbox.width,
             self.bbox.height,
-            new_segmentation,
+            self.mask,
             confidence=self.confidence,
             an_type=self.an_type,
         )

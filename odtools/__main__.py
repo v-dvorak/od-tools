@@ -23,9 +23,9 @@ def main():
     form_parser.add_argument("annot_dir", help="Path to annotations.")
 
     form_parser.add_argument("-i", "--input_format", default=InputFormat.MUNG.value,
-                             choices=InputFormat.get_all_value())
+                             choices=[i for i in InputFormat])
     form_parser.add_argument("-o", "--output_format", default=OutputFormat.COCO.value,
-                             choices=OutputFormat.get_all_value())
+                             choices=[o for o in OutputFormat])
     form_parser.add_argument("--image_format", default="jpg", help="Input image format.")
 
     form_parser.add_argument("-s", "--split", type=float, default=1.0, help="Train/test split ratio.")
@@ -63,9 +63,9 @@ def main():
 
     stats_parser.add_argument("-o", "--output_dir", type=str, default=None, help="If used, plots will be saved here.")
     stats_parser.add_argument("-i", "--input_format", default=InputFormat.MUNG.value,
-                              choices=InputFormat.get_all_value())
+                              choices=[i for i in InputFormat])
     stats_parser.add_argument('-j', '--jobs', nargs='+', help="Specify jobs to run, if None, all jobs will be run.",
-                              choices=StatJob.get_all_value())
+                              choices=[s for s in StatJob])
 
     stats_parser.add_argument("--image_format", default="jpg", help="Input image format.")
 
@@ -84,7 +84,7 @@ def main():
     val_parser.add_argument("annot_dir", help="Path to annotations.")
 
     val_parser.add_argument("-i", "--input_format", default=InputFormat.MUNG.value,
-                            choices=InputFormat.get_all_value())
+                            choices=[i for i in InputFormat])
     val_parser.add_argument("-m", "--model_type", default="yolod", choices=["yolod", "yolos"],
                             help="Type of model.")
 
@@ -187,8 +187,8 @@ def main():
     # DATASET FORMATTING
     if args.command == "form":
         # input preprocessing
-        input_f = InputFormat.from_string(args.input_format)
-        output_f = OutputFormat.from_string(args.output_format)
+        input_f = InputFormat(args.input_format.lower())
+        output_f = OutputFormat(args.output_format.lower())
 
         if not args.image_splitting and args.augmentation is not None:
             raise ValueError("Cannot augment data without image splitting")
@@ -236,12 +236,12 @@ def main():
             # directories
             Path(args.image_dir),
             Path(args.annot_dir),
-            InputFormat.from_string(args.input_format),
+            InputFormat(args.input_format.lower()),
             # class ids etc.
             class_reference_table=class_id_mapping,
             class_output_names=class_output_names,
             image_format=args.image_format,
-            jobs=[StatJob.from_string(job) for job in args.jobs] if args.jobs else None,
+            jobs=[StatJob(job) for job in args.jobs] if args.jobs else None,
             # others
             output_dir=Path(args.output_dir) if args.output_dir is not None else None,
             summarize=args.sum,
@@ -255,7 +255,7 @@ def main():
             Path(args.image_dir),
             Path(args.annot_dir),
             # formatting
-            InputFormat.from_string(args.input_format),
+            InputFormat(args.input_format.lower()),
             EvalJob.ModelType.from_string(args.model_type),
             class_output_names,
             iou_threshold=args.iou,

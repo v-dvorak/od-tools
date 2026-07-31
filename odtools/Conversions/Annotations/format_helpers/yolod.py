@@ -9,7 +9,7 @@ if TYPE_CHECKING:
     from ..FullPage import FullPage
 
 
-class _YOLOHelper:
+class _YOLODetectionHelper:
     @staticmethod
     def from_yolo_detection(
             annot_path: Path,
@@ -25,34 +25,7 @@ class _YOLOHelper:
 
         with open(annot_path, "r") as file:
             for line in file:
-                annots.append(_YOLOHelper._parse_single_line_yolo_detection(
-                    line,
-                    image_width,
-                    image_height,
-                    an_type=an_type
-                ))
-
-        return FullPage.from_list_of_coco_annotations(
-            (image_width, image_width),
-            annots,
-            class_output_names
-        )
-
-    @staticmethod
-    def from_yolo_segmentation(
-            annot_path: Path,
-            image_path: Path,
-            class_reference_table: dict[str, int],
-            class_output_names: list[str],
-            an_type: AnnotationType = AnnotationType.GROUND_TRUTH
-    ) -> "FullPage":
-        from ..FullPage import FullPage
-        image_width, image_height = ConversionUtils.get_num_pixels(image_path)
-        annots = []
-
-        with open(annot_path, "r") as file:
-            for line in file:
-                annots.append(_YOLOHelper._parse_single_line_yolo_segmentation(
+                annots.append(_YOLODetectionHelper._parse_single_line_yolo_detection(
                     line,
                     image_width,
                     image_height,
@@ -97,30 +70,6 @@ class _YOLOHelper:
         return Annotation(class_id, int(left), int(top), int(width_pixels), int(height_pixels), None, an_type=an_type)
 
     @staticmethod
-    def _parse_single_line_yolo_segmentation(
-            line: str,
-            image_width: int,
-            image_height: int,
-            an_type: AnnotationType = AnnotationType.GROUND_TRUTH
-    ) -> Annotation:
-        parts = line.strip().split()
-        assert len(parts) > 2 and len(parts) % 2 == 1
-
-        class_id = int(parts[0])
-
-        segm = []
-        i = 0
-        # process every point of segmentation
-        while i + 1 < len(parts[1:]):
-            x, y = int(float(parts[i]) * image_width), int(float(parts[i + 1]) * image_height)
-            segm.append((x, y))
-            i += 2
-
-        l, t, w, h = Annotation.bounding_box_from_segmentation(segm)
-
-        return Annotation(class_id, l, t, w, h, segm, an_type=an_type)
-
-    @staticmethod
     def save_yolo_detection(
             page: "FullPage",
             output_path: Path,
@@ -128,7 +77,7 @@ class _YOLOHelper:
     ) -> None:
         with open(output_path, "w") as file:
             for annotation in page.all_annotations():
-                file.write(_YOLOHelper._serialize_detection(page.size, annotation, with_confidence))
+                file.write(_YOLODetectionHelper._serialize_detection(page.size, annotation, with_confidence))
                 file.write("\n")
 
     @staticmethod
@@ -159,5 +108,3 @@ class _YOLOHelper:
                 f"{annotation.class_id} "
                 f"{xc / im_width:.6f} {yc / im_height:.6f} {w / im_width:.6f} {h / im_height:.6f}"
             )
-
-# endregion

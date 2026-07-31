@@ -6,7 +6,7 @@ from .Annotation import Annotation
 from .annotation_type import AnnotationType
 from ..Formats import InputFormat, OutputFormat
 from ...Conversions.BoundingBox import BoundingBox
-from .format_helpers import _COCOHelper, _MuNGHelper, _YOLOHelper
+from .format_helpers import _COCOHelper, _MuNGHelper, _YOLODetectionHelper, _YOLOSegmentationHelper, _SemanticSegmentationHelper
 
 
 class FullPage:
@@ -32,16 +32,24 @@ class FullPage:
         
         self._check_annotations_in_bounds()
     
+    @property
+    def width(self) -> int:
+        return self.size[0]
+    
+    @property
+    def height(self) -> int:
+        return self.size[1]
+    
     def _check_annotations_in_bounds(self) -> None:
         width, height = self.size
-        for annot in self.all_annotations():
-            if (
-                annot.bbox.left > width
-                or annot.bbox.right > width
-                or annot.bbox.top > height
-                or annot.bbox.bottom > height
-            ):
-                raise ValueError(f"Bbox {annot.bbox} out of bounds (0, 0) x {self.size}")
+        # for annot in self.all_annotations():
+        #     if (
+        #         annot.bbox.left > width
+        #         or annot.bbox.right > width
+        #         or annot.bbox.top > height
+        #         or annot.bbox.bottom > height
+        #     ):
+        #         raise ValueError(f"Bbox {annot.bbox} out of bounds (0, 0) x {self.size}")
 
     def __str__(self):
         return f"({self.class_names=}, {self.size=}, {self.annotations})"
@@ -135,7 +143,7 @@ class FullPage:
                     an_type=an_type
                 )
             case InputFormat.YOLO_DETECTION:
-                return _YOLOHelper.from_yolo_detection(
+                return _YOLODetectionHelper.from_yolo_detection(
                     annot_path,
                     image_path,
                     class_reference_table,
@@ -143,7 +151,7 @@ class FullPage:
                     an_type=an_type
                 )
             case InputFormat.YOLO_SEGMENTATION:
-                return _YOLOHelper.from_yolo_segmentation(
+                return _YOLOSegmentationHelper.from_yolo_segmentation(
                     annot_path,
                     image_path,
                     class_reference_table,
@@ -175,25 +183,20 @@ class FullPage:
         :param output_format: output format
         :param with_confidence: add confidence to each annotation in the output
         """
+        output_file = output_dir / f"{dato_name}.{output_format.to_annotation_extension()}"
         match output_format:
             case OutputFormat.COCO:
-                _COCOHelper.save_annotation(
-                    self,
-                    output_dir / f"{dato_name}.{output_format.to_annotation_extension()}",
-                )
+                _COCOHelper.save_annotation(self, output_file)
             case OutputFormat.YOLO_DETECTION:
-                _YOLOHelper.save_yolo_detection(
-                    self,
-                    output_dir / f"{dato_name}.{output_format.to_annotation_extension()}",
-                    with_confidence
-                )
+                _YOLODetectionHelper.save_yolo_detection(self, output_file, with_confidence)
             case OutputFormat.MUNG:
-                _MuNGHelper.save_annotation(
-                    self,
-                    output_dir / f"{dato_name}.{output_format.to_annotation_extension()}"
-                )
+                _MuNGHelper.save_annotation(self, output_file)
+            case OutputFormat.YOLO_SEGMENTATION:
+                _YOLOSegmentationHelper.save_yolo_segmentation(self, output_file, with_confidence)
+            case OutputFormat.SEMANTIC_SEGMENTATION:
+                _SemanticSegmentationHelper.save_semantic_segmentation(self, output_file, with_confidence)
             case _:
-                raise NotImplementedError()
+                raise NotImplementedError
 
     @classmethod
     def from_yolo_result(cls, result: Results, wanted_ids: Optional[list[int]] = None) -> Self:
@@ -241,7 +244,7 @@ class FullPage:
                         round(width),
                         round(height),
                         # TODO: what to do with segmentation?
-                        segmentation=None,
+                        mask=None,
                         confidence=float(result.boxes.conf[i]),
                         an_type=AnnotationType.PREDICTION
                     )

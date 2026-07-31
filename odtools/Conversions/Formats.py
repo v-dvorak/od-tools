@@ -25,6 +25,7 @@ class OutputFormat(StrEnum):
     COCO = "coco"
     YOLO_DETECTION = "yolod"
     YOLO_SEGMENTATION = "yolos"
+    SEMANTIC_SEGMENTATION = "semseg"
 
     def to_annotation_extension(self) -> str:
         match self:
@@ -34,5 +35,7 @@ class OutputFormat(StrEnum):
                 return "json"
             case OutputFormat.YOLO_DETECTION | OutputFormat.YOLO_SEGMENTATION:
                 return "txt"
+            case OutputFormat.SEMANTIC_SEGMENTATION:
+                return "png"
             case _:
                 raise ValueError

@@ -70,7 +70,7 @@ class _COCOHelper:
         class_id_to_name: dict[int, str] = {c["id"] : c["name"] for c in data["categories"]}
         for annotation in data["annotations"]:
             # convert loaded names to names wanted by the loading script
-            class_name = class_id_to_name[annotation["categoryId"]]
+            class_name = class_id_to_name[annotation["category_id"]]
             global_class_id = class_reference_table.get(class_name)
             if global_class_id is None:
                 continue
@@ -84,7 +84,7 @@ class _COCOHelper:
                 # continue
             try:
                 annots[global_class_id].append(
-                    Annotation(global_class_id, left, top, width, height, segmentation=None, an_type=an_type)
+                    Annotation(global_class_id, left, top, width, height, mask=None, an_type=an_type)
                 )
             except AssertionError as e:
                 print(f"Warning: {str(e)}, file name: {image_info['file_name']}, object id: {annotation['id']}")
@@ -123,7 +123,7 @@ class COCOAnnotationEncoder(JSONEncoder):
         if isinstance(o, Annotation):
             # flatten
             segm = []
-            for x, y in o.segmentation: # type: ignore
+            for x, y in o.mask: # type: ignore
                 segm.append(x)
                 segm.append(y)
 
