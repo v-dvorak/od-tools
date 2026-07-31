@@ -1,6 +1,6 @@
 [build-system]
-requires = ["setuptools", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 name = "odtools"
@@ -22,13 +22,11 @@ dependencies = [
     "tqdm",
     "ultralytics"
 ]
-description = "Object Detection Tools"
 readme = "README.md"
 requires-python = ">=3.11"
 version = "1.0.0"
 classifiers = [
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT",
     "Operating System :: OS Independent",
 ]
 
@@ -37,5 +35,5 @@ Homepage = "https://github.com/v-dvorak/od-tools"
 Source = "https://github.com/v-dvorak/od-tools"
 Issues = "https://github.com/v-dvorak/od-tools/issues"
 
-[tool.setuptools.packages.find]
-include = ["odtools"]
+[tool.hatch.build]
+include = ["/odtools"]
