@@ -1,7 +1,7 @@
-from ..Utils import ExtendedEnum
+from enum import StrEnum
 
 
-class StatJob(ExtendedEnum):
+class StatJob(StrEnum):
     ANNOTATION_COUNT_ON_PAGE = "counts"
     ANNOTATION_SIZES_ON_PAGE = "sizes"
     XY_HEATMAP = "xybin"

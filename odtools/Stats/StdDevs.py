@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -7,9 +8,9 @@ import numpy as np
 def plot_stddev(
         means: list[float],
         std_devs: list[float],
-        title: str = None,
-        names: list[str | int] = None,
-        output_path: Path | str = None,
+        title: Optional[str] = None,
+        names: Optional[list[str | int]] = None,
+        output_path: Optional[Path | str] = None,
 ) -> None:
     """
     Plot means wíth standard deviations.

@@ -3,13 +3,14 @@ from pathlib import Path
 import matplotlib.patches as patches
 import matplotlib.pyplot as plt
 import seaborn
+from typing import Optional
 
 from ..Splitting.SplitUtils import colors
 
 
 def plot_rectangles(
         rectangles: list[tuple[int, tuple[float, float]]],
-        output_path: Path | str = None
+        output_path: Optional[Path | str] = None
 ) -> None:
     """
     Plot rectangles given by a list of `(class_id, (width, height))`, coordinates are relative,
@@ -50,7 +51,7 @@ def plot_2d_heatmap(
         num_bins: int = 50,
         xlabel: str = 'x',
         ylabel: str = 'y',
-        output_path: Path | str = None
+        output_path: Optional[Path | str] = None
 ) -> None:
     """
     Plots given 2D data to bins given by a list of `(x, y)`,

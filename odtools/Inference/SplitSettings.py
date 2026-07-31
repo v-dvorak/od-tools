@@ -27,11 +27,11 @@ class SplitSettings:
     overlap_ratio: float = 0.10
     """Minimum horizontal/vertical overlap between tiles when splitting."""
 
-    iou_threshold: float = 0.25
-    """
-    Lower bound for overlaps of bounding boxes in stitched tiles
-    to be further resolved.
-    """
+    # iou_threshold: float = 0.25
+    # """
+    # Lower bound for overlaps of bounding boxes in stitched tiles
+    # to be further resolved.
+    # """
 
     edge_offset_ratio: float = 0.04
     """Ratio used to compute ``edge_offset``."""
@@ -76,3 +76,22 @@ class SplitSettings:
                 (self.tals * (1 - self.overlap_ratio) - self.overlap_ratio)
             )
             self.width, self.height = tiles_width, tiles_width
+
+    @classmethod
+    def from_json(cls, data: dict) -> "SplitSettings":
+        # Construct while using above defined default values
+        kwargs = {}
+
+        if (w_size := data.get("window_size")) is not None:
+            width, height = w_size
+            kwargs["width"] = width
+            kwargs["height"] = height
+
+        if data.get("overlap_ratio") is not None:
+            kwargs["overlap_ratio"] = data["overlap_ratio"]
+
+        if data.get("edge_offset_ratio") is not None:
+            kwargs["edge_offset_ratio"] = data["edge_offset_ratio"]
+
+        return cls(**kwargs)
+    

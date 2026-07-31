@@ -1,8 +1,9 @@
 import random
 import statistics
 from pathlib import Path
+from typing import Optional
 
-from prettytable import PrettyTable, MARKDOWN
+from prettytable import PrettyTable, TableStyle
 from tqdm import tqdm
 
 from . import StdDevs, Bins
@@ -20,10 +21,10 @@ def load_and_plot_stats(
         input_format: InputFormat,
         class_reference_table: dict[str, int],
         class_output_names: list[str],
-        jobs: list[StatJob] = None,
+        jobs: Optional[list[StatJob]] = None,
         summarize: bool = False,
         image_format: str = "jpg",
-        output_dir: Path = None,
+        output_dir: Optional[Path] = None,
         seed: int = 42,
         verbose: bool = False,
 ):
@@ -48,7 +49,7 @@ def load_and_plot_stats(
     """
     # set up params
     if jobs is None:
-        jobs = StatJob.get_all()
+        jobs = [s for s in StatJob]
     if output_dir is not None:
         output_dir.mkdir(exist_ok=True, parents=True)
 
@@ -101,7 +102,7 @@ def load_and_plot_stats(
             if StatJob.RECTANGLE_PLOT in jobs:
                 class_ids_in_order.append(annot.class_id)
             if StatJob.ANNOTATION_SIZES_ON_PAGE in jobs:
-                box_area = annot.bbox.area()
+                box_area = annot.bbox.area
                 if box_area < SMALL_SIZE_CAP:
                     sizes[annot_index][0] += 1
                 elif box_area < MEDIUM_SIZE_CAP:
@@ -165,9 +166,9 @@ def _process_stddev(
         counts: list[list[int]],
         all_counts: list[int] | None,
         class_output_names: list[str],
-        title: str = None,
+        title: Optional[str] = None,
         summarize: bool = False,
-        output_path: Path | str = None,
+        output_path: Optional[Path | str] = None,
         verbose: bool = False,
 ):
     means = []
@@ -175,7 +176,7 @@ def _process_stddev(
 
     if verbose:
         table = PrettyTable(["ID", "Name", "Mean", "Stddev"])
-        table.set_style(MARKDOWN)
+        table.set_style(TableStyle.MARKDOWN)
         table.align = "r"
 
     for i, count in enumerate(counts):

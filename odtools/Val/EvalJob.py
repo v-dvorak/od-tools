@@ -4,8 +4,9 @@ from pathlib import Path
 
 from tqdm import tqdm
 from ultralytics import YOLO
-from prettytable import PrettyTable, MARKDOWN
+from prettytable import PrettyTable, TableStyle
 from PIL import Image
+from typing import Optional
 
 from ..Conversions import ConversionUtils
 from ..Conversions.Annotations import FullPage, Annotation
@@ -49,9 +50,9 @@ def run_f1_scores_vs_iou(
         class_output_names: list[str],
         iou_threshold: float = 0.25,
         overlap: float = 0.25,
-        output_dir: Path = None,
+        output_dir: Optional[Path] = None,
         summarize: bool = True,
-        count: int = None,
+        count: Optional[int] = None,
         verbose: bool = False,
 ):
     """
@@ -118,7 +119,7 @@ def run_f1_scores_vs_iou(
     # generate table
     save_table = table_from_scores(scores, GLOBAL_IOU_THRESHOLDS)
     if verbose:
-        save_table.set_style(MARKDOWN)
+        save_table.set_style(TableStyle.MARKDOWN)
         print(save_table)
 
     if output_dir is not None:
@@ -251,7 +252,7 @@ def get_gts_and_predictions(
         class_output_names: list[str],
         class_reference_table: dict[str, int],
         image_format: str = "jpg",
-        count: int = None,
+        count: Optional[int] = None,
         verbose: bool = False,
         seed: int = 42,
         iou_threshold: float = 0.25,

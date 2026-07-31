@@ -9,6 +9,7 @@ from ..Conversions.Annotations.FullPage import FullPage
 def _run_split_prediction_job(job: InferenceJob, verbose: bool = False) -> FullPage:
     # get image dimensions
     assert job.split_settings is not None
+    assert job.stitch_settings is not None
     
     if isinstance(job.image, np.ndarray):
         w, h = job.image.shape[:2]
@@ -25,16 +26,25 @@ def _run_split_prediction_job(job: InferenceJob, verbose: bool = False) -> FullP
     )
     tiles = Splitting.create_split_images(job.image, splits)
 
+    print(f"Created total of {len(tiles)} tiles")
+
     # predict
     subpages: list[FullPage] = job.model_wrapper.predict_multiple(tiles, wanted_ids=job.wanted_ids, verbose=verbose)
-
+    print(f"got {len(subpages)} subpages")
+    from ..stitching.stitch_settings import combine_multiple_pages_and_resolve
     # resolve
-    resolved = FullPage.combine_multiple_pages_and_resolve(
+    # resolved = FullPage.combine_multiple_pages_and_resolve(
+    #     subpages,
+    #     splits,
+    #     iou_threshold=job.split_settings.iou_threshold,
+    #     edge_offset=job.split_settings.edge_offset,
+    #     verbose=verbose
+    # )
+    resolved = combine_multiple_pages_and_resolve(
         subpages,
         splits,
-        iou_threshold=job.split_settings.iou_threshold,
-        edge_offset=job.split_settings.edge_offset,
-        verbose=verbose
+        job.split_settings,
+        job.stitch_settings
     )
 
     return resolved
