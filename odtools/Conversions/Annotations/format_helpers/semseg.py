@@ -66,7 +66,7 @@ class _SemanticSegmentationHelper:
     def save_mask(mask_array: np.ndarray, output_path: Path) -> None:
         output_path.parent.mkdir(parents=True, exist_ok=True)
         Image.fromarray(mask_array, mode="L").save(output_path)
-        print(
-            f"Saved {output_path}  ({mask_array.shape[1]}x{mask_array.shape[0]}, "
-            f"{int((mask_array > 0).sum())} foreground px)"
-        )
+        # print(
+        #     f"Saved {output_path}  ({mask_array.shape[1]}x{mask_array.shape[0]}, "
+        #     f"{int((mask_array > 0).sum())} foreground px)"
+        # )
