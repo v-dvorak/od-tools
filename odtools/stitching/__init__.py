@@ -1,0 +1,1 @@
+from .stitch_settings import StitchSettings
