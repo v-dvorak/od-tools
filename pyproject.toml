@@ -4,23 +4,20 @@ build-backend = "hatchling.build"
 
 [project]
 name = "odtools"
-authors = [
-    { name = "Vojtech Dvorak", email = "dvorak@ufal.mff.cuni.cz" },
-]
+authors = [{ name = "Vojtech Dvorak", email = "dvorak@ufal.mff.cuni.cz" }]
 dependencies = [
-    "matplotlib",
-    "mung",
-    "numpy",
-    "opencv_python",
-    "packaging",
-    "Pillow",
-    "prettytable",
-    "PyYAML",
-    "Requests",
-    "seaborn",
-    "smashcima",
-    "tqdm",
-    "ultralytics"
+    "matplotlib==3.10.0",
+    "mung==1.2.1",
+    "numpy==2.2.2",
+    "opencv_python==4.10.0.84",
+    "packaging==24.2",
+    "Pillow==11.1.0",
+    "prettytable==3.14.0",
+    "PyYAML==6.0.2",
+    "requests==2.32.3",
+    "seaborn==0.13.2",
+    "tqdm==4.66.1",
+    "ultralytics==8.3.28",
 ]
 readme = "README.md"
 requires-python = ">=3.11"
@@ -37,3 +34,9 @@ Issues = "https://github.com/v-dvorak/od-tools/issues"
 
 [tool.hatch.build]
 include = ["/odtools"]
+
+[tool.ruff.lint]
+ignore = ["I001"]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
