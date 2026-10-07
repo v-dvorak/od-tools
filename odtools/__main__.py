@@ -2,7 +2,7 @@ import argparse
 import json
 from pathlib import Path
 
-from . import Utils
+from . import utils
 from .Conversions import Formatter
 from .Conversions.Formats import InputFormat, OutputFormat
 from .Stats import Plots
@@ -136,7 +136,7 @@ def main():
         with open(args.config_path, "r", encoding="utf8") as f:
             loaded_config = json.load(f)
 
-        Utils.get_mapping_and_names_from_config(loaded_config, verbose=True)
+        utils.get_mapping_and_names_from_config(loaded_config, verbose=True)
         return 0
 
     # DATASET TRAIN/TEST SPLIT (without any augmentation or image splitting)
@@ -182,7 +182,7 @@ def main():
         with open(args.config, "r", encoding="utf8") as f:
             loaded_config = json.load(f)
 
-    class_id_mapping, class_output_names = Utils.get_mapping_and_names_from_config(loaded_config)
+    class_id_mapping, class_output_names = utils.get_mapping_and_names_from_config(loaded_config)
 
     # DATASET FORMATTING
     if args.command == "form":
