@@ -31,11 +31,15 @@ class InferenceJob:
     If an image was split into multiple windows before inference,
     these settings are used to put it back together.
     """
+    batch_size: int = 16
+    """
+    Used for batching when in split mode.
+    """
 
     def __post_init__(self) -> None:
         if self.split_settings is not None and self.stitch_settings is None:
             raise ValueError("Stitch settings have to be set, if split setting are")
-    
+
     def report(self) -> str:
         return (
             f"{type(self).__name__} with "

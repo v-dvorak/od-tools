@@ -11,6 +11,7 @@ DEFAULT_NMS_IOU_THRESHOLD: float = 0.5
 class StitchSettings:
     nms_iou_threshold: float = DEFAULT_NMS_IOU_THRESHOLD
     special_cases: dict[int, float] = field(default_factory=dict)
+    apply_nms: bool = True
 
     def __post_init__(self) -> None:
         for value in self.special_cases.values():
@@ -49,6 +50,7 @@ def _apply_nms_single_class(
 
     return kept
 
+
 def _apply_nms_cross_part_single_class(
     annotations_a: list[Annotation],
     annotations_b: list[Annotation],
@@ -63,10 +65,7 @@ def _apply_nms_cross_part_single_class(
     A = 0
     B = 1
     # tag each annotation with its source part
-    tagged = (
-        [(a, A) for a in annotations_a] +
-        [(b, B) for b in annotations_b]
-    )
+    tagged = [(a, A) for a in annotations_a] + [(b, B) for b in annotations_b]
     tagged = sorted(tagged, key=lambda x: x[0].confidence, reverse=True)
 
     kept_a, kept_b = [], []
@@ -90,9 +89,7 @@ def _apply_nms_cross_part_single_class(
 
 
 def apply_nms_two_page(
-        page_a: FullPage,
-        page_b: FullPage,
-        iou_threshold: float
+    page_a: FullPage, page_b: FullPage, iou_threshold: float
 ) -> None:
     """
     Modifies pages in place.
@@ -103,15 +100,10 @@ def apply_nms_two_page(
         an_a = page_a.annotations[class_id]
         an_b = page_b.annotations[class_id]
 
-        an_a, an_b = _apply_nms_cross_part_single_class(
-            an_a,
-            an_b,
-            iou_threshold
-        )
+        an_a, an_b = _apply_nms_cross_part_single_class(an_a, an_b, iou_threshold)
 
         page_a.annotations[class_id] = an_a
         page_b.annotations[class_id] = an_b
-
 
 
 def combine_multiple_pages_and_resolve(
@@ -176,10 +168,11 @@ def combine_multiple_pages_and_resolve(
         (last_split.right, last_split.bottom), completed_annotations, class_names
     )
 
-    complete_page.annotations = [
-        _apply_nms_single_class(annots, stitch_settings.nms_iou_threshold)
-        for annots in complete_page.annotations
-    ]
+    if stitch_settings.apply_nms:
+        complete_page.annotations = [
+            _apply_nms_single_class(annots, stitch_settings.nms_iou_threshold)
+            for annots in complete_page.annotations
+        ]
 
     return complete_page
 
@@ -190,21 +183,22 @@ def resolve_matrix_of_pages(
 ) -> None:
 
     # vectors = [(1, 0), (1, 1), (0, 1)]
-    vectors = [(1, 0), (2, 0),
-       (0, 1), (1, 1), (2, 1),
-       (0, 2), (1, 2), (2, 2)]
+    vectors = [(1, 0), (2, 0), (0, 1), (1, 1), (2, 1), (0, 2), (1, 2), (2, 2)]
     for row in range(len(subpage_matrix)):
         for col in range(len(subpage_matrix[0])):
             for dx, dy in vectors:
                 if row + dx < len(subpage_matrix) and col + dy < len(subpage_matrix[0]):
                     print(f"processing {(row, col)} vs {(row + dx, col + dy)}")
-                    print(subpage_matrix[row][col].annotation_count() +
-                        subpage_matrix[row + dx][col + dy].annotation_count())
+                    print(
+                        subpage_matrix[row][col].annotation_count()
+                        + subpage_matrix[row + dx][col + dy].annotation_count()
+                    )
                     apply_nms_two_page(
                         subpage_matrix[row][col],
                         subpage_matrix[row + dx][col + dy],
-                        iou_threshold
+                        iou_threshold,
                     )
-                    print(subpage_matrix[row][col].annotation_count() +
-                        subpage_matrix[row + dx][col + dy].annotation_count())
-                    
+                    print(
+                        subpage_matrix[row][col].annotation_count()
+                        + subpage_matrix[row + dx][col + dy].annotation_count()
+                    )

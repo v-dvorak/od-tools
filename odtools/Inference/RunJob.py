@@ -29,7 +29,7 @@ def _run_split_prediction_job(job: InferenceJob, verbose: bool = False) -> FullP
     print(f"Created total of {len(tiles)} tiles")
 
     # predict
-    subpages: list[FullPage] = job.model_wrapper.predict_multiple(tiles, wanted_ids=job.wanted_ids, verbose=verbose)
+    subpages: list[FullPage] = job.model_wrapper.predict_multiple(tiles, wanted_ids=job.wanted_ids, verbose=verbose, batch_size=job.batch_size)
     print(f"got {len(subpages)} subpages")
     from ..stitching.stitch_settings import combine_multiple_pages_and_resolve
     # resolve
