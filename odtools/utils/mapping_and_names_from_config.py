@@ -1,10 +1,9 @@
-from enum import Enum
-from typing import Self
-
 from prettytable import PrettyTable, TableStyle
 
 
-def get_mapping_and_names_from_config(config: dict, verbose: bool = False) -> tuple[dict[str, int], list[str]]:
+def get_mapping_and_names_from_config(
+    config: dict, verbose: bool = False
+) -> tuple[dict[str, int], list[str]]:
     """
     Get class name mapping to ids and output names from config file.
 
@@ -44,12 +43,12 @@ def get_mapping_and_names_from_config(config: dict, verbose: bool = False) -> tu
         for name in group:
             class_id_reference_table[name] = class_id
             if verbose:
-                table.add_row(['"' + name + '"', '"' + output_name + '"', class_id])
+                table.add_row(['"' + name + '"', '"' + output_name + '"', class_id])  # type: ignore
 
         output_names.append(output_name)
 
     if verbose:
-        table.sortby = "ID"
-        print(table)
+        table.sortby = "ID"  # type: ignore
+        print(table)  # type: ignore
 
     return class_id_reference_table, output_names
