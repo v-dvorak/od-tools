@@ -6,15 +6,21 @@ from .Annotation import Annotation
 from .annotation_type import AnnotationType
 from ..Formats import InputFormat, OutputFormat
 from ...Conversions.BoundingBox import BoundingBox
-from .format_helpers import _COCOHelper, _MuNGHelper, _YOLODetectionHelper, _YOLOSegmentationHelper, _SemanticSegmentationHelper
+from .format_helpers import (
+    _COCOHelper,
+    _MuNGHelper,
+    _YOLODetectionHelper,
+    _YOLOSegmentationHelper,
+    _SemanticSegmentationHelper,
+)
 
 
 class FullPage:
     def __init__(
-            self,
-            image_size: tuple[int, int],
-            annotations: list[list[Annotation]],
-            class_names: list[str]
+        self,
+        image_size: tuple[int, int],
+        annotations: list[list[Annotation]],
+        class_names: list[str],
     ):
         """
         Stores all subpages inside a single page (path_to_image).
@@ -29,33 +35,39 @@ class FullPage:
         assert self.size[0] > 0 and self.size[1] > 0
         self.class_names = class_names
         self.annotations: list[list[Annotation]] = annotations
-        
+
         self._check_annotations_in_bounds()
-    
+
     @property
     def width(self) -> int:
         return self.size[0]
-    
+
     @property
     def height(self) -> int:
         return self.size[1]
-    
-    def _check_annotations_in_bounds(self) -> None:
+
+    def _check_annotations_in_bounds(self, strict: bool = False) -> None:
         width, height = self.size
-        # for annot in self.all_annotations():
-        #     if (
-        #         annot.bbox.left > width
-        #         or annot.bbox.right > width
-        #         or annot.bbox.top > height
-        #         or annot.bbox.bottom > height
-        #     ):
-        #         raise ValueError(f"Bbox {annot.bbox} out of bounds (0, 0) x {self.size}")
+        for annot in self.all_annotations():
+            if (
+                annot.bbox.left > width
+                or annot.bbox.right > width
+                or annot.bbox.top > height
+                or annot.bbox.bottom > height
+            ):
+                msg = f"Bbox {annot.bbox} out of bounds (0, 0) x {self.size}"
+                if strict:
+                    raise ValueError(msg)
+                else:
+                    print(msg)
 
     def __str__(self):
         return f"({self.class_names=}, {self.size=}, {self.annotations})"
 
     @staticmethod
-    def _sort_annotations_by_class(annotations: list[Annotation], class_count: int) -> list[list[Annotation]]:
+    def _sort_annotations_by_class(
+        annotations: list[Annotation], class_count: int
+    ) -> list[list[Annotation]]:
         output = [[] for _ in range(class_count)]
         for annot in annotations:
             output[annot.class_id].append(annot)
@@ -64,10 +76,10 @@ class FullPage:
 
     @classmethod
     def from_list_of_coco_annotations(
-            cls,
-            image_size: tuple[int, int],
-            annotations: list[Annotation],
-            class_names: list[str]
+        cls,
+        image_size: tuple[int, int],
+        annotations: list[Annotation],
+        class_names: list[str],
     ) -> Self:
         """
         Creates a new FullPage object from a list of annotations.
@@ -80,7 +92,7 @@ class FullPage:
         return cls(
             image_size,
             cls._sort_annotations_by_class(annotations, len(class_names)),
-            class_names
+            class_names,
         )
 
     def all_annotations(self) -> Generator[Annotation, None, None]:
@@ -96,7 +108,9 @@ class FullPage:
     def annotation_count(self) -> int:
         return sum([len(self.annotations[i]) for i in range(len(self.annotations))])
 
-    def adjust_position_for_all_annotations(self, shift_left: int = 0, shift_top: int = 0) -> None:
+    def adjust_position_for_all_annotations(
+        self, shift_left: int = 0, shift_top: int = 0
+    ) -> None:
         """
         Adjusts the position of all annotations by given left and top shift.
 
@@ -108,13 +122,13 @@ class FullPage:
 
     @classmethod
     def load_from_file(
-            cls,
-            annot_path: Path,
-            image_path: Path,
-            class_reference_table: dict[str, int],
-            class_output_names: list[str],
-            input_format: InputFormat,
-            an_type: AnnotationType = AnnotationType.GROUND_TRUTH
+        cls,
+        annot_path: Path,
+        image_path: Path,
+        class_reference_table: dict[str, int],
+        class_output_names: list[str],
+        input_format: InputFormat,
+        an_type: AnnotationType = AnnotationType.GROUND_TRUTH,
     ) -> "FullPage":
         """
         Loads a single page of annotations from given file in specified format.
@@ -132,7 +146,7 @@ class FullPage:
                     annot_path,
                     class_reference_table,
                     class_output_names,
-                    an_type=an_type
+                    an_type=an_type,
                 )
             case InputFormat.MUNG:
                 return _MuNGHelper.from_mung(
@@ -140,7 +154,7 @@ class FullPage:
                     image_path,
                     class_reference_table,
                     class_output_names,
-                    an_type=an_type
+                    an_type=an_type,
                 )
             case InputFormat.YOLO_DETECTION:
                 return _YOLODetectionHelper.from_yolo_detection(
@@ -148,7 +162,7 @@ class FullPage:
                     image_path,
                     class_reference_table,
                     class_output_names,
-                    an_type=an_type
+                    an_type=an_type,
                 )
             case InputFormat.YOLO_SEGMENTATION:
                 return _YOLOSegmentationHelper.from_yolo_segmentation(
@@ -156,24 +170,24 @@ class FullPage:
                     image_path,
                     class_reference_table,
                     class_output_names,
-                    an_type=an_type
+                    an_type=an_type,
                 )
             case InputFormat.DOLORES_COCO:
                 return _COCOHelper.from_dolores_coco_file(
                     annot_path,
                     class_reference_table,
                     class_output_names,
-                    an_type=an_type
+                    an_type=an_type,
                 )
             case _:
                 raise ValueError(f"Unsupported input format: {input_format}")
 
     def save_to_file(
-            self,
-            output_dir: Path,
-            dato_name: Path | str,
-            output_format: OutputFormat,
-            with_confidence: bool = False
+        self,
+        output_dir: Path,
+        dato_name: Path | str,
+        output_format: OutputFormat,
+        with_confidence: bool = False,
     ) -> None:
         """
         Based on OutputFormat saves FullPage to the output directory.
@@ -183,23 +197,35 @@ class FullPage:
         :param output_format: output format
         :param with_confidence: add confidence to each annotation in the output
         """
-        output_file = output_dir / f"{dato_name}.{output_format.to_annotation_extension()}"
+        output_file = (
+            output_dir / f"{dato_name}.{output_format.to_annotation_extension()}"
+        )
         match output_format:
             case OutputFormat.COCO:
                 _COCOHelper.save_annotation(self, output_file)
             case OutputFormat.YOLO_DETECTION:
-                _YOLODetectionHelper.save_yolo_detection(self, output_file, with_confidence)
+                _YOLODetectionHelper.save_yolo_detection(
+                    self, output_file, with_confidence
+                )
             case OutputFormat.MUNG:
-                _MuNGHelper.save_annotation(self, output_file)
+                _MuNGHelper.save_annotation(
+                    self, output_file, with_confidence=with_confidence
+                )
             case OutputFormat.YOLO_SEGMENTATION:
-                _YOLOSegmentationHelper.save_yolo_segmentation(self, output_file, with_confidence)
+                _YOLOSegmentationHelper.save_yolo_segmentation(
+                    self, output_file, with_confidence
+                )
             case OutputFormat.SEMANTIC_SEGMENTATION:
-                _SemanticSegmentationHelper.save_semantic_segmentation(self, output_file, with_confidence)
+                _SemanticSegmentationHelper.save_semantic_segmentation(
+                    self, output_file, with_confidence
+                )
             case _:
                 raise NotImplementedError
 
     @classmethod
-    def from_yolo_result(cls, result: Results, wanted_ids: Optional[list[int]] = None) -> Self:
+    def from_yolo_result(
+        cls, result: Results, wanted_ids: Optional[list[int]] = None
+    ) -> Self:
         """
         Transforms YOLO predictions into an FullPage object.
 
@@ -217,7 +243,7 @@ class FullPage:
             id_mapping = {w_id: index for index, w_id in enumerate(wanted_ids)}
 
         predictions = [[] for _ in range(class_count)]
-        
+
         assert result.boxes is not None
 
         for i in range(len(result.boxes.xywh)):
@@ -228,13 +254,13 @@ class FullPage:
                     float(result.boxes.xywh[i, 0]),
                     float(result.boxes.xywh[i, 1]),
                     float(result.boxes.xywh[i, 2]),
-                    float(result.boxes.xywh[i, 3])
+                    float(result.boxes.xywh[i, 3]),
                 )
                 # get index in output list
                 if wanted_ids is None:
                     output_index = class_id
                 else:
-                    output_index = id_mapping[class_id] # type: ignore
+                    output_index = id_mapping[class_id]  # type: ignore
 
                 predictions[output_index].append(
                     Annotation(
@@ -246,17 +272,20 @@ class FullPage:
                         # TODO: what to do with segmentation?
                         mask=None,
                         confidence=float(result.boxes.conf[i]),
-                        an_type=AnnotationType.PREDICTION
+                        an_type=AnnotationType.PREDICTION,
                     )
                 )
         # original shape is stored as (height, width) in YOLO
-        return cls((result.orig_shape[1], result.orig_shape[0]), predictions, class_names)
+        return cls(
+            (result.orig_shape[1], result.orig_shape[0]), predictions, class_names
+        )
 
     # region Resolve overlaps
     def cut_off_predictions_too_close_to_edge(
-            self, edge_offset: int = 20,
-            edge_tile: tuple[bool, bool, bool, bool] = (True, True, True, True),
-            verbose: bool = False
+        self,
+        edge_offset: int = 20,
+        edge_tile: tuple[bool, bool, bool, bool] = (True, True, True, True),
+        verbose: bool = False,
     ) -> None:
         """
         Removes page's annotations that are to close to the edge.
@@ -271,7 +300,7 @@ class FullPage:
             0 + edge_offset if edge_tile[0] else 0,
             0 + edge_offset if edge_tile[1] else 0,
             width - edge_offset if edge_tile[2] else width,
-            height - edge_offset if edge_tile[3] else height
+            height - edge_offset if edge_tile[3] else height,
         )
 
         new_annotations = []
@@ -291,15 +320,14 @@ class FullPage:
         if verbose:
             print(f"Cut off {old_count - self.annotation_count()} out of {old_count}")
 
-
     @classmethod
     def combine_multiple_pages_and_resolve(
-            cls,
-            subpages: list[Self],
-            splits: list[list[BoundingBox]],
-            edge_offset: int = 20,
-            iou_threshold: float = 0.25,
-            verbose: bool = False,
+        cls,
+        subpages: list[Self],
+        splits: list[list[BoundingBox]],
+        edge_offset: int = 20,
+        iou_threshold: float = 0.25,
+        verbose: bool = False,
     ) -> "FullPage":
         """
         Combines multiple pages into a single page.
@@ -312,7 +340,9 @@ class FullPage:
         :return: FullPage
         """
 
-        for i, (subpage, split) in enumerate(zip(subpages, [x for xs in splits for x in xs])):
+        for i, (subpage, split) in enumerate(
+            zip(subpages, [x for xs in splits for x in xs])
+        ):
             subpage: FullPage
             split: BoundingBox
 
@@ -327,7 +357,7 @@ class FullPage:
                         x != len(splits[0]) - 1,
                         y != len(splits) - 1,
                     ),
-                    verbose=verbose
+                    verbose=verbose,
                 )
             # shift annotations based in their absolute position in image
             subpage.adjust_position_for_all_annotations(split.left, split.top)
@@ -339,7 +369,9 @@ class FullPage:
         # we can retrieve image image_size from here,
         last_split: BoundingBox = splits[-1][-1]
 
-        def _apply_nms_single_class(annotations: list[Annotation], iou_threshold: float) -> list[Annotation]:
+        def _apply_nms_single_class(
+            annotations: list[Annotation], iou_threshold: float
+        ) -> list[Annotation]:
             annotations = sorted(annotations, key=lambda a: a.confidence, reverse=True)
             kept = []
 
@@ -348,7 +380,8 @@ class FullPage:
                 kept.append(current)
 
                 annotations = [
-                    a for a in annotations
+                    a
+                    for a in annotations
                     if current.intersection_over_union(a) < iou_threshold
                 ]
 
@@ -358,8 +391,10 @@ class FullPage:
         for subpage in subpages:
             for annotation in subpage.all_annotations():
                 completed_annotations[annotation.class_id].append(annotation)
-        
-        complete_page = FullPage((last_split.right, last_split.bottom), completed_annotations, class_names)
+
+        complete_page = FullPage(
+            (last_split.right, last_split.bottom), completed_annotations, class_names
+        )
 
         complete_page.annotations = [
             _apply_nms_single_class(annots, iou_threshold)
@@ -376,8 +411,9 @@ class FullPage:
         :param new_page: page to source new annotations from
         """
         if self.size[0] != new_page.size[0] or self.size[1] != new_page.size[1]:
-            raise ValueError(f"Image sizes do not match: {self.size} != {new_page.size}")
+            raise ValueError(
+                f"Image sizes do not match: {self.size} != {new_page.size}"
+            )
 
         self.annotations += new_page.annotations
         self.class_names += new_page.class_names
-

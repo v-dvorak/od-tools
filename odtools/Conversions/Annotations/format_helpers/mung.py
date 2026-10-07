@@ -8,6 +8,7 @@ from mung.graph import Node
 from ..Annotation import Annotation
 from ..annotation_type import AnnotationType
 from ... import ConversionUtils
+
 if TYPE_CHECKING:
     from ..FullPage import FullPage
 
@@ -15,11 +16,11 @@ if TYPE_CHECKING:
 class _MuNGHelper:
     @staticmethod
     def from_mung(
-            annot_path: Path,
-            image_path: Path,
-            class_reference_table: dict[str, int],
-            class_output_names: list[str],
-            an_type: AnnotationType = AnnotationType.GROUND_TRUTH
+        annot_path: Path,
+        image_path: Path,
+        class_reference_table: dict[str, int],
+        class_output_names: list[str],
+        an_type: AnnotationType = AnnotationType.GROUND_TRUTH,
     ) -> "FullPage":
         image_size = ConversionUtils.get_num_pixels(image_path)
         return _MuNGHelper.from_mung_file(
@@ -27,47 +28,57 @@ class _MuNGHelper:
             image_size,
             class_reference_table,
             class_output_names,
-            an_type=an_type
+            an_type=an_type,
         )
 
     @staticmethod
     def from_mung_file(
-            annot_path: Path,
-            image_size: tuple[int, int],
-            class_reference_table: dict[str, int],
-            class_output_names: list[str],
-            an_type: AnnotationType = AnnotationType.GROUND_TRUTH
+        annot_path: Path,
+        image_size: tuple[int, int],
+        class_reference_table: dict[str, int],
+        class_output_names: list[str],
+        an_type: AnnotationType = AnnotationType.GROUND_TRUTH,
     ) -> "FullPage":
         from ..FullPage import FullPage
+
         nodes = read_nodes_from_file(annot_path.__str__())
 
         annots = []
         # process each node
         for node in nodes:
             if node.class_name in class_reference_table:
-                annots.append(Annotation.from_mung_node(class_reference_table[node.class_name], node, an_type=an_type))
+                annots.append(
+                    Annotation.from_mung_node(
+                        class_reference_table[node.class_name], node, an_type=an_type
+                    )
+                )
 
         # create single page
-        full_page = FullPage.from_list_of_coco_annotations(image_size, annots, class_output_names)
+        full_page = FullPage.from_list_of_coco_annotations(
+            image_size, annots, class_output_names
+        )
         return full_page
 
     @staticmethod
     def save_annotation(
         page: "FullPage",
-        output_path: Path
+        output_path: Path,
+        with_confidence: bool = False,
     ) -> None:
         nodes = []
         id_ = 0
         for annot in chain.from_iterable(page.annotations):
-            nodes.append(Node(
-                id_,
-                page.class_names[annot.class_id],
-                top=annot.bbox.top,
-                left=annot.bbox.left,
-                width=annot.bbox.width,
-                height=annot.bbox.height,
-                mask=np.ones((annot.bbox.height, annot.bbox.width)),
-                # data={"confidence": annot.confidence}
-            ))
+            nodes.append(
+                Node(
+                    id_,
+                    page.class_names[annot.class_id],
+                    top=annot.bbox.top,
+                    left=annot.bbox.left,
+                    width=annot.bbox.width,
+                    height=annot.bbox.height,
+                    mask=np.ones((annot.bbox.height, annot.bbox.width)),
+                    data={"confidence": annot.confidence} if with_confidence else {},
+                )
+            )
             id_ += 1
         write_nodes_to_file(nodes, str(output_path))
