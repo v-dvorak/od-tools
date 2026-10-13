@@ -2,13 +2,12 @@ import shutil
 import re
 from pathlib import Path
 from tqdm import tqdm
-import json
 from argparse import ArgumentParser
-
-from .get_image import get_image_path
+from musicorpus import Dataset
 
 
 DEFAULT_MUNG_FILE_NAME = "transcription.mung"
+OMNIOMR_OUTPUT_DIR = Path("datasets/omniomr-data")
 
 
 def is_uuid_pair(s: str) -> bool:
@@ -19,48 +18,51 @@ def is_uuid_pair(s: str) -> bool:
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument("--source", type=Path, required=True)
     parser.add_argument(
-        "--splits", type=Path, default=None, help="Path to splits config"
+        "--source",
+        type=Path,
+        required=True,
+        help="Input directory",
     )
-    parser.add_argument("-o", "--output", type=Path, required=True)
+    parser.add_argument(
+        "--split_name",
+        type=str,
+        default=None,
+    )
+    parser.add_argument(
+        "--output",
+        type=Path,
+        default=OMNIOMR_OUTPUT_DIR,
+    )
+
     args = parser.parse_args()
-    if args.splits is None:
-        args.splits = args.source / "splits.json"
 
-    print(f"Collecting Musicorpus dataset from {args.source} to {args.output}")
+    dataset = Dataset(args.source)
+    args.output = Path(args.output)
+    args.output.mkdir(exist_ok=True, parents=True)
 
-    with open(args.splits, "r") as f:
-        splits: dict[str, list[str]] = json.load(f)
+    print(f"Collecting OmniOMR dataset from {args.source} to {args.output}")
 
-    for split, data in splits.items():
-        print(f"    Processing {split}")
-        (args.output / split).mkdir(parents=True, exist_ok=True)
-        for i, dato in tqdm(enumerate(data)):
-            source_directory = args.source / dato
-            # for system in (source_directory / "Systems").iterdir():
-            # if system.is_dir():
-            img_path = get_image_path(source_directory)
-            img_suffix = img_path.name.split(".")[-1]
-            shutil.copyfile(
-                img_path,
-                args.output / split / f"{source_directory.name}.{img_suffix}",
-            )
+    split_names = dataset.splits(args.split_name).split_names()
+
+    for split_name in split_names:
+        (args.output / split_name).mkdir(parents=True, exist_ok=True)
+        for page in tqdm(
+            dataset.split(split_name, args.split_name),
+            desc=f"Processing '{split_name}'",
+        ):
+            image_path = page.image_path()
+            assert image_path is not None
+            img_suffix = image_path.name.split(".")[-1]
 
             shutil.copyfile(
-                source_directory / DEFAULT_MUNG_FILE_NAME,
-                args.output / split / f"{source_directory.name}.xml",
+                image_path,
+                args.output / split_name / f"{page.name}.{img_suffix}",
             )
 
-            # import imagesize
-
-            # width, height = imagesize.get(img_path)
-            # # print(width, height)
-            # with open(source_directory / DEFAULT_ANNOT_FILE_NAME, "r") as f:
-            #     layout = json.load(f)
-
-            # layout["images"][0]["width"] = width
-            # layout["images"][0]["height"] = height
-
-            # with open(OMNIOMR_OUTPUT_DIR / split / f"{source_directory.name}.json", "w") as f:
-            #     json.dump(layout, f)
+            mung_transcription = page.transcription_path("mung")
+            assert mung_transcription is not None
+            shutil.copyfile(
+                mung_transcription,
+                args.output / split_name / f"{page.name}.xml",
+            )
