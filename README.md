@@ -13,16 +13,20 @@ For usage details, check out [TonIC](https://github.com/v-dvorak/tonic).
     - [COCO](https://cocodataset.org/#home)
     - [YOLO detection](https://docs.ultralytics.com/datasets/detect/) (YOLOd)
     - [YOLO segmentation](https://docs.ultralytics.com/datasets/segment/) (YOLOs)
+    - Semantic Segmentation (SemSeg)
 - Supported conversions:
 
-| from \ to | MuNG | COCO | YOLOd | YOLOs |
-|-----------|------|------|-------|-------|
-| **MuNG**  | ☑️    | ✅    | ✅     | ✅     |
-| **COCO**  | ✅    | ✅    | ✅     | ✅     |
-| **YOLOd** | ✅    | ✅    | ✅     | ✅     |
-| **YOLOs** | ✅    | ✅    | ✅     | ✅     |
+| From \ To | MuNG | COCO | YOLOd | YOLOs | SemSeg |
+|-|-|-|-|-|-|
+| **MuNG**  | ☑️ | ✅ | ✅ | ✅ | ✅ |
+| **COCO**  | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **YOLOd** | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **YOLOs** | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **SemSeg** | ✖️ | ✖️ | ✖️ | ✖️ | ✖️ |
 
 > ☑️ - With loss of information (inlinks, outlinks).
+>
+> ✖️ - Semantic segmentation does not encode instances, it is not possible to convert it to instance-based formats.
 
 ### Image splitting with overlaps with annotations adjusted accordingly
 
@@ -46,11 +50,11 @@ job = InferenceJob(
     # retrieve only full and empty noteheads
     wanted_ids=[0, 1],
     split_settings=SplitSettings(
-        width=640,
-        height=640,
-        overlap_ratio=0.10,
-        iou_threshold=0.25,
-        edge_offset_ratio=0.04
+    width=640,
+    height=640,
+    overlap_ratio=0.10,
+    iou_threshold=0.25,
+    edge_offset_ratio=0.04
     )
 )
 
@@ -84,10 +88,6 @@ Example of output of multiple models merged and resolved. In this case two model
 ### Easy-to-implement model wrappers
 
 **ODT** is designed primarily for use with YOLO models. However, it can be extended to support other architectures, such as Fast R-CNN or U-Net. To integrate a different model, users simply need to implement a custom wrapper class that inherits from the abstract class [`IModelWrapper`](odtools/Inference/ModelWrappers/ModelWrapper.py) and define its two methods: `predict_single` and `predict_multiple`.
-
-[//]: # (### Model validation)
-
-[//]: # (TODO:)
 
 ## References
 
