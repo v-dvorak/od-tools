@@ -41,6 +41,7 @@ def main():
     form_parser.add_argument("-v", "--verbose", action="store_true", help="Make script verbose")
     form_parser.add_argument("--config", default=None,
                              help="Path to config, see \"default.config\" for example.")
+    form_parser.add_argument("--cut_to_fit", action="store_true", help="If set, annotations that extend beyond the patches will be cut to fit")
     # endregion
 
     # region DATASET SPLITTING ARGUMENTS
@@ -228,7 +229,8 @@ def main():
             aug_ratios=args.augmentation,
             # others
             seed=args.seed,
-            verbose=args.verbose
+            verbose=args.verbose,
+            cut_to_fit=args.cut_to_fit,
         )
     # DATASET STATISTICS
     elif args.command == "stats":

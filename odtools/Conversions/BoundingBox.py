@@ -253,23 +253,48 @@ class BoundingBox:
         else:
             raise NotImplementedError()
 
+    def cut_to_fit(
+        self,
+        other: Self,
+    ) -> "BoundingBox":
+        """
+        New bounding box that is the result of cutting THIS
+        `BoundingBox` to fully fit inside `other` `BoundingBox`.
+
+        :param other: "Bigger" box
+        "return: New `BoundingBox` cut to fit `other`
+        """
+        if not other.intersects(self):
+            print(
+                f"Warning {self} does not intersect with {other}, the resulting {type(self).__name__} will have zero area"
+            )
+
+        left = max(self.left, other.left)
+        top = max(self.top, other.top)
+        right = min(self.right, other.right)
+        bottom = min(self.bottom, other.bottom)
+
+        return BoundingBox(
+            left=left,
+            top=top,
+            right=right,
+            bottom=bottom,
+        )
+
 
 if __name__ == "__main__":
     from unittest import TestCase, main
-    
-    class TestIoU(TestCase):
 
+    class TestIoU(TestCase):
         def test_iou_identical_boxes(self):
             b1 = BoundingBox(0, 0, 10, 10)
             b2 = BoundingBox(0, 0, 10, 10)
             assert b1.intersection_over_union(b2) == 1.0
 
-
         def test_iou_no_overlap(self):
             b1 = BoundingBox(0, 0, 10, 10)
             b2 = BoundingBox(20, 20, 30, 30)
             assert b1.intersection_over_union(b2) == 0.0
-
 
         def test_iou_partial_overlap(self):
             b1 = BoundingBox(0, 0, 10, 10)
@@ -281,12 +306,10 @@ if __name__ == "__main__":
 
             self.assertAlmostEqual(b1.intersection_over_union(b2), expected)
 
-
         def test_iou_touching_edges(self):
             b1 = BoundingBox(0, 0, 10, 10)
             b2 = BoundingBox(10, 0, 20, 10)
             assert b1.intersection_over_union(b2) == 0.0
-
 
         def test_iou_one_inside_another(self):
             b1 = BoundingBox(0, 0, 10, 10)
@@ -298,16 +321,13 @@ if __name__ == "__main__":
 
             self.assertAlmostEqual(b1.intersection_over_union(b2), expected)
 
-
         def test_iou_symmetry(self):
             b1 = BoundingBox(0, 0, 10, 10)
             b2 = BoundingBox(5, 5, 15, 15)
 
             self.assertAlmostEqual(
-                b1.intersection_over_union(b2),
-                b2.intersection_over_union(b1)
+                b1.intersection_over_union(b2), b2.intersection_over_union(b1)
             )
-
 
         def test_iou_zero_area_box(self):
             b1 = BoundingBox(0, 0, 0, 0)

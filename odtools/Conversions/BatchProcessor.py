@@ -57,6 +57,7 @@ def _process_single_split_image(
         image_format: str = "jpg",
         window_size: tuple[int, int] = (640, 640),
         overlap_ratio: float = 0.25,
+        cut_to_fit: bool = False,
         name_add_tags: str = None,
 ):
     split_page = create_splits_from_full_page(
@@ -67,6 +68,7 @@ def _process_single_split_image(
         input_format,
         window_size=window_size,
         overlap_ratio=overlap_ratio,
+        cut_to_fit=cut_to_fit,
     )
     # save images (same for both annot_format)
     save_split_page_image(
@@ -97,6 +99,7 @@ def process_split_batch(
         image_format: str = "jpg",
         window_size: tuple[int, int] = (640, 640),
         overlap_ratio: float = 0.25,
+        cut_to_fit: bool = False,
         aug_ratios: list[float] = None,
 ) -> None:
     if aug_ratios is None:
@@ -113,7 +116,8 @@ def process_split_batch(
                 output_format,
                 image_format=image_format,
                 window_size=window_size,
-                overlap_ratio=overlap_ratio
+                overlap_ratio=overlap_ratio,
+                cut_to_fit=cut_to_fit,
             )
     else:
         # create tags for given augmentation ratios
@@ -139,7 +143,8 @@ def process_split_batch(
                     image_format=image_format,
                     window_size=new_ws,
                     overlap_ratio=overlap_ratio,
-                    name_add_tags=aug_tag
+                    name_add_tags=aug_tag,
+                    cut_to_fit=cut_to_fit,
                 )
 
 
@@ -151,6 +156,7 @@ def create_splits_from_full_page(
         input_format: InputFormat,
         window_size: tuple[int, int] = (640, 640),
         overlap_ratio: float = 0.25,
+        cut_to_fit: bool = False,
 ) -> SplitPage:
     # create single page
     page = FullPage.load_from_file(
@@ -169,7 +175,7 @@ def create_splits_from_full_page(
     )
 
     # split page based on created splits
-    return SplitPage.from_full_page(page, splits)
+    return SplitPage.from_full_page(page, splits, cut_to_fit=cut_to_fit)
 
 
 def _create_image_name(dato_name: str, row: int, col: int, image_format: str, add_tags: str = None,

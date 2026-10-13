@@ -113,6 +113,7 @@ def format_dataset(
         overlap_ratio: float = 0.25,
         image_splitting: bool = False,
         aug_ratios: list[float] = None,
+        cut_to_fit: bool = False,
         verbose: bool = False,
 ) -> None:
     """
@@ -169,6 +170,7 @@ def format_dataset(
                 window_size=window_size,
                 overlap_ratio=overlap_ratio,
                 aug_ratios=aug_ratios,
+                cut_to_fit=cut_to_fit,
             )
         else:
             BatchProcessor.process_normal_batch(
@@ -217,6 +219,7 @@ def format_dataset(
                 window_size=window_size,
                 overlap_ratio=overlap_ratio,
                 aug_ratios=aug_ratios,
+                cut_to_fit=cut_to_fit,
             )
 
             BatchProcessor.process_split_batch(
@@ -230,7 +233,8 @@ def format_dataset(
                 image_format=image_format,
                 window_size=window_size,
                 overlap_ratio=overlap_ratio,
-                aug_ratios=aug_ratios
+                aug_ratios=aug_ratios,
+                cut_to_fit=cut_to_fit,
             )
         else:
             BatchProcessor.process_normal_batch(
