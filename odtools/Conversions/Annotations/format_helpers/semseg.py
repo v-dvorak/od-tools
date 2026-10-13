@@ -17,13 +17,16 @@ class _SemanticSegmentationHelper:
         with_confidence: bool,
     ) -> None:
         annotations = page.all_annotations()
-        assert page.height == page.width
-        comp_mask = _SemanticSegmentationHelper.composite_mask(annotations, page.height)
+        comp_mask = _SemanticSegmentationHelper.composite_mask(
+            annotations, page.height, page.width
+        )
         _SemanticSegmentationHelper.save_mask(comp_mask, output_path)
 
     @staticmethod
     def composite_mask(
-        annotations: Iterable["Annotation"], canvas_size: int = 512
+        annotations: Iterable["Annotation"],
+        canvas_height: int = 512,
+        canvas_width: int = 512,
     ) -> np.ndarray:
         """
         Pastes each annotation's mask onto a (canvas_size, canvas_size)
@@ -33,7 +36,7 @@ class _SemanticSegmentationHelper:
 
         Returns: full_size_binary_mask (uint8 array, 0/255)
         """
-        canvas = np.zeros((canvas_size, canvas_size), dtype=np.uint8)
+        canvas = np.zeros((canvas_height, canvas_width), dtype=np.uint8)
 
         for a in annotations:
             assert isinstance(a.mask, np.ndarray)
@@ -46,8 +49,8 @@ class _SemanticSegmentationHelper:
             left_clip = max(0, -left)
             top_dst = max(0, top)
             left_dst = max(0, left)
-            bottom_dst = min(canvas_size, top + h)
-            right_dst = min(canvas_size, left + w)
+            bottom_dst = min(canvas_height, top + h)
+            right_dst = min(canvas_width, left + w)
 
             if bottom_dst <= top_dst or right_dst <= left_dst:
                 continue  # entirely off-canvas, skip
@@ -66,7 +69,3 @@ class _SemanticSegmentationHelper:
     def save_mask(mask_array: np.ndarray, output_path: Path) -> None:
         output_path.parent.mkdir(parents=True, exist_ok=True)
         Image.fromarray(mask_array, mode="L").save(output_path)
-        # print(
-        #     f"Saved {output_path}  ({mask_array.shape[1]}x{mask_array.shape[0]}, "
-        #     f"{int((mask_array > 0).sum())} foreground px)"
-        # )
