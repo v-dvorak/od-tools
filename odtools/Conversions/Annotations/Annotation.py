@@ -4,9 +4,7 @@ import numpy as np
 from mung.io import Node
 
 from .annotation_type import AnnotationType
-from .. import ConversionUtils
 from ..BoundingBox import BoundingBox, Direction
-
 
 
 class Annotation:
@@ -28,8 +26,7 @@ class Annotation:
         self.mask = mask
         self.confidence = confidence
         self.an_type = an_type
-        self.image_name: str = None # type: ignore
-
+        self.image_name: str = None  # type: ignore
 
     def __str__(self):
         return f"({self.class_id=}, {self.bbox.left}, {self.bbox.top}, {self.bbox.width}, {self.bbox.height}, {self.bbox.segmentation})"
@@ -88,7 +85,9 @@ class Annotation:
         )
 
     @staticmethod
-    def bounding_box_from_segmentation(segm: list[tuple[int, int]]) -> tuple[int, int ,int, int]:
+    def bounding_box_from_segmentation(
+        segm: list[tuple[int, int]],
+    ) -> tuple[int, int, int, int]:
         """
         Returns the bounding box of the given segmentation.
 
@@ -133,7 +132,7 @@ class Annotation:
         :param top_shift: pixel shift to the top
         """
         self.bbox.shift(left_shift, top_shift)
-    
+
     def adjust_position_copy(self, left_shift: int, top_shift: int) -> "Annotation":
         """
         Creates a new Annotation object with adjusted position.
@@ -142,12 +141,6 @@ class Annotation:
         :param top_shift: pixel shift to the top
         :return: new Annotation object with adjusted coordinates
         """
-        # if self.mask is not None:
-        #     new_segmentation = [
-        #         (x + left_shift, y + top_shift) for x, y in self.mask
-        #     ]
-        # else:
-        #     new_segmentation = None
 
         return Annotation(
             self.class_id,
