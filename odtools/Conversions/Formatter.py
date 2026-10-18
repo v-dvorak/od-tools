@@ -51,7 +51,11 @@ def _load_data_from_paths(
     annotations = sorted(list(annotations_dir.rglob(annotations_search_regex)))
 
     if len(images) != len(annotations):
-        raise ValueError("Number of images and annotations do not match")
+        raise ValueError(
+            "Number of images and annotations do not match, "
+            f"{len(images)} images vs {len(annotations)} annotations, "
+            f"for search terms: {images_dir}/{images_search_regex} (images), {annotations_dir}/{annotations_search_regex} (annotations)."
+        )
 
     return list(zip(images, annotations))
 
