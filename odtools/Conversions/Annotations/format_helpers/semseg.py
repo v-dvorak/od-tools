@@ -1,7 +1,7 @@
-from typing import TYPE_CHECKING, Iterable
+from typing import TYPE_CHECKING
+from collections.abc import Iterable
 from pathlib import Path
 import numpy as np
-
 from PIL import Image
 
 if TYPE_CHECKING:
@@ -16,11 +16,37 @@ class _SemanticSegmentationHelper:
         output_path: Path,
         with_confidence: bool,
     ) -> None:
-        annotations = page.all_annotations()
-        comp_mask = _SemanticSegmentationHelper.composite_mask(
-            annotations, page.height, page.width
-        )
-        _SemanticSegmentationHelper.save_mask(comp_mask, output_path)
+        """
+        If there are two or three classes of annotations,
+        they are put into a single RGB mask, in other cases
+        all the annotations are squished into a single BW mask.        
+        """
+        
+        if len(page.class_names) not in {2, 3}:
+            annotations = page.all_annotations()
+            comp_mask = _SemanticSegmentationHelper.composite_mask(
+                annotations, page.height, page.width
+            )
+            _SemanticSegmentationHelper.save_mask(
+                comp_mask, output_path, multiple=False
+            )
+        else:
+            comps = []
+            for a in page.annotations:
+                comps.append(
+                    _SemanticSegmentationHelper.composite_mask(
+                        a, page.height, page.width
+                    )
+                )
+            for _ in range(3 - len(comps)):
+                comps.append(
+                    _SemanticSegmentationHelper.composite_mask(
+                        [], page.height, page.width
+                    )
+                )
+            _SemanticSegmentationHelper.save_mask(
+                np.stack(comps, axis=-1), output_path, multiple=True
+            )
 
     @staticmethod
     def composite_mask(
@@ -66,6 +92,12 @@ class _SemanticSegmentationHelper:
         return canvas.astype(np.uint8) * 255
 
     @staticmethod
-    def save_mask(mask_array: np.ndarray, output_path: Path) -> None:
+    def save_mask(
+        mask_array: np.ndarray, output_path: Path, multiple: bool = False
+    ) -> None:
+        if multiple:
+            mode = "RGB"
+        else:
+            mode = "L"
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        Image.fromarray(mask_array, mode="L").save(output_path)
+        Image.fromarray(mask_array, mode=mode).save(output_path)
