@@ -1,0 +1,190 @@
+from typing import Self
+import numpy as np
+
+from mung.io import Node
+
+from .annotation_type import AnnotationType
+from ..bounding_box import BoundingBox, Direction
+
+
+def _masks_equal(first: np.ndarray | None, second: np.ndarray | None) -> bool:
+    if first is None or second is None:
+        return first is None and second is None
+    return np.array_equal(first, second)
+
+
+class Annotation:
+    def __init__(
+        self,
+        class_id: int,
+        left: int,
+        top: int,
+        width: int,
+        height: int,
+        mask: np.ndarray | None,
+        confidence: float = 1.0,
+        an_type: AnnotationType = AnnotationType.GROUND_TRUTH,
+    ):
+        self.class_id = class_id
+        self.bbox: BoundingBox = BoundingBox.from_ltwh(
+            left=left, top=top, width=width, height=height
+        )
+        self.mask = mask
+        self.confidence = confidence
+        self.an_type = an_type
+        self.image_name: str | None = None
+
+    def __str__(self):
+        return f"({self.class_id=}, {self.bbox.left}, {self.bbox.top}, {self.bbox.width}, {self.bbox.height}, {self.bbox.segmentation})"
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Annotation):
+            return NotImplemented
+        return (
+            self.class_id == other.class_id
+            and self.bbox == other.bbox
+            and self.confidence == other.confidence
+            and self.an_type == other.an_type
+            and self.image_name == other.image_name
+            and _masks_equal(self.mask, other.mask)
+        )
+
+    def __hash__(self) -> int:
+        # the mask is excluded: it may hold unhashable arrays,
+        # and equal annotations still hash equal without it
+        return hash(
+            (
+                self.class_id,
+                self.bbox.coordinates(),
+                self.confidence,
+                self.an_type,
+                self.image_name,
+            )
+        )
+
+    @classmethod
+    def from_bbox(
+        cls,
+        class_id: int,
+        bbox: BoundingBox,
+        segmentation: np.ndarray | None = None,
+        confidence: float = 1.0,
+        an_type: AnnotationType = AnnotationType.GROUND_TRUTH,
+    ) -> Self:
+        return cls(
+            class_id,
+            bbox.left,
+            bbox.top,
+            bbox.width,
+            bbox.height,
+            mask=segmentation,
+            confidence=confidence,
+            an_type=an_type,
+        )
+
+    def set_image_name(self, image_name: str):
+        self.image_name = image_name
+
+    def get_image_name(self) -> str:
+        assert self.image_name is not None
+        return self.image_name
+
+    def get_class_id(self) -> int:
+        return self.class_id
+
+    @classmethod
+    def from_mung_node(
+        cls,
+        class_id: int,
+        node: Node,
+        an_type: AnnotationType = AnnotationType.GROUND_TRUTH,
+    ) -> Self:
+        """
+        Creates a new Annotation object from Mung Node.
+
+        :param class_id: class id
+        :param node: Mung Node
+        :return: new Annotation object
+        """
+        return cls(
+            class_id,
+            node.left,
+            node.top,
+            node.width,
+            node.height,
+            mask=node.mask,
+            an_type=an_type,
+        )
+
+    @staticmethod
+    def bounding_box_from_segmentation(
+        segm: list[tuple[int, int]],
+    ) -> tuple[int, int, int, int]:
+        """
+        Returns the bounding box of the given segmentation.
+
+        :param segm: list of segmentation coordinates
+        :return: left, top, width, height
+        """
+        left = min(segm, key=lambda x: x[0])[0]
+        top = min(segm, key=lambda x: x[1])[1]
+        right = max(segm, key=lambda x: x[0])[0]
+        bottom = max(segm, key=lambda x: x[1])[1]
+        return left, top, right - left, bottom - top
+
+    @staticmethod
+    def segmentation_from_bounding_box(bbox: BoundingBox):
+        """
+        Returns the segmentation coordinates of the given bounding box.
+
+        :param bbox: bounding box
+        :return: segmentation as list[tuple[int, int]]
+        """
+        x1, y1, x2, y2 = bbox.xyxy()
+        return [(x1, y1), (x2, y1), (x2, y2), (x1, y2)]
+
+    def intersects(self, other: Self, direction: Direction | None = None) -> bool:
+        """
+        Returns true if two Annotation objects intersect, else false.
+
+        Direction marks the plane on which the bounding boxes "collapse".
+        Horizontal direction tries to find intersection in left-right coordinates,
+        vertical in top-bottom.
+
+        :param other: other Annotation object
+        """
+        return self.bbox.intersects(other.bbox, direction=direction)
+
+    def intersection_over_union(
+        self, other: Self, direction: Direction | None = None
+    ) -> float:
+        return self.bbox.intersection_over_union(other.bbox, direction=direction)
+
+    def adjust_position(self, left_shift: int = 0, top_shift: int = 0) -> None:
+        """
+        Adjusts classes position in place.
+
+        :param left_shift: pixel shift to the left
+        :param top_shift: pixel shift to the top
+        """
+        self.bbox.shift(left_shift, top_shift)
+
+    def adjust_position_copy(self, left_shift: int, top_shift: int) -> "Annotation":
+        """
+        Creates a new Annotation object with adjusted position.
+
+        :param left_shift: pixel shift to the left
+        :param top_shift: pixel shift to the top
+        :return: new Annotation object with adjusted coordinates
+        """
+
+        return Annotation(
+            self.class_id,
+            self.bbox.left + left_shift,
+            self.bbox.top + top_shift,
+            self.bbox.width,
+            self.bbox.height,
+            self.mask,
+            confidence=self.confidence,
+            an_type=self.an_type,
+        )

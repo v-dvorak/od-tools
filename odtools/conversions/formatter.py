@@ -1,0 +1,318 @@
+import shutil
+from pathlib import Path
+import yaml
+from tqdm import tqdm
+
+from . import batch_processor
+from . import conversion_utils
+from .formats import InputFormat, OutputFormat
+
+
+def setup_split_dirs(
+    output_dir: Path, exist_ok: bool = True, parents: bool = True
+) -> tuple[Path, Path, Path, Path]:
+    train_image_dir = output_dir / "images" / "train"
+    val_image_dir = output_dir / "images" / "val"
+    train_annot_dir = output_dir / "labels" / "train"
+    val_annot_dir = output_dir / "labels" / "val"
+
+    train_image_dir.mkdir(exist_ok=exist_ok, parents=parents)
+    val_image_dir.mkdir(exist_ok=exist_ok, parents=parents)
+    train_annot_dir.mkdir(exist_ok=exist_ok, parents=parents)
+    val_annot_dir.mkdir(exist_ok=exist_ok, parents=parents)
+
+    return train_image_dir, val_image_dir, train_annot_dir, val_annot_dir
+
+
+def setup_no_split_dirs(
+    output_dir: Path, exist_ok: bool = True, parents: bool = True
+) -> tuple[Path, Path]:
+    images_dir = output_dir / "images"
+    annot_dir = output_dir / "labels"
+
+    images_dir.mkdir(exist_ok=exist_ok, parents=parents)
+    annot_dir.mkdir(exist_ok=exist_ok, parents=parents)
+
+    return images_dir, annot_dir
+
+
+def load_data_from_paths(
+    images_dir: Path,
+    images_search_regex: str,
+    annotations_dir: Path,
+    annotations_search_regex: str,
+) -> list[tuple[Path, Path]]:
+    images = sorted(images_dir.rglob(images_search_regex))
+    annotations = sorted(annotations_dir.rglob(annotations_search_regex))
+
+    if len(images) != len(annotations):
+        raise ValueError(
+            "Number of images and annotations do not match, "
+            f"{len(images)} images vs {len(annotations)} annotations, "
+            f"for search terms: {images_dir}/{images_search_regex} (images), {annotations_dir}/{annotations_search_regex} (annotations)."
+        )
+
+    return list(zip(images, annotations))
+
+
+def split_and_save_dataset(
+    output_path: Path,
+    image_source_dir: Path,
+    annot_source_dir: Path,
+    split_ratio: float = 0.9,
+    seed: int = 42,
+    verbose: bool = False,
+) -> None:
+    """
+    Splits images and annotations into train and test (val) datasets.
+    Given data are split based on the split_ratio regardless of their format.
+    Config file will not be created.
+
+    :param output_path: path to save split dataset
+    :param image_source_dir: path to image directory
+    :param annot_source_dir: path to annotation directory
+
+    :param split_ratio: split ratio
+    :param seed: random seed
+
+    :param verbose: make script verbose
+    """
+    data = load_data_from_paths(image_source_dir, "*", annot_source_dir, "*")
+    train_image_dir, val_image_dir, train_annot_dir, val_annot_dir = setup_split_dirs(
+        output_path
+    )
+
+    # split
+    train_data, val_data = conversion_utils.split_dataset(
+        data, split_ratio=split_ratio, seed=seed
+    )
+
+    for image, annotation in tqdm(
+        train_data, desc="Processing train", disable=not verbose
+    ):
+        shutil.copy(image, train_image_dir / image.name)
+        shutil.copy(annotation, train_annot_dir / annotation.name)
+
+    for image, annotation in tqdm(val_data, desc="Processing val", disable=not verbose):
+        shutil.copy(image, val_image_dir / image.name)
+        shutil.copy(annotation, val_annot_dir / annotation.name)
+
+
+def format_dataset(
+    output_dir: Path,
+    image_source_dir: Path,
+    annot_source_dir: Path,
+    class_reference_table: dict[str, int],
+    class_output_names: list[str],
+    input_format: InputFormat,
+    output_format: OutputFormat,
+    image_format: str = "jpg",
+    split_ratio: float = 0.9,
+    split_config: Path | None = None,
+    resize: int | None = None,
+    seed: int = 42,
+    window_size: tuple[int, int] = (640, 640),
+    overlap_ratio: float = 0.25,
+    image_splitting: bool = False,
+    aug_ratios: list[float] | None = None,
+    cut_to_fit: bool = False,
+    n: int | None = None,
+    verbose: bool = False,
+) -> None:
+    """
+    Finds all images and subpages inside given files
+    and processes them according to the split ratio and output format.
+
+    :param image_source_dir: path to directory with images
+    :param annot_source_dir: path to directory with labels
+    :param output_dir: path to final dataset, all data will be outputted here
+
+    :param class_reference_table: dictionary, a function that assigns class id by class name
+    :param class_output_names: list of class names
+
+    :param input_format: defines input output_format
+    :param output_format: defines output annot_format
+
+    :param split_ratio: train/test split ratio
+    :param split_config: file with predefined train/test split
+    :param resize: resizes images so that the longer side is this many pixels long
+    :param seed: seed for dataset shuffling
+    :param image_format: format in which the images are saved
+
+    :param window_size: size of the sliding window applied to image in case of image splitting
+    :param overlap_ratio: overlap ratio between two tiles in case of image splitting
+    :param image_splitting: whether to split images according to the split ratio and sliding window
+
+    :param aug_ratios: list of augmentation ratios applied to images in case of image splitting
+
+    :param verbose: make script verbose
+    """
+    if not image_splitting and aug_ratios is not None:
+        raise NotImplementedError("Cannot augment data without image splitting")
+
+    data = load_data_from_paths(
+        image_source_dir,
+        f"*.{image_format}",
+        annot_source_dir,
+        f"*.{input_format.to_annotation_extension()}",
+    )
+    if n is not None:
+        data = data[:n]
+
+    # dump everything into one directory
+    if split_ratio == 1.0 and split_config is None:
+        # set up folders
+        out_image_dir, out_annot_dir = setup_no_split_dirs(output_dir)
+
+        if image_splitting:
+            batch_processor.process_split_batch(
+                data,
+                out_image_dir,
+                out_annot_dir,
+                class_reference_table,
+                class_output_names,
+                input_format,
+                output_format,
+                image_format=image_format,
+                window_size=window_size,
+                overlap_ratio=overlap_ratio,
+                aug_ratios=aug_ratios,
+                cut_to_fit=cut_to_fit,
+            )
+        else:
+            batch_processor.process_normal_batch(
+                data,
+                out_image_dir,
+                out_annot_dir,
+                class_reference_table,
+                class_output_names,
+                input_format,
+                output_format,
+                image_format=image_format,
+                resize=resize,
+            )
+
+        if (
+            output_format == OutputFormat.YOLO_DETECTION
+            or output_format == OutputFormat.YOLO_SEGMENTATION
+        ):
+            _create_yaml_config_for_yolo(
+                output_dir, out_image_dir, class_output_names, verbose=verbose
+            )
+
+    # split to train/test
+    else:
+        # setup folders
+        train_image_dir, val_image_dir, train_annot_dir, val_annot_dir = (
+            setup_split_dirs(output_dir)
+        )
+
+        # split
+        train_data, val_data = conversion_utils.split_dataset(
+            data, split_ratio=split_ratio, seed=seed, split_config=split_config
+        )
+
+        if image_splitting:
+            batch_processor.process_split_batch(
+                train_data,
+                train_image_dir,
+                train_annot_dir,
+                class_reference_table,
+                class_output_names,
+                input_format,
+                output_format,
+                image_format=image_format,
+                window_size=window_size,
+                overlap_ratio=overlap_ratio,
+                aug_ratios=aug_ratios,
+                cut_to_fit=cut_to_fit,
+            )
+
+            batch_processor.process_split_batch(
+                val_data,
+                val_image_dir,
+                val_annot_dir,
+                class_reference_table,
+                class_output_names,
+                input_format,
+                output_format,
+                image_format=image_format,
+                window_size=window_size,
+                overlap_ratio=overlap_ratio,
+                aug_ratios=aug_ratios,
+                cut_to_fit=cut_to_fit,
+            )
+        else:
+            batch_processor.process_normal_batch(
+                train_data,
+                train_image_dir,
+                train_annot_dir,
+                class_reference_table,
+                class_output_names,
+                input_format,
+                output_format,
+                image_format=image_format,
+                resize=resize,
+            )
+
+            batch_processor.process_normal_batch(
+                val_data,
+                val_image_dir,
+                val_annot_dir,
+                class_reference_table,
+                class_output_names,
+                input_format,
+                output_format,
+                image_format=image_format,
+                resize=resize,
+            )
+
+        if (
+            output_format == OutputFormat.YOLO_DETECTION
+            or output_format == OutputFormat.YOLO_SEGMENTATION
+        ):
+            _create_yaml_config_for_yolo(
+                output_dir,
+                train_image_dir,
+                class_output_names,
+                verbose=verbose,
+                val_path=val_image_dir,
+            )
+
+
+def _create_yaml_config_for_yolo(
+    output_path: Path,
+    train_path: Path,
+    class_output_names: list[str],
+    val_path: Path | None = None,
+    config_name: str = "config",
+    verbose: bool = False,
+):
+    """
+    Creates .yaml file in YOLO format necessary for model training.
+
+    :param output_path: path to dataset directory
+    :param train_path: path to train directory
+    :param class_output_names: names of classes
+    :param val_path: path to validation directory, optional, if not provided, defaults to `train_path`
+    :param config_name: name of config file, default is "config"
+    """
+    if val_path is None:
+        val_path = train_path
+
+    names = {}
+    for i, class_name in enumerate(class_output_names):
+        names[i] = class_name
+
+    data = {
+        "path": str(output_path.absolute().resolve()),
+        "train": str(train_path.absolute().resolve()),
+        "val": str(val_path.absolute().resolve()),
+        "names": names,
+    }
+
+    with open(output_path / f"{config_name}.yaml", "w") as f:
+        yaml.dump(data, f, sort_keys=False, indent=4)
+
+    if verbose:
+        print(f"Created {config_name}.yaml in {output_path.absolute().resolve()}.")

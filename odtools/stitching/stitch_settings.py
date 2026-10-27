@@ -1,8 +1,7 @@
 from dataclasses import dataclass, field
-import numpy as np
 
-from ..Conversions import FullPage, BoundingBox, Annotation
-from ..Inference import SplitSettings
+from ..conversions import FullPage, BoundingBox, Annotation
+from ..inference.split_settings import SplitSettings
 
 DEFAULT_NMS_IOU_THRESHOLD: float = 0.5
 
@@ -15,7 +14,8 @@ class StitchSettings:
 
     def __post_init__(self) -> None:
         for value in self.special_cases.values():
-            assert 0 <= value <= 1
+            if not 0 <= value <= 1:
+                raise ValueError(f"NMS IoU thresholds must be in [0, 1], got {value}")
 
     def get_nms_iou_threshold_for_class(self, class_id: int) -> float:
         threshold = self.special_cases.get(class_id)
@@ -27,11 +27,11 @@ class StitchSettings:
 
     @classmethod
     def from_json(cls, data: dict) -> "StitchSettings":
-        iou = data.get("nms_iou")
-        if iou is None:
-            return cls(DEFAULT_NMS_IOU_THRESHOLD, {})
-        else:
-            return cls(iou, {})
+        return cls(
+            data.get("nms_iou", DEFAULT_NMS_IOU_THRESHOLD),
+            data.get("special_cases", {}),
+            data.get("apply_nms", True),
+        )
 
 
 def _apply_nms_single_class(
@@ -118,8 +118,8 @@ def combine_multiple_pages_and_resolve(
 
     :param subpages: list of subpages
     :param splits: matrix of splits
-    :param iou_threshold: how big IoU has to be to trigger resolving
-    :param edge_offset: offset from edges, anything outside the edge will be dropped from final page
+    :param split_settings: settings used for splitting, tile edge offsets are taken from it
+    :param stitch_settings: settings used for stitching, NMS thresholds are taken from it
     :param verbose: make script verbose
     :return: FullPage
     """
@@ -153,12 +153,6 @@ def combine_multiple_pages_and_resolve(
     # we can retrieve image image_size from here,
     last_split: BoundingBox = splits[-1][-1]
 
-    # matrix = list(np.reshape(subpages, (len(splits), len(splits[0]))))
-    # print(splits)
-    # exit()
-
-    # resolve_matrix_of_pages(matrix, stitch_settings.nms_iou_threshold)
-
     completed_annotations = [[] for _ in range(len(class_names))]
     for subpage in subpages:
         for annotation in subpage.all_annotations():
@@ -170,8 +164,11 @@ def combine_multiple_pages_and_resolve(
 
     if stitch_settings.apply_nms:
         complete_page.annotations = [
-            _apply_nms_single_class(annots, stitch_settings.nms_iou_threshold)
-            for annots in complete_page.annotations
+            _apply_nms_single_class(
+                annots,
+                stitch_settings.get_nms_iou_threshold_for_class(class_id),
+            )
+            for class_id, annots in enumerate(complete_page.annotations)
         ]
 
     return complete_page

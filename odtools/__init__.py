@@ -1,4 +1,4 @@
-from .Conversions import (
+from .conversions import (
     AnnotationType,
     Annotation,
     BoundingBox,
@@ -8,6 +8,6 @@ from .Conversions import (
     InputFormat,
     OutputFormat,
 )
-from .Inference import (
+from .inference import (
     IModelWrapper,
 )

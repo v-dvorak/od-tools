@@ -3,18 +3,16 @@ import json
 from pathlib import Path
 
 from . import utils
-from .Conversions import Formatter
-from .Conversions.Formats import InputFormat, OutputFormat
-from .Stats import Plots
-from .Stats.StatJob import StatJob
-from .Val import EvalJob
+from .conversions import formatter
+from .conversions.formats import InputFormat, OutputFormat
+from .stats import plots
+from .stats.stat_job import StatJob
+from .val import eval_job
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        prog="Object Detection Tools"
-    )
-    subparsers = parser.add_subparsers(dest="command", help="Jobs")
+    parser = argparse.ArgumentParser(prog="Object Detection Tools")
+    subparsers = parser.add_subparsers(dest="command", help="Jobs", required=True)
 
     # region DATASET FORMATTING AND SPLITTING ARGUMENTS
     form_parser = subparsers.add_parser("form")
@@ -22,27 +20,70 @@ def main():
     form_parser.add_argument("image_dir", help="Path to images.")
     form_parser.add_argument("annot_dir", help="Path to annotations.")
 
-    form_parser.add_argument("-i", "--input_format", default=InputFormat.MUNG.value,
-                             choices=[i for i in InputFormat])
-    form_parser.add_argument("-o", "--output_format", default=OutputFormat.COCO.value,
-                             choices=[o for o in OutputFormat])
-    form_parser.add_argument("--image_format", default="jpg", help="Input image format.")
+    form_parser.add_argument(
+        "-i",
+        "--input_format",
+        default=InputFormat.MUNG.value,
+        choices=[i for i in InputFormat],
+    )
+    form_parser.add_argument(
+        "-o",
+        "--output_format",
+        default=OutputFormat.COCO.value,
+        choices=[o for o in OutputFormat],
+    )
+    form_parser.add_argument(
+        "--image_format", default="jpg", help="Input image format."
+    )
 
-    form_parser.add_argument("-s", "--split", type=float, default=1.0, help="Train/test split ratio.")
-    form_parser.add_argument("--split_config", type=Path, default=None, help="Train/test split config.")
+    form_parser.add_argument(
+        "-s", "--split", type=float, default=1.0, help="Train/test split ratio."
+    )
+    form_parser.add_argument(
+        "--split_config", type=Path, default=None, help="Train/test split config."
+    )
 
-    form_parser.add_argument("--seed", type=int, default=42, help="Seed for dataset shuffling.")
-    form_parser.add_argument("--resize", type=int, default=None,
-                             help="Resizes images so that the longer side is this many pixels long.")
-    form_parser.add_argument("--image_splitting", action="store_true", help="Split images into smaller ones.")
-    form_parser.add_argument("-a", "--augmentation", nargs="+", default=None, help="Zoom in/out augmentations.")
+    form_parser.add_argument(
+        "--seed", type=int, default=42, help="Seed for dataset shuffling."
+    )
+    form_parser.add_argument(
+        "--resize",
+        type=int,
+        default=None,
+        help="Resizes images so that the longer side is this many pixels long.",
+    )
+    form_parser.add_argument(
+        "--image_splitting", action="store_true", help="Split images into smaller ones."
+    )
+    form_parser.add_argument(
+        "-a",
+        "--augmentation",
+        nargs="+",
+        default=None,
+        help="Zoom in/out augmentations.",
+    )
 
     # global arguments
-    form_parser.add_argument("-v", "--verbose", action="store_true", help="Make script verbose")
-    form_parser.add_argument("--config", default=None,
-                             help="Path to config, see \"default.config\" for example.")
-    form_parser.add_argument("--cut_to_fit", action="store_true", help="If set, annotations that extend beyond the patches will be cut to fit")
-    form_parser.add_argument("-n", "--number_of_samples", type=int, default=None, help="Number of samples to output, if None, all will be used")
+    form_parser.add_argument(
+        "-v", "--verbose", action="store_true", help="Make script verbose"
+    )
+    form_parser.add_argument(
+        "--config",
+        default=None,
+        help='Path to config, see "default.config" for example.',
+    )
+    form_parser.add_argument(
+        "--cut_to_fit",
+        action="store_true",
+        help="If set, annotations that extend beyond the patches will be cut to fit",
+    )
+    form_parser.add_argument(
+        "-n",
+        "--number_of_samples",
+        type=int,
+        default=None,
+        help="Number of samples to output, if None, all will be used",
+    )
     # endregion
 
     # region DATASET SPLITTING ARGUMENTS
@@ -51,11 +92,21 @@ def main():
     split_parser.add_argument("image_dir", help="Path to images.")
     split_parser.add_argument("annot_dir", help="Path to annotations.")
 
-    split_parser.add_argument("-s", "--split", type=float, default=0.9, help="Train/test split ratio, default is 0.9.")
-    split_parser.add_argument("--seed", type=int, default=42, help="Seed for dataset shuffling.")
+    split_parser.add_argument(
+        "-s",
+        "--split",
+        type=float,
+        default=0.9,
+        help="Train/test split ratio, default is 0.9.",
+    )
+    split_parser.add_argument(
+        "--seed", type=int, default=42, help="Seed for dataset shuffling."
+    )
 
     # global arguments
-    split_parser.add_argument("-v", "--verbose", action="store_true", help="Make script verbose")
+    split_parser.add_argument(
+        "-v", "--verbose", action="store_true", help="Make script verbose"
+    )
     # endregion
 
     # region DATASET STATISTICS ARGUMENTS
@@ -63,19 +114,43 @@ def main():
     stats_parser.add_argument("image_dir", help="Path to images.")
     stats_parser.add_argument("annot_dir", help="Path to annotations.")
 
-    stats_parser.add_argument("-o", "--output_dir", type=str, default=None, help="If used, plots will be saved here.")
-    stats_parser.add_argument("-i", "--input_format", default=InputFormat.MUNG.value,
-                              choices=[i for i in InputFormat])
-    stats_parser.add_argument('-j', '--jobs', nargs='+', help="Specify jobs to run, if None, all jobs will be run.",
-                              choices=[s for s in StatJob])
+    stats_parser.add_argument(
+        "-o",
+        "--output_dir",
+        type=str,
+        default=None,
+        help="If used, plots will be saved here.",
+    )
+    stats_parser.add_argument(
+        "-i",
+        "--input_format",
+        default=InputFormat.MUNG.value,
+        choices=[i for i in InputFormat],
+    )
+    stats_parser.add_argument(
+        "-j",
+        "--jobs",
+        nargs="+",
+        help="Specify jobs to run, if None, all jobs will be run.",
+        choices=[s for s in StatJob],
+    )
 
-    stats_parser.add_argument("--image_format", default="jpg", help="Input image format.")
+    stats_parser.add_argument(
+        "--image_format", default="jpg", help="Input image format."
+    )
 
     # global arguments
-    stats_parser.add_argument("-v", "--verbose", action="store_true", help="Make script verbose")
-    stats_parser.add_argument("--config", default=None,
-                              help="Path to config, see \"default.config\" for example.")
-    stats_parser.add_argument("--sum", action="store_true", help="Adds \"All\" category to stats.")
+    stats_parser.add_argument(
+        "-v", "--verbose", action="store_true", help="Make script verbose"
+    )
+    stats_parser.add_argument(
+        "--config",
+        default=None,
+        help='Path to config, see "default.config" for example.',
+    )
+    stats_parser.add_argument(
+        "--sum", action="store_true", help='Adds "All" category to stats.'
+    )
     # endregion
 
     # region MODEL VALIDATION ARGUMENTS
@@ -85,27 +160,58 @@ def main():
     val_parser.add_argument("image_dir", help="Path to images.")
     val_parser.add_argument("annot_dir", help="Path to annotations.")
 
-    val_parser.add_argument("-i", "--input_format", default=InputFormat.MUNG.value,
-                            choices=[i for i in InputFormat])
-    val_parser.add_argument("-m", "--model_type", default="yolod", choices=["yolod", "yolos"],
-                            help="Type of model.")
+    val_parser.add_argument(
+        "-i",
+        "--input_format",
+        default=InputFormat.MUNG.value,
+        choices=[i for i in InputFormat],
+    )
+    val_parser.add_argument(
+        "-m",
+        "--model_type",
+        default="yolod",
+        choices=["yolod", "yolos"],
+        help="Type of model.",
+    )
 
-    val_parser.add_argument("-o", "--output_dir", type=str, default=None,
-                            help="Path to output directory, if not specified, plot will be shown.")
+    val_parser.add_argument(
+        "-o",
+        "--output_dir",
+        type=str,
+        default=None,
+        help="Path to output directory, if not specified, plot will be shown.",
+    )
 
     val_parser.add_argument("--image_format", default="jpg", help="Input image format.")
 
-    val_parser.add_argument("--overlap", type=float, default=0.25, help="Overlap ratio for image splits.")
-    val_parser.add_argument("-c", "--count", type=int, help="How many images the model will be tested on.")
-    val_parser.add_argument("-s", "--seed", type=int, default=42, help="Seed for dataset shuffling.")
-    val_parser.add_argument("--sum", action="store_true", help="Adds \"All\" category to evaluation.")
-    val_parser.add_argument("--iou", type=float, default=0.25,
-                            help="Threshold to consider two annotations overlapping while resolving predictions.")
+    val_parser.add_argument(
+        "--overlap", type=float, default=0.25, help="Overlap ratio for image splits."
+    )
+    val_parser.add_argument(
+        "-c", "--count", type=int, help="How many images the model will be tested on."
+    )
+    val_parser.add_argument(
+        "-s", "--seed", type=int, default=42, help="Seed for dataset shuffling."
+    )
+    val_parser.add_argument(
+        "--sum", action="store_true", help='Adds "All" category to evaluation.'
+    )
+    val_parser.add_argument(
+        "--iou",
+        type=float,
+        default=0.25,
+        help="Threshold to consider two annotations overlapping while resolving predictions.",
+    )
 
     # global arguments
-    val_parser.add_argument("-v", "--verbose", action="store_true", help="Make script verbose")
-    val_parser.add_argument("--config", default=None,
-                            help="Path to config, see \"default.config\" for example.")
+    val_parser.add_argument(
+        "-v", "--verbose", action="store_true", help="Make script verbose"
+    )
+    val_parser.add_argument(
+        "--config",
+        default=None,
+        help='Path to config, see "default.config" for example.',
+    )
 
     # endregion
 
@@ -115,7 +221,7 @@ def main():
     # endregion
 
     # region DEFAULT RESOURCES UPDATE
-    update_parser = subparsers.add_parser("update")
+    subparsers.add_parser("update")
     # endregion
 
     # region K-FOLD ARGUMENTS
@@ -123,12 +229,18 @@ def main():
     kfold_parser.add_argument("output", help="Split dataset destination.")
     kfold_parser.add_argument("image_dir", help="Path to images.")
     kfold_parser.add_argument("annot_dir", help="Path to annotations.")
-    kfold_parser.add_argument("-f", "--folds", type=int, default=3, help="Number of folds.")
+    kfold_parser.add_argument(
+        "-f", "--folds", type=int, default=3, help="Number of folds."
+    )
     kfold_parser.add_argument("-p", "--pout", type=int, default=1, help="Leave p out.")
 
     # global arguments
-    kfold_parser.add_argument("-v", "--verbose", action="store_true", help="Make script verbose")
-    kfold_parser.add_argument("--seed", type=int, default=42, help="Seed for dataset shuffling.")
+    kfold_parser.add_argument(
+        "-v", "--verbose", action="store_true", help="Make script verbose"
+    )
+    kfold_parser.add_argument(
+        "--seed", type=int, default=42, help="Seed for dataset shuffling."
+    )
     # endregion
 
     args = parser.parse_args()
@@ -143,27 +255,28 @@ def main():
 
     # DATASET TRAIN/TEST SPLIT (without any augmentation or image splitting)
     if args.command == "split":
-        Formatter.split_and_save_dataset(
+        formatter.split_and_save_dataset(
             # directories
             Path(args.output),
             Path(args.image_dir),
             Path(args.annot_dir),
-
             split_ratio=args.split,
             seed=args.seed,
-            verbose=args.verbose
+            verbose=args.verbose,
         )
         return 0
 
     # UPDATE RESOURCES
     elif args.command == "update":
-        from .Download import update_all_default_resources
+        from .download import update_all_default_resources
+
         update_all_default_resources()
         return 0
 
     # RUN K-FOLD ON DATASET
     elif args.command == "kfold":
-        from .KFold import kfold_dataset
+        from .kfold import kfold_dataset
+
         kfold_dataset(
             Path(args.output),
             Path(args.image_dir),
@@ -171,7 +284,7 @@ def main():
             folds=args.folds,
             pout=args.pout,
             seed=args.seed,
-            verbose=args.verbose
+            verbose=args.verbose,
         )
         return 0
 
@@ -184,7 +297,9 @@ def main():
         with open(args.config, "r", encoding="utf8") as f:
             loaded_config = json.load(f)
 
-    class_id_mapping, class_output_names = utils.get_mapping_and_names_from_config(loaded_config)
+    class_id_mapping, class_output_names = utils.get_mapping_and_names_from_config(
+        loaded_config
+    )
 
     # DATASET FORMATTING
     if args.command == "form":
@@ -207,7 +322,7 @@ def main():
             if args.verbose:
                 print(f"Augmentation ratios: {args.augmentation}")
 
-        Formatter.format_dataset(
+        formatter.format_dataset(
             # directories
             Path(args.output),
             Path(args.image_dir),
@@ -223,7 +338,10 @@ def main():
             resize=args.resize,
             image_format=args.image_format,
             # image splitting settings
-            window_size=(loaded_config["window_size"][0], loaded_config["window_size"][1]),
+            window_size=(
+                loaded_config["window_size"][0],
+                loaded_config["window_size"][1],
+            ),
             overlap_ratio=loaded_config["overlap_ratio"],
             image_splitting=args.image_splitting,
             # augmentation
@@ -236,7 +354,7 @@ def main():
         )
     # DATASET STATISTICS
     elif args.command == "stats":
-        Plots.load_and_plot_stats(
+        plots.load_and_plot_stats(
             # directories
             Path(args.image_dir),
             Path(args.annot_dir),
@@ -249,18 +367,18 @@ def main():
             # others
             output_dir=Path(args.output_dir) if args.output_dir is not None else None,
             summarize=args.sum,
-            verbose=args.verbose
+            verbose=args.verbose,
         )
     # MODEL VALIDATION
     elif args.command == "val":
-        EvalJob.run_f1_scores_vs_iou(
+        eval_job.run_f1_scores_vs_iou(
             # input paths
             Path(args.model_path),
             Path(args.image_dir),
             Path(args.annot_dir),
             # formatting
             InputFormat(args.input_format.lower()),
-            EvalJob.ModelType.from_string(args.model_type),
+            eval_job.ModelType.from_string(args.model_type),
             class_output_names,
             iou_threshold=args.iou,
             overlap=args.overlap,
@@ -268,7 +386,7 @@ def main():
             output_dir=Path(args.output_dir) if args.output_dir is not None else None,
             summarize=args.sum,
             count=args.count,
-            verbose=args.verbose
+            verbose=args.verbose,
         )
 
 

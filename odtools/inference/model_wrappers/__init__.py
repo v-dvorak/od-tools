@@ -1,0 +1,2 @@
+from .model_wrapper import IModelWrapper
+from .yolo_detection_model_wrapper import YOLODetectionModelWrapper
