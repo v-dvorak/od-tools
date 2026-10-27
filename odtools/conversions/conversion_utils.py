@@ -37,14 +37,14 @@ def split_dataset(
         random.Random(seed).shuffle(data)
         # actually split the dataset
         split_index = int(len(data) * split_ratio)
-        train_data = data[:split_index]
-        val_data = data[split_index:]
+        train_data: list[tuple[Path, Path]] = data[:split_index]
+        val_data: list[tuple[Path, Path]] = data[split_index:]
 
         return train_data, val_data
 
     else:
-        train_data: list[tuple[Path, Path]] = []
-        val_data: list[tuple[Path, Path]] = []
+        train_data = []
+        val_data = []
 
         with open(split_config, "r", encoding="utf8") as f:
             c = json.load(f)
@@ -104,20 +104,21 @@ def find_convex_hull(binary_array: np.ndarray, show_plot: bool = False) -> list:
         plt.show()
 
     # flatten outputted list
-    return [x[0] for x in hull]
+    return [tuple(point) for point in np.asarray(hull).reshape(-1, 2)]
 
 
 def draw_shapes_on_image(
-    image_path: str | Path, coordinates_list: list[tuple[int, int]]
+    image_path: str | Path,
+    coordinates_list: list[list[tuple[float, float]]],
 ):
     """
     Draws multiple 2D shapes from lists of relative coordinates onto a given path_to_image.
 
     :param image_path: path to path_to_image
-    :param coordinates_list: list of relative coordinates
+    :param coordinates_list: list of shapes, each a list of relative (x, y) coordinates
     """
 
-    img = cv2.imread(image_path)
+    img = cv2.imread(str(image_path))
     img_height, img_width = img.shape[:2]
 
     for relative_coordinates in coordinates_list:
@@ -224,7 +225,7 @@ def copy_and_resize_image(
             new_width = int((max_size / height) * width)
 
         # Resize the path_to_image using bilinear interpolation
-        img_resized = img.resize((new_width, new_height), Image.BILINEAR)
+        img_resized = img.resize((new_width, new_height), Image.Resampling.BILINEAR)
 
         # Save the resized path_to_image back to the same path
         img_resized.save(output_path)
