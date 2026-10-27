@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 from ..annotation import Annotation
 from ..annotation_type import AnnotationType
+
 if TYPE_CHECKING:
     from ..full_page import FullPage
 
@@ -13,12 +14,13 @@ if TYPE_CHECKING:
 class _COCOHelper:
     @staticmethod
     def from_coco_file(
-            file_path: Path,
-            class_reference_table: dict[str, int],
-            class_output_names: list[str],
-            an_type: AnnotationType = AnnotationType.GROUND_TRUTH
+        file_path: Path,
+        class_reference_table: dict[str, int],
+        class_output_names: list[str],
+        an_type: AnnotationType = AnnotationType.GROUND_TRUTH,
     ) -> "FullPage":
         from ..full_page import FullPage
+
         with open(file_path, "r") as file:
             data = json.load(file)
         image_width, image_height = data["width"], data["height"]
@@ -38,22 +40,29 @@ class _COCOHelper:
                     i = 0
                     segm = []
                     while i + 1 < len(annot["segmentation"][0]):
-                        segm.append((int(annot["segmentation"][0][i]), int(annot["segmentation"][0][i + 1])))
+                        segm.append(
+                            (
+                                int(annot["segmentation"][0][i]),
+                                int(annot["segmentation"][0][i + 1]),
+                            )
+                        )
                         i += 2
 
                 # save parsed annotation
                 annots[class_id].append(
-                    Annotation(class_id, left, top, width, height, segm, an_type=an_type)
+                    Annotation(
+                        class_id, left, top, width, height, segm, an_type=an_type
+                    )
                 )
 
         return FullPage((image_width, image_height), annots, class_output_names)
-    
+
     @staticmethod
     def from_dolores_coco_file(
-            file_path: Path,
-            class_reference_table: dict[str, int],
-            class_output_names: list[str],
-            an_type: AnnotationType = AnnotationType.GROUND_TRUTH
+        file_path: Path,
+        class_reference_table: dict[str, int],
+        class_output_names: list[str],
+        an_type: AnnotationType = AnnotationType.GROUND_TRUTH,
     ) -> "FullPage":
         from ..full_page import FullPage
 
@@ -63,7 +72,7 @@ class _COCOHelper:
             raise ValueError(
                 f"Expected exactly one image in DOLORES COCO file, got {len(data['images'])}"
             )
-        
+
         # get image info
         image_info = data["images"][0]
         image_width, image_height = image_info["width"], image_info["height"]
@@ -71,7 +80,9 @@ class _COCOHelper:
         # collected annotations
         annots: list[list[Annotation]] = [[] for _ in range(len(class_output_names))]
         # class id to class names inside the loaded document
-        class_id_to_name: dict[int, str] = {c["id"] : c["name"] for c in data["categories"]}
+        class_id_to_name: dict[int, str] = {
+            c["id"]: c["name"] for c in data["categories"]
+        }
         for annotation in data["annotations"]:
             # convert loaded names to names wanted by the loading script
             class_name = class_id_to_name[annotation["category_id"]]
@@ -80,30 +91,37 @@ class _COCOHelper:
                 continue
             # create annotation
             left, top, width, height = annotation["bbox"]
-            if (left > image_width
+            if (
+                left > image_width
                 or left + width > image_width
                 or top > image_height
-                or top + height > image_height):
+                or top + height > image_height
+            ):
                 warnings.warn(
                     f"Bbox {class_name, left, top, width, height} out of bounds, "
                     f"file name: {image_info['file_name']}, object id: {annotation['id']}"
                 )
             try:
                 annots[global_class_id].append(
-                    Annotation(global_class_id, left, top, width, height, mask=None, an_type=an_type)
+                    Annotation(
+                        global_class_id,
+                        left,
+                        top,
+                        width,
+                        height,
+                        mask=None,
+                        an_type=an_type,
+                    )
                 )
             except ValueError as e:
                 warnings.warn(
                     f"{e!s}, file name: {image_info['file_name']}, object id: {annotation['id']}"
                 )
-        
+
         return FullPage((image_width, image_height), annots, class_output_names)
 
     @staticmethod
-    def save_annotation(
-            page: "FullPage",
-            output_path: Path
-    ) -> None:
+    def save_annotation(page: "FullPage", output_path: Path) -> None:
         with open(output_path, "w") as f:
             json.dump(page, f, indent=4, cls=COCOFullPageEncoder)
 
@@ -111,6 +129,7 @@ class _COCOHelper:
 class COCOFullPageEncoder(JSONEncoder):
     def default(self, o):
         from ..full_page import FullPage
+
         if isinstance(o, FullPage):
             output = {
                 # "source": obj.source,
@@ -118,7 +137,7 @@ class COCOFullPageEncoder(JSONEncoder):
                 "height": o.size[1],
             }
             for i in range(len(o.class_names)):
-                output[o.class_names[i]] = o.annotations[i] # type: ignore
+                output[o.class_names[i]] = o.annotations[i]  # type: ignore
             return output
         elif isinstance(o, Annotation):
             return COCOAnnotationEncoder().default(o)
@@ -131,7 +150,7 @@ class COCOAnnotationEncoder(JSONEncoder):
         if isinstance(o, Annotation):
             # flatten
             segm = []
-            for x, y in o.mask: # type: ignore
+            for x, y in o.mask:  # type: ignore
                 segm.append(x)
                 segm.append(y)
 
