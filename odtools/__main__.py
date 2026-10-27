@@ -42,6 +42,7 @@ def main():
     form_parser.add_argument("--config", default=None,
                              help="Path to config, see \"default.config\" for example.")
     form_parser.add_argument("--cut_to_fit", action="store_true", help="If set, annotations that extend beyond the patches will be cut to fit")
+    form_parser.add_argument("-n", "--number_of_samples", type=int, default=None, help="Number of samples to output, if None, all will be used")
     # endregion
 
     # region DATASET SPLITTING ARGUMENTS
@@ -231,6 +232,7 @@ def main():
             seed=args.seed,
             verbose=args.verbose,
             cut_to_fit=args.cut_to_fit,
+            n=args.number_of_samples,
         )
     # DATASET STATISTICS
     elif args.command == "stats":

@@ -118,6 +118,7 @@ def format_dataset(
         image_splitting: bool = False,
         aug_ratios: list[float] = None,
         cut_to_fit: bool = False,
+        n: int | None = None,
         verbose: bool = False,
 ) -> None:
     """
@@ -155,6 +156,8 @@ def format_dataset(
         image_source_dir, f"*.{image_format}",
         annot_source_dir, f"*.{input_format.to_annotation_extension()}"
     )
+    if n is not None:
+        data = data[:n]
 
     # dump everything into one directory
     if split_ratio == 1.0 and split_config is None:
