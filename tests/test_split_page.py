@@ -1,5 +1,4 @@
-from odtools.annotations import FullPage, SplitPage
-from odtools.conversions.bounding_box import BoundingBox
+from odtools import FullPage, SplitPage, BoundingBox
 
 
 def _page() -> FullPage:
