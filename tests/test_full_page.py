@@ -1,6 +1,6 @@
 import pytest
 
-from odtools.conversions.annotations import FullPage
+from odtools import FullPage
 
 
 class TestConstruction:

@@ -5,12 +5,12 @@ from typing import TYPE_CHECKING, Literal
 import cv2
 import numpy as np
 
-from ..annotation import Annotation
-from ..annotation_type import AnnotationType
-from ... import conversion_utils
+from ...annotations.annotation import Annotation
+from ...annotations.annotation_type import AnnotationType
+from .. import conversion_utils
 
 if TYPE_CHECKING:
-    from ..full_page import FullPage
+    from ...annotations.full_page import FullPage
 
 
 class _YOLOSegmentationHelper:
@@ -22,7 +22,7 @@ class _YOLOSegmentationHelper:
         class_output_names: list[str],
         an_type: AnnotationType = AnnotationType.GROUND_TRUTH,
     ) -> "FullPage":
-        from ..full_page import FullPage
+        from ...annotations.full_page import FullPage
 
         image_width, image_height = conversion_utils.get_num_pixels(image_path)
         annots = []

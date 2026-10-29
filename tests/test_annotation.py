@@ -1,5 +1,4 @@
-from odtools.conversions.annotations import Annotation
-from odtools.conversions.bounding_box import BoundingBox, Direction
+from odtools import Annotation, BoundingBox, Direction
 
 
 class TestConstruction:

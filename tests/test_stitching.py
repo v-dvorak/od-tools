@@ -1,13 +1,21 @@
-from odtools.conversions.annotations import FullPage
-from odtools.conversions.bounding_box import BoundingBox
+from odtools import FullPage, BoundingBox
 from odtools.inference import SplitSettings
 from odtools.stitching import StitchSettings, stitch_settings
 
 
 def _annot(class_id, left, top, width, height, confidence=1.0):
-    from odtools.conversions.annotations import Annotation
+    from odtools.annotations import Annotation
 
-    return Annotation(class_id, left, top, width, height, None, f"class_{class_id}", confidence=confidence)
+    return Annotation(
+        class_id,
+        left,
+        top,
+        width,
+        height,
+        None,
+        f"class_{class_id}",
+        confidence=confidence,
+    )
 
 
 def _subpage(annotations, class_names, size=(60, 60)) -> FullPage:

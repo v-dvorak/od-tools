@@ -3,7 +3,7 @@ from ultralytics import YOLO
 from pathlib import Path
 
 from .model_wrapper import IModelWrapper
-from ...conversions.annotations.full_page import FullPage
+from ...annotations.full_page import FullPage
 
 
 class YOLODetectionModelWrapper(IModelWrapper):

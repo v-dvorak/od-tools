@@ -10,9 +10,9 @@ if TYPE_CHECKING:
 
 from .annotation import Annotation
 from .annotation_type import AnnotationType
-from ..formats import InputFormat, OutputFormat
-from ...conversions.bounding_box import BoundingBox
-from .format_helpers import (
+from ..conversions.formats import InputFormat, OutputFormat
+from ..conversions.bounding_box import BoundingBox
+from ..conversions.format_helpers import (
     _COCOHelper,
     _MuNGHelper,
     _YOLODetectionHelper,

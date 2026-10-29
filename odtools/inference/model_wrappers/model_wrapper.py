@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 import numpy as np
 
-from ...conversions.annotations.full_page import FullPage
+from ...annotations.full_page import FullPage
 
 
 class IModelWrapper(ABC):

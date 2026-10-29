@@ -2,7 +2,7 @@ from collections import defaultdict
 
 import numpy as np
 
-from ..conversions.annotations import Annotation
+from ..annotations import Annotation
 
 """
 This module is based on the "Object Detection Metrics" by Rafael Padilla.

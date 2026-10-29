@@ -6,7 +6,7 @@ from tqdm import tqdm
 from .formats import InputFormat, OutputFormat
 from .. import splitting
 from ..conversions import conversion_utils
-from ..conversions.annotations import FullPage, SplitPage
+from ..annotations import FullPage, SplitPage
 from ..conversions.bounding_box import BoundingBox
 
 

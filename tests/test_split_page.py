@@ -1,4 +1,4 @@
-from odtools.conversions.annotations import FullPage, SplitPage
+from odtools.annotations import FullPage, SplitPage
 from odtools.conversions.bounding_box import BoundingBox
 
 
@@ -22,7 +22,7 @@ def _page() -> FullPage:
 
 
 def _annot(class_id, left, top, width, height):
-    from odtools.conversions.annotations import Annotation
+    from odtools.annotations import Annotation
 
     return Annotation(class_id, left, top, width, height, None, f"class_{class_id}")
 

@@ -3,8 +3,8 @@ from typing import Self
 from copy import deepcopy
 
 from .full_page import FullPage, Annotation
-from ..bounding_box import BoundingBox
-from ..formats import OutputFormat
+from ..conversions.bounding_box import BoundingBox
+from ..conversions.formats import OutputFormat
 
 
 class SplitPage:

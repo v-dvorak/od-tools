@@ -7,7 +7,7 @@ from ultralytics import YOLO
 from prettytable import PrettyTable, TableStyle
 
 from ..conversions import conversion_utils
-from ..conversions.annotations import FullPage, Annotation
+from ..annotations import FullPage, Annotation
 from ..conversions.formats import InputFormat
 from ..splitting import split_scripts
 from ..splitting import split_utils

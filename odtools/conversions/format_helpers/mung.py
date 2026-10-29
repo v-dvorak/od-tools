@@ -5,12 +5,12 @@ from typing import TYPE_CHECKING
 
 from mung.io import read_nodes_from_file, write_nodes_to_file
 from mung.graph import Node
-from ..annotation import Annotation
-from ..annotation_type import AnnotationType
-from ... import conversion_utils
+from ...annotations.annotation import Annotation
+from ...annotations.annotation_type import AnnotationType
+from .. import conversion_utils
 
 if TYPE_CHECKING:
-    from ..full_page import FullPage
+    from ...annotations.full_page import FullPage
 
 
 class _MuNGHelper:
@@ -39,7 +39,7 @@ class _MuNGHelper:
         class_output_names: list[str],
         an_type: AnnotationType = AnnotationType.GROUND_TRUTH,
     ) -> "FullPage":
-        from ..full_page import FullPage
+        from ...annotations.full_page import FullPage
 
         nodes = read_nodes_from_file(annot_path.__str__())
 

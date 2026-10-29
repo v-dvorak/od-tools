@@ -5,7 +5,7 @@ import numpy as np
 
 from .inference_job import InferenceJob
 from .. import splitting
-from ..conversions.annotations.full_page import FullPage
+from ..annotations.full_page import FullPage
 from ..stitching.stitch_settings import combine_multiple_pages_and_resolve
 
 

@@ -2,8 +2,7 @@ import numpy as np
 import pytest
 from PIL import Image
 
-from odtools.conversions.annotations import FullPage
-from odtools.conversions.formats import InputFormat, OutputFormat
+from odtools import FullPage, InputFormat, OutputFormat
 
 IMAGE_SIZE = (200, 100)  # (width, height), deliberately non-square
 
@@ -27,7 +26,7 @@ def _make_page() -> FullPage:
 
 
 def _annot(class_id, left, top, width, height, confidence=1.0):
-    from odtools.conversions.annotations import Annotation
+    from odtools.annotations import Annotation
 
     return Annotation(
         class_id,
@@ -279,7 +278,7 @@ class TestSemanticSegmentationOutput:
 
 
 def _masked_annot(class_id, left, top, width, height):
-    from odtools.conversions.annotations import Annotation
+    from odtools.annotations import Annotation
 
     return Annotation(
         class_id,

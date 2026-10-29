@@ -4,7 +4,7 @@ import numpy as np
 from mung.io import Node
 
 from .annotation_type import AnnotationType
-from ..bounding_box import BoundingBox, Direction
+from ..conversions.bounding_box import BoundingBox, Direction
 
 
 def _masks_equal(first: np.ndarray | None, second: np.ndarray | None) -> bool:

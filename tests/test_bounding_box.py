@@ -1,6 +1,6 @@
 import pytest
 
-from odtools.conversions.bounding_box import BoundingBox, Direction
+from odtools import BoundingBox, Direction
 
 
 class TestConstruction:

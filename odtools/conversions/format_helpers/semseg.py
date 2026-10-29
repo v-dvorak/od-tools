@@ -5,8 +5,8 @@ import numpy as np
 from PIL import Image
 
 if TYPE_CHECKING:
-    from ..full_page import FullPage
-    from ..annotation import Annotation
+    from ...annotations.full_page import FullPage
+    from ...annotations.annotation import Annotation
 
 
 class _SemanticSegmentationHelper:

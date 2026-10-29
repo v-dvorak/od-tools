@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from odtools.conversions.bounding_box import BoundingBox
+from odtools import BoundingBox
 from odtools.splitting import split_scripts
 import itertools
 

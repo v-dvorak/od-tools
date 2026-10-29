@@ -4,11 +4,11 @@ from json import JSONEncoder
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from ..annotation import Annotation
-from ..annotation_type import AnnotationType
+from ...annotations.annotation import Annotation
+from ...annotations.annotation_type import AnnotationType
 
 if TYPE_CHECKING:
-    from ..full_page import FullPage
+    from ...annotations.full_page import FullPage
 
 
 class _COCOHelper:
@@ -19,7 +19,7 @@ class _COCOHelper:
         class_output_names: list[str],
         an_type: AnnotationType = AnnotationType.GROUND_TRUTH,
     ) -> "FullPage":
-        from ..full_page import FullPage
+        from ...annotations.full_page import FullPage
 
         with open(file_path, "r") as file:
             data = json.load(file)
@@ -71,7 +71,7 @@ class _COCOHelper:
         class_output_names: list[str],
         an_type: AnnotationType = AnnotationType.GROUND_TRUTH,
     ) -> "FullPage":
-        from ..full_page import FullPage
+        from ...annotations.full_page import FullPage
 
         with open(file_path, "r", encoding="utf8") as f:
             data = json.load(f)
@@ -136,7 +136,7 @@ class _COCOHelper:
 
 class COCOFullPageEncoder(JSONEncoder):
     def default(self, o):
-        from ..full_page import FullPage
+        from ...annotations.full_page import FullPage
 
         if isinstance(o, FullPage):
             output = {

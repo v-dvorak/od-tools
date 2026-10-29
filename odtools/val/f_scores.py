@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from . import coco_evaluator
-from ..conversions.annotations import Annotation
+from ..annotations import Annotation
 
 
 def calculate_f1_score(tp: int, fp: int, fn: int) -> float:

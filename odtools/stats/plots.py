@@ -7,7 +7,7 @@ from tqdm import tqdm
 
 from . import std_devs, bins
 from .stat_job import StatJob
-from ..conversions.annotations import FullPage
+from ..annotations import FullPage
 from ..conversions.formats import InputFormat
 
 SMALL_SIZE_CAP = 32 * 32

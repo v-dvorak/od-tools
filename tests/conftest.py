@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from odtools.conversions.annotations import Annotation
+from odtools import Annotation
 
 
 @pytest.fixture
