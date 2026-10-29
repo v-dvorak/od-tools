@@ -1,11 +1,11 @@
 # Datasets
-datasets
+datasets/
 
 # Demo
-models
-images
-logs
-runs
+models/
+images/
+logs/
+runs/
 
 # Test files
 /*.jpg
@@ -14,6 +14,7 @@ runs
 /*.musicxml
 /*.xml
 /*.lmx
+/*.pt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
