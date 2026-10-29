@@ -29,7 +29,16 @@ def _make_page() -> FullPage:
 def _annot(class_id, left, top, width, height, confidence=1.0):
     from odtools.conversions.annotations import Annotation
 
-    return Annotation(class_id, left, top, width, height, None, confidence=confidence)
+    return Annotation(
+        class_id,
+        left,
+        top,
+        width,
+        height,
+        None,
+        f"class_{chr(ord('a') + class_id)}",
+        confidence=confidence,
+    )
 
 
 def _boxes(page: FullPage):
@@ -37,6 +46,60 @@ def _boxes(page: FullPage):
         (a.class_id, a.bbox.left, a.bbox.top, a.bbox.width, a.bbox.height)
         for a in page.all_annotations()
     )
+
+
+class TestAnnotationIdentity:
+    def test_annotations_carry_their_own_class_names(self):
+        page = _make_page()
+        names = sorted(a.class_name for a in page.all_annotations())
+        assert names == ["class_a", "class_b", "class_b"]
+
+    def test_class_name_is_independent_of_class_names_row(self):
+        annot = _annot(0, 10, 10, 20, 30)
+        page = FullPage(IMAGE_SIZE, [[annot]], ["class_a"])
+        page.class_names[0] = "renamed"
+
+        # the annotation's own name wins over the class row name
+        assert annot.class_name == "class_a"
+
+    def test_mung_round_trip_preserves_class_names(self, image_path, tmp_path):
+        page = _make_page()
+
+        page.save_to_file(tmp_path, "page", OutputFormat.MUNG)
+        loaded = FullPage.load_from_file(
+            tmp_path / "page.xml",
+            image_path,
+            {"class_a": 0, "class_b": 1},
+            ["class_a", "class_b"],
+            InputFormat.MUNG,
+        )
+
+        names = sorted(a.class_name for a in loaded.all_annotations())
+        assert names == ["class_a", "class_b", "class_b"]
+
+    def test_coco_round_trip_preserves_class_names(self, tmp_path):
+        page = _make_page()
+        for annot in page.all_annotations():
+            b = annot.bbox
+            annot.mask = [
+                (b.left, b.top),
+                (b.right, b.top),
+                (b.right, b.bottom),
+                (b.left, b.bottom),
+            ]
+
+        page.save_to_file(tmp_path, "page", OutputFormat.COCO)
+        loaded = FullPage.load_from_file(
+            tmp_path / "page.json",
+            None,
+            {"class_a": 0, "class_b": 1},
+            ["class_a", "class_b"],
+            InputFormat.COCO,
+        )
+
+        by_left = {a.bbox.left: a for a in loaded.all_annotations()}
+        assert by_left[10].class_name == "class_a"
+        assert by_left[50].class_name == "class_b"
 
 
 class TestYOLODetectionRoundTrip:
@@ -225,4 +288,5 @@ def _masked_annot(class_id, left, top, width, height):
         width,
         height,
         np.ones((height, width), dtype=np.uint8),
+        f"class_{class_id}",
     )

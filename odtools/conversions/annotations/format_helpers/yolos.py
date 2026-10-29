@@ -26,12 +26,19 @@ class _YOLOSegmentationHelper:
 
         image_width, image_height = conversion_utils.get_num_pixels(image_path)
         annots = []
+        id_to_name = {c_id: name for name, c_id in class_reference_table.items()}
 
         with open(annot_path, "r") as file:
             for line in file:
+                class_id = int(line.strip().split()[0])
+                name = id_to_name.get(class_id, str(class_id))
                 annots.append(
                     _YOLOSegmentationHelper._parse_single_line_yolo_segmentation(
-                        line, image_width, image_height, an_type=an_type
+                        line,
+                        image_width,
+                        image_height,
+                        name,
+                        an_type=an_type,
                     )
                 )
 
@@ -44,6 +51,7 @@ class _YOLOSegmentationHelper:
         line: str,
         image_width: int,
         image_height: int,
+        class_name: str,
         an_type: AnnotationType = AnnotationType.GROUND_TRUTH,
     ) -> Annotation:
         parts = line.strip().split()
@@ -67,7 +75,7 @@ class _YOLOSegmentationHelper:
 
         l, t, w, h = Annotation.bounding_box_from_segmentation(segm)
 
-        return Annotation(class_id, l, t, w, h, segm, an_type=an_type)
+        return Annotation(class_id, l, t, w, h, segm, class_name, an_type=an_type)
 
     @staticmethod
     def save_yolo_segmentation(

@@ -23,12 +23,19 @@ class _YOLODetectionHelper:
         # TODO: manage class filtering
         image_width, image_height = conversion_utils.get_num_pixels(image_path)
         annots = []
+        id_to_name = {c_id: name for name, c_id in class_reference_table.items()}
 
         with open(annot_path, "r") as file:
             for line in file:
+                class_id = int(line.strip().split()[0])
+                name = id_to_name.get(class_id, str(class_id))
                 annots.append(
                     _YOLODetectionHelper._parse_single_line_yolo_detection(
-                        line, image_width, image_height, an_type=an_type
+                        line,
+                        image_width,
+                        image_height,
+                        name,
+                        an_type=an_type,
                     )
                 )
 
@@ -38,7 +45,11 @@ class _YOLODetectionHelper:
 
     @staticmethod
     def _parse_single_line_yolo_detection(
-        line: str, image_width: int, image_height: int, an_type: AnnotationType
+        line: str,
+        image_width: int,
+        image_height: int,
+        class_name: str,
+        an_type: AnnotationType,
     ) -> Annotation:
         """
         From YOLO detection output_format to `Annotation`.
@@ -46,6 +57,7 @@ class _YOLODetectionHelper:
         :param line: single line of detection in YOLO output_format
         :param image_width: image width
         :param image_height: image height
+        :param class_name: name of the annotation's class
         :return: Annotation
         """
         # parse data
@@ -69,6 +81,7 @@ class _YOLODetectionHelper:
             int(width_pixels),
             int(height_pixels),
             None,
+            class_name,
             an_type=an_type,
         )
 

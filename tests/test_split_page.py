@@ -24,7 +24,7 @@ def _page() -> FullPage:
 def _annot(class_id, left, top, width, height):
     from odtools.conversions.annotations import Annotation
 
-    return Annotation(class_id, left, top, width, height, None)
+    return Annotation(class_id, left, top, width, height, None, f"class_{class_id}")
 
 
 def _quadrant_splits() -> list[list[BoundingBox]]:

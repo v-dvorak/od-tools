@@ -7,7 +7,7 @@ from odtools.stitching import StitchSettings, stitch_settings
 def _annot(class_id, left, top, width, height, confidence=1.0):
     from odtools.conversions.annotations import Annotation
 
-    return Annotation(class_id, left, top, width, height, None, confidence=confidence)
+    return Annotation(class_id, left, top, width, height, None, f"class_{class_id}", confidence=confidence)
 
 
 def _subpage(annotations, class_names, size=(60, 60)) -> FullPage:

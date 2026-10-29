@@ -22,10 +22,12 @@ class Annotation:
         width: int,
         height: int,
         mask: np.ndarray | None,
+        class_name: str,
         confidence: float = 1.0,
         an_type: AnnotationType = AnnotationType.GROUND_TRUTH,
     ):
         self.class_id = class_id
+        self.class_name: str = class_name
         self.bbox: BoundingBox = BoundingBox.from_ltwh(
             left=left, top=top, width=width, height=height
         )
@@ -35,13 +37,14 @@ class Annotation:
         self.image_name: str | None = None
 
     def __str__(self):
-        return f"({self.class_id=}, {self.bbox.left}, {self.bbox.top}, {self.bbox.width}, {self.bbox.height}, {self.bbox.segmentation})"
+        return f"({self.class_id=}, {self.class_name=}, {self.bbox.left}, {self.bbox.top}, {self.bbox.width}, {self.bbox.height}, {self.bbox.segmentation})"
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Annotation):
             return NotImplemented
         return (
             self.class_id == other.class_id
+            and self.class_name == other.class_name
             and self.bbox == other.bbox
             and self.confidence == other.confidence
             and self.an_type == other.an_type
@@ -55,6 +58,7 @@ class Annotation:
         return hash(
             (
                 self.class_id,
+                self.class_name,
                 self.bbox.coordinates(),
                 self.confidence,
                 self.an_type,
@@ -67,6 +71,7 @@ class Annotation:
         cls,
         class_id: int,
         bbox: BoundingBox,
+        class_name: str,
         segmentation: np.ndarray | None = None,
         confidence: float = 1.0,
         an_type: AnnotationType = AnnotationType.GROUND_TRUTH,
@@ -78,6 +83,7 @@ class Annotation:
             bbox.width,
             bbox.height,
             mask=segmentation,
+            class_name=class_name,
             confidence=confidence,
             an_type=an_type,
         )
@@ -91,6 +97,12 @@ class Annotation:
 
     def get_class_id(self) -> int:
         return self.class_id
+
+    def get_class_name(self) -> str:
+        return self.class_name
+
+    def set_class_name(self, class_name: str):
+        self.class_name = class_name
 
     @classmethod
     def from_mung_node(
@@ -113,6 +125,7 @@ class Annotation:
             node.width,
             node.height,
             mask=node.mask,
+            class_name=node.class_name,
             an_type=an_type,
         )
 
@@ -185,6 +198,7 @@ class Annotation:
             self.bbox.width,
             self.bbox.height,
             self.mask,
+            self.class_name,
             confidence=self.confidence,
             an_type=self.an_type,
         )

@@ -70,7 +70,7 @@ class _MuNGHelper:
             nodes.append(
                 Node(
                     id_,
-                    page.class_names[annot.class_id],
+                    annot.class_name,
                     top=annot.bbox.top,
                     left=annot.bbox.left,
                     width=annot.bbox.width,

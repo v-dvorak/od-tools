@@ -1,5 +1,4 @@
 from collections import defaultdict
-from typing import Any
 
 import numpy as np
 
@@ -10,11 +9,6 @@ This module is based on the "Object Detection Metrics" by Rafael Padilla.
 url: https://github.com/rafaelpadilla/review_object_detection_metrics
 license: MIT
 """
-
-
-def _mean_or_nan(values: list[float]) -> float:
-    """Mean of the given values, NaN when the list is empty."""
-    return float(np.mean(values)) if values else float("nan")
 
 
 def get_coco_summary(

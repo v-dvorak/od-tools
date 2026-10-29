@@ -280,6 +280,7 @@ class FullPage:
                         round(height),
                         # TODO: what to do with segmentation?
                         mask=None,
+                        class_name=class_names[output_index],
                         confidence=float(result.boxes.conf[i]),
                         an_type=AnnotationType.PREDICTION,
                     )

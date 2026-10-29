@@ -16,6 +16,7 @@ def make_annotation():
         height: int,
         confidence: float = 1.0,
         mask: np.ndarray | None = None,
+        class_name: str | None = None,
     ) -> Annotation:
         return Annotation(
             class_id,
@@ -24,6 +25,7 @@ def make_annotation():
             width,
             height,
             mask,
+            class_name if class_name is not None else f"class_{class_id}",
             confidence=confidence,
         )
 

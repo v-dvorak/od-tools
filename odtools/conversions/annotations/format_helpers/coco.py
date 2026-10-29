@@ -51,7 +51,14 @@ class _COCOHelper:
                 # save parsed annotation
                 annots[class_id].append(
                     Annotation(
-                        class_id, left, top, width, height, segm, an_type=an_type
+                        class_id,
+                        left,
+                        top,
+                        width,
+                        height,
+                        segm,
+                        annot.get("name") or class_name,
+                        an_type=an_type,
                     )
                 )
 
@@ -110,6 +117,7 @@ class _COCOHelper:
                         width,
                         height,
                         mask=None,
+                        class_name=class_name,
                         an_type=an_type,
                     )
                 )
@@ -155,6 +163,7 @@ class COCOAnnotationEncoder(JSONEncoder):
                 segm.append(y)
 
             return {
+                "name": o.class_name,
                 "left": o.bbox.left,
                 "top": o.bbox.top,
                 "width": o.bbox.width,
