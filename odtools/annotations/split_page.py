@@ -4,7 +4,7 @@ from copy import deepcopy
 
 from .full_page import FullPage, Annotation
 from ..conversions.bounding_box import BoundingBox
-from ..conversions.formats import OutputFormat
+from ..conversions.formats import Format
 
 
 class SplitPage:
@@ -24,7 +24,7 @@ class SplitPage:
         self,
         output_dir: Path,
         dato_name: Path | str,
-        output_format: OutputFormat,
+        output_format: Format,
         add_tags: str | None = None,
     ) -> None:
         for row in range(len(self.subpages)):

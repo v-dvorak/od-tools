@@ -1,41 +1,46 @@
+from __future__ import annotations
 from enum import StrEnum
 
 
-class InputFormat(StrEnum):
+class Format(StrEnum):
     MUNG = "mung"
     COCO = "coco"
     YOLO_DETECTION = "yolod"
     YOLO_SEGMENTATION = "yolos"
     DOLORES_COCO = "dolores"
-
-    def to_annotation_extension(self) -> str:
-        match self:
-            case InputFormat.MUNG:
-                return "xml"
-            case InputFormat.COCO | InputFormat.DOLORES_COCO:
-                return "json"
-            case InputFormat.YOLO_DETECTION | InputFormat.YOLO_SEGMENTATION:
-                return "txt"
-            case _:
-                raise ValueError
-
-
-class OutputFormat(StrEnum):
-    MUNG = "mung"
-    COCO = "coco"
-    YOLO_DETECTION = "yolod"
-    YOLO_SEGMENTATION = "yolos"
     SEMANTIC_SEGMENTATION = "semseg"
 
     def to_annotation_extension(self) -> str:
         match self:
-            case OutputFormat.MUNG:
+            case Format.MUNG:
                 return "xml"
-            case OutputFormat.COCO:
+            case Format.COCO | Format.DOLORES_COCO:
                 return "json"
-            case OutputFormat.YOLO_DETECTION | OutputFormat.YOLO_SEGMENTATION:
+            case Format.YOLO_DETECTION | Format.YOLO_SEGMENTATION:
                 return "txt"
-            case OutputFormat.SEMANTIC_SEGMENTATION:
+            case Format.SEMANTIC_SEGMENTATION:
                 return "png"
             case _:
                 raise ValueError
+
+    @classmethod
+    def input_formats(cls) -> list[Format]:
+        """Formats that can be loaded."""
+        from ..conversions.format_helpers import all_subclasses, _HelperBase
+
+        output: set[Format] = set()
+        for sc in all_subclasses(_HelperBase):
+            if sc.FORMAT_TYPE is not None and sc.supports_from_file():
+                output.add(sc.FORMAT_TYPE)
+        return list(output)
+
+    @classmethod
+    def output_formats(cls) -> list[Format]:
+        """Formats that can be saved."""
+        from ..conversions.format_helpers import all_subclasses, _HelperBase
+
+        output: set[Format] = set()
+        for sc in all_subclasses(_HelperBase):
+            if sc.FORMAT_TYPE is not None and sc.supports_to_file():
+                output.add(sc.FORMAT_TYPE)
+        return list(output)

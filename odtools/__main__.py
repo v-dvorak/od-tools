@@ -4,7 +4,7 @@ from pathlib import Path
 
 from . import utils
 from .conversions import formatter
-from .conversions.formats import InputFormat, OutputFormat
+from .conversions.formats import Format
 from .stats import plots
 from .stats.stat_job import StatJob
 from .val import eval_job
@@ -23,14 +23,14 @@ def main():
     form_parser.add_argument(
         "-i",
         "--input_format",
-        default=InputFormat.MUNG.value,
-        choices=[i for i in InputFormat],
+        default=Format.MUNG.value,
+        choices=Format.input_formats(),
     )
     form_parser.add_argument(
         "-o",
         "--output_format",
-        default=OutputFormat.COCO.value,
-        choices=[o for o in OutputFormat],
+        default=Format.COCO.value,
+        choices=Format.output_formats(),
     )
     form_parser.add_argument(
         "--image_format", default="jpg", help="Input image format."
@@ -124,8 +124,8 @@ def main():
     stats_parser.add_argument(
         "-i",
         "--input_format",
-        default=InputFormat.MUNG.value,
-        choices=[i for i in InputFormat],
+        default=Format.MUNG.value,
+        choices=Format.input_formats(),
     )
     stats_parser.add_argument(
         "-j",
@@ -163,8 +163,8 @@ def main():
     val_parser.add_argument(
         "-i",
         "--input_format",
-        default=InputFormat.MUNG.value,
-        choices=[i for i in InputFormat],
+        default=Format.MUNG.value,
+        choices=Format.input_formats(),
     )
     val_parser.add_argument(
         "-m",
@@ -270,8 +270,8 @@ def main():
     # DATASET FORMATTING
     if args.command == "form":
         # input preprocessing
-        input_f = InputFormat(args.input_format.lower())
-        output_f = OutputFormat(args.output_format.lower())
+        input_f = Format(args.input_format.lower())
+        output_f = Format(args.output_format.lower())
 
         if not args.image_splitting and args.augmentation is not None:
             raise ValueError("Cannot augment data without image splitting")
@@ -324,7 +324,7 @@ def main():
             # directories
             Path(args.image_dir),
             Path(args.annot_dir),
-            InputFormat(args.input_format.lower()),
+            Format(args.input_format.lower()),
             # class ids etc.
             class_reference_table=class_id_mapping,
             class_output_names=class_output_names,
@@ -343,7 +343,7 @@ def main():
             Path(args.image_dir),
             Path(args.annot_dir),
             # formatting
-            InputFormat(args.input_format.lower()),
+            Format(args.input_format.lower()),
             eval_job.ModelType.from_string(args.model_type),
             class_output_names,
             iou_threshold=args.iou,

@@ -8,7 +8,7 @@ from prettytable import PrettyTable, TableStyle
 
 from ..conversions import conversion_utils
 from ..annotations import FullPage, Annotation
-from ..conversions.formats import InputFormat
+from ..conversions.formats import Format
 from ..splitting import split_scripts
 from ..splitting import split_utils
 from ..val import f_scores
@@ -43,7 +43,7 @@ def run_f1_scores_vs_iou(
     model_path: Path,
     images_path: Path,
     annotations_path: Path,
-    input_format: InputFormat,
+    input_format: Format,
     model_type: ModelType,
     class_output_names: list[str],
     iou_threshold: float = 0.25,
@@ -137,7 +137,7 @@ def run_f1_scores_vs_iou(
 def retrieve_ground_truth(
     image_path: Path,
     annotation_path: Path,
-    input_format: InputFormat,
+    input_format: Format,
     class_output_names: list[str],
     class_reference_table: dict[str, int],
     index: int,
@@ -225,7 +225,7 @@ def get_gts_and_predictions(
     model_path: Path,
     images_path: Path,
     annotations_path: Path,
-    input_format: InputFormat,
+    input_format: Format,
     model_type: ModelType,
     class_output_names: list[str],
     class_reference_table: dict[str, int],

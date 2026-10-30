@@ -5,26 +5,32 @@ from typing import TYPE_CHECKING
 
 from mung.io import read_nodes_from_file, write_nodes_to_file
 from mung.graph import Node
-from ...annotations.annotation import Annotation
-from ...annotations.annotation_type import AnnotationType
+from ...annotations import Annotation, AnnotationType
 from .. import conversion_utils
+from ..formats import Format
+from .base import _HelperBase
 
 if TYPE_CHECKING:
-    from ...annotations.full_page import FullPage
+    from ...annotations import FullPage
 
 
-class _MuNGHelper:
+class MuNGHelper(_HelperBase):
+    FORMAT_TYPE = Format.MUNG
+    __supports_from_file__ = True
+    __supports_to_file__ = True
+
     @staticmethod
-    def from_mung(
-        annot_path: Path,
+    def from_file(
+        annotation_path: Path,
         image_path: Path,
         class_reference_table: dict[str, int],
         class_output_names: list[str],
         an_type: AnnotationType = AnnotationType.GROUND_TRUTH,
+        with_confidence: bool = False,
     ) -> "FullPage":
         image_size = conversion_utils.get_num_pixels(image_path)
-        return _MuNGHelper.from_mung_file(
-            annot_path,
+        return MuNGHelper.from_mung_file(
+            annotation_path,
             image_size,
             class_reference_table,
             class_output_names,
@@ -60,7 +66,7 @@ class _MuNGHelper:
         return full_page
 
     @staticmethod
-    def save_annotation(
+    def to_file(
         page: "FullPage",
         output_path: Path,
         with_confidence: bool = False,

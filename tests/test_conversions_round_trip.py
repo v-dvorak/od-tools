@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from PIL import Image
 
-from odtools import FullPage, InputFormat, OutputFormat
+from odtools import Format, FullPage
 
 IMAGE_SIZE = (200, 100)  # (width, height), deliberately non-square
 
@@ -64,13 +64,13 @@ class TestAnnotationIdentity:
     def test_mung_round_trip_preserves_class_names(self, image_path, tmp_path):
         page = _make_page()
 
-        page.save_to_file(tmp_path, "page", OutputFormat.MUNG)
+        page.save_to_file(tmp_path, "page", Format.MUNG)
         loaded = FullPage.load_from_file(
             tmp_path / "page.xml",
             image_path,
             {"class_a": 0, "class_b": 1},
             ["class_a", "class_b"],
-            InputFormat.MUNG,
+            Format.MUNG,
         )
 
         names = sorted(a.class_name for a in loaded.all_annotations())
@@ -87,13 +87,13 @@ class TestAnnotationIdentity:
                 (b.left, b.bottom),
             ]
 
-        page.save_to_file(tmp_path, "page", OutputFormat.COCO)
+        page.save_to_file(tmp_path, "page", Format.COCO)
         loaded = FullPage.load_from_file(
             tmp_path / "page.json",
             None,
             {"class_a": 0, "class_b": 1},
             ["class_a", "class_b"],
-            InputFormat.COCO,
+            Format.COCO,
         )
 
         by_left = {a.bbox.left: a for a in loaded.all_annotations()}
@@ -104,7 +104,7 @@ class TestAnnotationIdentity:
 class TestYOLODetectionRoundTrip:
     def test_round_trip(self, image_path, tmp_path):
         page = _make_page()
-        page.save_to_file(tmp_path, "page", OutputFormat.YOLO_DETECTION)
+        page.save_to_file(tmp_path, "page", Format.YOLO_DETECTION)
 
         # the annotation extension must match what save_to_file produced
         assert (tmp_path / "page.txt").exists()
@@ -114,7 +114,7 @@ class TestYOLODetectionRoundTrip:
             image_path,
             {"class_a": 0, "class_b": 1},
             ["class_a", "class_b"],
-            InputFormat.YOLO_DETECTION,
+            Format.YOLO_DETECTION,
         )
 
         # regression: image size must be parsed as (width, height)
@@ -134,7 +134,7 @@ class TestYOLODetectionRoundTrip:
     def test_with_confidence(self, tmp_path):
         page = _make_page()
         page.save_to_file(
-            tmp_path, "page", OutputFormat.YOLO_DETECTION, with_confidence=True
+            tmp_path, "page", Format.YOLO_DETECTION, with_confidence=True
         )
 
         lines = (tmp_path / "page.txt").read_text().splitlines()
@@ -155,7 +155,7 @@ class TestYOLOSegmentationParsing:
             image_path,
             {"class_a": 0},
             ["class_a"],
-            InputFormat.YOLO_SEGMENTATION,
+            Format.YOLO_SEGMENTATION,
         )
 
         annot = next(iter(page.all_annotations()))
@@ -175,7 +175,7 @@ class TestYOLOSegmentationParsing:
                 image_path,
                 {"class_a": 0},
                 ["class_a"],
-                InputFormat.YOLO_SEGMENTATION,
+                Format.YOLO_SEGMENTATION,
             )
 
 
@@ -199,7 +199,7 @@ class TestCOCORoundTrip:
                 (b.left, b.bottom),
             ]
 
-        page.save_to_file(tmp_path, "page", OutputFormat.COCO)
+        page.save_to_file(tmp_path, "page", Format.COCO)
         assert (tmp_path / "page.json").exists()
 
         loaded = FullPage.load_from_file(
@@ -207,7 +207,7 @@ class TestCOCORoundTrip:
             None,
             {"class_a": 0, "class_b": 1},
             ["class_a", "class_b"],
-            InputFormat.COCO,
+            Format.COCO,
         )
 
         assert loaded.size == IMAGE_SIZE
@@ -218,7 +218,7 @@ class TestMuNGRoundTrip:
     def test_round_trip(self, image_path, tmp_path):
         page = _make_page()
 
-        page.save_to_file(tmp_path, "page", OutputFormat.MUNG)
+        page.save_to_file(tmp_path, "page", Format.MUNG)
         assert (tmp_path / "page.xml").exists()
 
         # MuNG does not store page size, the image is needed to recover it
@@ -227,7 +227,7 @@ class TestMuNGRoundTrip:
             image_path,
             {"class_a": 0, "class_b": 1},
             ["class_a", "class_b"],
-            InputFormat.MUNG,
+            Format.MUNG,
         )
 
         assert _boxes(page) == _boxes(loaded)
@@ -244,7 +244,7 @@ class TestSemanticSegmentationOutput:
             ["class_a", "class_b"],
         )
 
-        page.save_to_file(tmp_path, "page", OutputFormat.SEMANTIC_SEGMENTATION)
+        page.save_to_file(tmp_path, "page", Format.SEMANTIC_SEGMENTATION)
 
         mask = Image.open(tmp_path / "page.png")
         assert mask.mode == "RGB"
@@ -266,7 +266,7 @@ class TestSemanticSegmentationOutput:
             ["a", "b", "c", "d"],
         )
 
-        page.save_to_file(tmp_path, "page", OutputFormat.SEMANTIC_SEGMENTATION)
+        page.save_to_file(tmp_path, "page", Format.SEMANTIC_SEGMENTATION)
 
         mask = Image.open(tmp_path / "page.png")
         assert mask.mode == "L"

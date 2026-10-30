@@ -4,17 +4,24 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
+from ..formats import Format
+from .base import _HelperBase
+
 if TYPE_CHECKING:
-    from ...annotations.full_page import FullPage
-    from ...annotations.annotation import Annotation
+    from ...annotations import FullPage, Annotation
 
 
-class _SemanticSegmentationHelper:
+class SemanticSegmentationHelper(_HelperBase):
+    FORMAT_TYPE = Format.SEMANTIC_SEGMENTATION
+    # semantic segmentation is an output-only format
+    __supports_from_file__ = False
+    __supports_to_file__ = True
+
     @staticmethod
-    def save_semantic_segmentation(
+    def to_file(
         page: "FullPage",
         output_path: Path,
-        with_confidence: bool,
+        with_confidence: bool = False,
     ) -> None:
         """
         If there are two or three classes of annotations,
@@ -24,27 +31,25 @@ class _SemanticSegmentationHelper:
 
         if len(page.class_names) not in {2, 3}:
             annotations = page.all_annotations()
-            comp_mask = _SemanticSegmentationHelper.composite_mask(
+            comp_mask = SemanticSegmentationHelper.composite_mask(
                 annotations, page.height, page.width
             )
-            _SemanticSegmentationHelper.save_mask(
-                comp_mask, output_path, multiple=False
-            )
+            SemanticSegmentationHelper.save_mask(comp_mask, output_path, multiple=False)
         else:
             comps = []
             for a in page.annotations:
                 comps.append(
-                    _SemanticSegmentationHelper.composite_mask(
+                    SemanticSegmentationHelper.composite_mask(
                         a, page.height, page.width
                     )
                 )
             for _ in range(3 - len(comps)):
                 comps.append(
-                    _SemanticSegmentationHelper.composite_mask(
+                    SemanticSegmentationHelper.composite_mask(
                         [], page.height, page.width
                     )
                 )
-            _SemanticSegmentationHelper.save_mask(
+            SemanticSegmentationHelper.save_mask(
                 np.stack(comps, axis=-1), output_path, multiple=True
             )
 

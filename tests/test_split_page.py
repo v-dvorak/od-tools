@@ -83,9 +83,9 @@ class TestFromFullPage:
 
     def test_save_to_file_naming(self, tmp_path):
         split_page = SplitPage.from_full_page(_page(), _quadrant_splits())
-        from odtools.conversions.formats import OutputFormat
+        from odtools.conversions.formats import Format
 
-        split_page.save_to_file(tmp_path, "page", OutputFormat.YOLO_DETECTION)
+        split_page.save_to_file(tmp_path, "page", Format.YOLO_DETECTION)
 
         expected = {
             "page-0-0.txt",
@@ -97,10 +97,10 @@ class TestFromFullPage:
 
     def test_save_to_file_naming_with_tag(self, tmp_path):
         split_page = SplitPage.from_full_page(_page(), _quadrant_splits())
-        from odtools.conversions.formats import OutputFormat
+        from odtools.conversions.formats import Format
 
         split_page.save_to_file(
-            tmp_path, "page", OutputFormat.YOLO_DETECTION, add_tags="x150"
+            tmp_path, "page", Format.YOLO_DETECTION, add_tags="x150"
         )
 
         assert (tmp_path / "page-0-0-x150.txt").exists()

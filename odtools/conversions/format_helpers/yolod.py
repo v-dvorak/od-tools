@@ -1,22 +1,28 @@
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from ...annotations.annotation import Annotation
-from ...annotations.annotation_type import AnnotationType
+from ...annotations import Annotation, AnnotationType
 from .. import conversion_utils
+from ..formats import Format
+from .base import _HelperBase
 
 if TYPE_CHECKING:
-    from ...annotations.full_page import FullPage
+    from ...annotations import FullPage
 
 
-class _YOLODetectionHelper:
+class YOLODetectionHelper(_HelperBase):
+    FORMAT_TYPE = Format.YOLO_DETECTION
+    __supports_from_file__ = True
+    __supports_to_file__ = True
+
     @staticmethod
-    def from_yolo_detection(
-        annot_path: Path,
+    def from_file(
+        annotation_path: Path,
         image_path: Path,
         class_reference_table: dict[str, int],
         class_output_names: list[str],
         an_type: AnnotationType = AnnotationType.GROUND_TRUTH,
+        with_confidence: bool = False,
     ) -> "FullPage":
         from ...annotations.full_page import FullPage
 
@@ -25,12 +31,12 @@ class _YOLODetectionHelper:
         annots = []
         id_to_name = {c_id: name for name, c_id in class_reference_table.items()}
 
-        with open(annot_path, "r") as file:
+        with open(annotation_path, "r") as file:
             for line in file:
                 class_id = int(line.strip().split()[0])
                 name = id_to_name.get(class_id, str(class_id))
                 annots.append(
-                    _YOLODetectionHelper._parse_single_line_yolo_detection(
+                    YOLODetectionHelper._parse_single_line_yolo_detection(
                         line,
                         image_width,
                         image_height,
@@ -86,13 +92,15 @@ class _YOLODetectionHelper:
         )
 
     @staticmethod
-    def save_yolo_detection(
-        page: "FullPage", output_path: Path, with_confidence: bool
+    def to_file(
+        page: "FullPage",
+        output_path: Path,
+        with_confidence: bool = False,
     ) -> None:
         with open(output_path, "w") as file:
             for annotation in page.all_annotations():
                 file.write(
-                    _YOLODetectionHelper._serialize_detection(
+                    YOLODetectionHelper._serialize_detection(
                         page.size, annotation, with_confidence
                     )
                 )

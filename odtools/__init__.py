@@ -5,8 +5,7 @@ from .conversions import (
     Direction,
     SplitPage,
     FullPage,
-    InputFormat,
-    OutputFormat,
+    Format,
 )
 from .inference import (
     IModelWrapper,

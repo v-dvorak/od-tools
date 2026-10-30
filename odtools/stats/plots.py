@@ -8,7 +8,7 @@ from tqdm import tqdm
 from . import std_devs, bins
 from .stat_job import StatJob
 from ..annotations import FullPage
-from ..conversions.formats import InputFormat
+from ..conversions.formats import Format
 
 SMALL_SIZE_CAP = 32 * 32
 MEDIUM_SIZE_CAP = 96 * 96
@@ -17,7 +17,7 @@ MEDIUM_SIZE_CAP = 96 * 96
 def load_and_plot_stats(
     images_path: Path,
     annotations_path: Path,
-    input_format: InputFormat,
+    input_format: Format,
     class_reference_table: dict[str, int],
     class_output_names: list[str],
     jobs: list[StatJob] | None = None,

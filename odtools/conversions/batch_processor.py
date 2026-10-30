@@ -3,7 +3,7 @@ from pathlib import Path
 import cv2
 from tqdm import tqdm
 
-from .formats import InputFormat, OutputFormat
+from .formats import Format
 from .. import splitting
 from ..conversions import conversion_utils
 from ..annotations import FullPage, SplitPage
@@ -16,8 +16,8 @@ def process_normal_batch(
     annot_out_dir: Path,
     class_reference_table: dict[str, int],
     class_output_names: list[str],
-    input_format: InputFormat,
-    output_format: OutputFormat,
+    input_format: Format,
+    output_format: Format,
     image_format: str = "jpg",
     resize: int | None = None,
 ) -> None:
@@ -46,8 +46,8 @@ def _process_single_split_image(
     annot_out_dir: Path,
     class_reference_table: dict[str, int],
     class_output_names: list[str],
-    input_format: InputFormat,
-    output_format: OutputFormat,
+    input_format: Format,
+    output_format: Format,
     image_format: str = "jpg",
     window_size: tuple[int, int] = (640, 640),
     overlap_ratio: float = 0.25,
@@ -88,8 +88,8 @@ def process_split_batch(
     annot_out_dir: Path,
     class_reference_table: dict[str, int],
     class_output_names: list[str],
-    input_format: InputFormat,
-    output_format: OutputFormat,
+    input_format: Format,
+    output_format: Format,
     image_format: str = "jpg",
     window_size: tuple[int, int] = (640, 640),
     overlap_ratio: float = 0.25,
@@ -149,7 +149,7 @@ def create_splits_from_full_page(
     annot_path: Path,
     class_reference_table: dict[str, int],
     class_output_names: list[str],
-    input_format: InputFormat,
+    input_format: Format,
     window_size: tuple[int, int] = (640, 640),
     overlap_ratio: float = 0.25,
     cut_to_fit: bool = False,

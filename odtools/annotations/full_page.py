@@ -10,15 +10,9 @@ if TYPE_CHECKING:
 
 from .annotation import Annotation
 from .annotation_type import AnnotationType
-from ..conversions.formats import InputFormat, OutputFormat
 from ..conversions.bounding_box import BoundingBox
-from ..conversions.format_helpers import (
-    _COCOHelper,
-    _MuNGHelper,
-    _YOLODetectionHelper,
-    _YOLOSegmentationHelper,
-    _SemanticSegmentationHelper,
-)
+from ..conversions.formats import Format
+from ..conversions.format_helpers import FORMAT_HELPERS
 
 
 class FullPage:
@@ -133,7 +127,7 @@ class FullPage:
         image_path: Path,
         class_reference_table: dict[str, int],
         class_output_names: list[str],
-        input_format: InputFormat,
+        input_format: Format,
         an_type: AnnotationType = AnnotationType.GROUND_TRUTH,
     ) -> FullPage:
         """
@@ -146,87 +140,41 @@ class FullPage:
         :param input_format: input format
         :return: FullPage
         """
-        match input_format:
-            case InputFormat.COCO:
-                return _COCOHelper.from_coco_file(
-                    annot_path,
-                    class_reference_table,
-                    class_output_names,
-                    an_type=an_type,
-                )
-            case InputFormat.MUNG:
-                return _MuNGHelper.from_mung(
-                    annot_path,
-                    image_path,
-                    class_reference_table,
-                    class_output_names,
-                    an_type=an_type,
-                )
-            case InputFormat.YOLO_DETECTION:
-                return _YOLODetectionHelper.from_yolo_detection(
-                    annot_path,
-                    image_path,
-                    class_reference_table,
-                    class_output_names,
-                    an_type=an_type,
-                )
-            case InputFormat.YOLO_SEGMENTATION:
-                return _YOLOSegmentationHelper.from_yolo_segmentation(
-                    annot_path,
-                    image_path,
-                    class_reference_table,
-                    class_output_names,
-                    an_type=an_type,
-                )
-            case InputFormat.DOLORES_COCO:
-                return _COCOHelper.from_dolores_coco_file(
-                    annot_path,
-                    class_reference_table,
-                    class_output_names,
-                    an_type=an_type,
-                )
-            case _:
-                raise ValueError(f"Unsupported input format: {input_format}")
+        loader = FORMAT_HELPERS.get(input_format)
+        if loader is None or not loader.supports_from_file():
+            raise ValueError(f"Unsupported input format: {input_format}")
+
+        return loader.from_file(
+            annot_path,
+            image_path,
+            class_reference_table,
+            class_output_names,
+            an_type=an_type,
+        )
 
     def save_to_file(
         self,
         output_dir: Path,
         dato_name: Path | str,
-        output_format: OutputFormat,
+        output_format: Format,
         with_confidence: bool = False,
     ) -> None:
         """
-        Based on OutputFormat saves FullPage to the output directory.
+        Based on Format saves FullPage to the output directory.
 
         :param output_dir: output directory
         :param dato_name: output file name, without extension
         :param output_format: output format
         :param with_confidence: add confidence to each annotation in the output
         """
+        loader = FORMAT_HELPERS.get(output_format)
+        if loader is None or not loader.supports_to_file():
+            raise ValueError(f"Unsupported output format: {output_format}")
+
         output_file = (
             output_dir / f"{dato_name}.{output_format.to_annotation_extension()}"
         )
-        match output_format:
-            case OutputFormat.COCO:
-                _COCOHelper.save_annotation(self, output_file)
-            case OutputFormat.YOLO_DETECTION:
-                _YOLODetectionHelper.save_yolo_detection(
-                    self, output_file, with_confidence
-                )
-            case OutputFormat.MUNG:
-                _MuNGHelper.save_annotation(
-                    self, output_file, with_confidence=with_confidence
-                )
-            case OutputFormat.YOLO_SEGMENTATION:
-                _YOLOSegmentationHelper.save_yolo_segmentation(
-                    self, output_file, with_confidence
-                )
-            case OutputFormat.SEMANTIC_SEGMENTATION:
-                _SemanticSegmentationHelper.save_semantic_segmentation(
-                    self, output_file, with_confidence
-                )
-            case _:
-                raise NotImplementedError
+        loader.to_file(self, output_file, with_confidence)
 
     @classmethod
     def from_yolo_result(

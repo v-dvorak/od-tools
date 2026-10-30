@@ -5,7 +5,7 @@ from tqdm import tqdm
 
 from . import batch_processor
 from . import conversion_utils
-from .formats import InputFormat, OutputFormat
+from .formats import Format
 
 
 def setup_split_dirs(
@@ -104,8 +104,8 @@ def format_dataset(
     annot_source_dir: Path,
     class_reference_table: dict[str, int],
     class_output_names: list[str],
-    input_format: InputFormat,
-    output_format: OutputFormat,
+    input_format: Format,
+    output_format: Format,
     image_format: str = "jpg",
     split_ratio: float = 0.9,
     split_config: Path | None = None,
@@ -193,8 +193,8 @@ def format_dataset(
             )
 
         if (
-            output_format == OutputFormat.YOLO_DETECTION
-            or output_format == OutputFormat.YOLO_SEGMENTATION
+            output_format == Format.YOLO_DETECTION
+            or output_format == Format.YOLO_SEGMENTATION
         ):
             _create_yaml_config_for_yolo(
                 output_dir, out_image_dir, class_output_names, verbose=verbose
@@ -268,8 +268,8 @@ def format_dataset(
             )
 
         if (
-            output_format == OutputFormat.YOLO_DETECTION
-            or output_format == OutputFormat.YOLO_SEGMENTATION
+            output_format == Format.YOLO_DETECTION
+            or output_format == Format.YOLO_SEGMENTATION
         ):
             _create_yaml_config_for_yolo(
                 output_dir,

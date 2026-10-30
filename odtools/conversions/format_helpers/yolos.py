@@ -5,22 +5,28 @@ from typing import TYPE_CHECKING, Literal
 import cv2
 import numpy as np
 
-from ...annotations.annotation import Annotation
-from ...annotations.annotation_type import AnnotationType
+from ...annotations import Annotation, AnnotationType
 from .. import conversion_utils
+from ..formats import Format
+from .base import _HelperBase
 
 if TYPE_CHECKING:
-    from ...annotations.full_page import FullPage
+    from ...annotations import FullPage
 
 
-class _YOLOSegmentationHelper:
+class YOLOSegmentationHelper(_HelperBase):
+    FORMAT_TYPE = Format.YOLO_SEGMENTATION
+    __supports_from_file__ = True
+    __supports_to_file__ = True
+
     @staticmethod
-    def from_yolo_segmentation(
-        annot_path: Path,
+    def from_file(
+        annotation_path: Path,
         image_path: Path,
         class_reference_table: dict[str, int],
         class_output_names: list[str],
         an_type: AnnotationType = AnnotationType.GROUND_TRUTH,
+        with_confidence: bool = False,
     ) -> "FullPage":
         from ...annotations.full_page import FullPage
 
@@ -28,12 +34,12 @@ class _YOLOSegmentationHelper:
         annots = []
         id_to_name = {c_id: name for name, c_id in class_reference_table.items()}
 
-        with open(annot_path, "r") as file:
+        with open(annotation_path, "r") as file:
             for line in file:
                 class_id = int(line.strip().split()[0])
                 name = id_to_name.get(class_id, str(class_id))
                 annots.append(
-                    _YOLOSegmentationHelper._parse_single_line_yolo_segmentation(
+                    YOLOSegmentationHelper._parse_single_line_yolo_segmentation(
                         line,
                         image_width,
                         image_height,
@@ -78,10 +84,10 @@ class _YOLOSegmentationHelper:
         return Annotation(class_id, l, t, w, h, segm, class_name, an_type=an_type)
 
     @staticmethod
-    def save_yolo_segmentation(
+    def to_file(
         page: "FullPage",
         output_path: Path,
-        with_confidence: bool,
+        with_confidence: bool = False,
         type_: Literal[
             "convex_hull", "contours", "contours_holes", "npz"
         ] = "contours_holes",
@@ -133,7 +139,7 @@ class _YOLOSegmentationHelper:
                     )
                 if type_ == "convex_hull":
                     file.write(
-                        _YOLOSegmentationHelper._convex_hull_from_mask(
+                        YOLOSegmentationHelper._convex_hull_from_mask(
                             annotation.mask,
                             annotation.bbox.top,
                             annotation.bbox.left,
@@ -144,7 +150,7 @@ class _YOLOSegmentationHelper:
                     )
                     file.write("\n")
                 elif type_ == "contours":
-                    contour = _YOLOSegmentationHelper._contours_from_mask(
+                    contour = YOLOSegmentationHelper._contours_from_mask(
                         annotation.mask,
                         annotation.bbox.top,
                         annotation.bbox.left,
@@ -222,21 +228,21 @@ class _YOLOSegmentationHelper:
             while child_idx >= 0:
                 hole = contours[child_idx]
 
-                if _YOLOSegmentationHelper._is_clockwise(parent):
+                if YOLOSegmentationHelper._is_clockwise(parent):
                     parent = parent[::-1]
-                if not _YOLOSegmentationHelper._is_clockwise(hole):
+                if not YOLOSegmentationHelper._is_clockwise(hole):
                     hole = hole[::-1]
 
-                pi, hi = _YOLOSegmentationHelper._closest_point_pair(parent, hole)
-                parent = _YOLOSegmentationHelper._stitch(parent, hole, pi, hi)
+                pi, hi = YOLOSegmentationHelper._closest_point_pair(parent, hole)
+                parent = YOLOSegmentationHelper._stitch(parent, hole, pi, hi)
 
                 child_idx = hierarchy[child_idx][0]
 
             merged.append(parent)
 
         while len(merged) > 1:
-            pi, qi = _YOLOSegmentationHelper._closest_point_pair(merged[0], merged[1])
-            merged[0] = _YOLOSegmentationHelper._stitch(merged[0], merged[1], pi, qi)
+            pi, qi = YOLOSegmentationHelper._closest_point_pair(merged[0], merged[1])
+            merged[0] = YOLOSegmentationHelper._stitch(merged[0], merged[1], pi, qi)
             merged.pop(1)
 
         pts = merged[0][:, 0, :].astype(float)
