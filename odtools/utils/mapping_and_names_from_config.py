@@ -44,6 +44,7 @@ def get_mapping_and_names_from_config(
             class_id_reference_table[name] = class_id
             if verbose:
                 table.add_row(['"' + name + '"', '"' + output_name + '"', class_id])  # type: ignore
+        class_id_reference_table[output_name] = class_id
 
         output_names.append(output_name)
 

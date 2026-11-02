@@ -5,6 +5,8 @@ from tqdm import tqdm
 from argparse import ArgumentParser
 from musicorpus import Dataset
 
+from odtools import Format
+
 
 DEFAULT_MUNG_FILE_NAME = "transcription.mung"
 OMNIOMR_OUTPUT_DIR = Path("datasets/omniomr-data")
@@ -34,6 +36,13 @@ if __name__ == "__main__":
         type=Path,
         default=OMNIOMR_OUTPUT_DIR,
     )
+    parser.add_argument(
+        "-f",
+        "--format",
+        type=Format,
+        default=Format.MUNG,
+        choices=[Format.DOLORES_COCO, Format.MUNG],
+    )
 
     args = parser.parse_args()
 
@@ -60,9 +69,17 @@ if __name__ == "__main__":
                 args.output / split_name / f"{page.name}.{img_suffix}",
             )
 
-            mung_transcription = page.transcription_path("mung")
-            assert mung_transcription is not None
-            shutil.copyfile(
-                mung_transcription,
-                args.output / split_name / f"{page.name}.xml",
-            )
+            if args.format == Format.MUNG:
+                mung_transcription = page.transcription_path("mung")
+                assert mung_transcription is not None
+                shutil.copyfile(
+                    mung_transcription,
+                    args.output / split_name / f"{page.name}.xml",
+                )
+            elif args.format == Format.DOLORES_COCO:
+                coco_transcription = page.coco_path
+                assert coco_transcription is not None
+                shutil.copyfile(
+                    coco_transcription,
+                    args.output / split_name / f"{page.name}.json",
+                )
