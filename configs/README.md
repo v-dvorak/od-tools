@@ -6,6 +6,8 @@ Configuration file stores setting for dataset processing that would be near impo
 - [Window size](#window-size)
 - [Overlap ratio](#overlap-ratio)
 
+Example of such a configuration file: [noteheads only](./../configs/notes.json). In new ODT version, class ids defined by user before each class name record are not needed: [noteheads only, without id](.//../configs/notes-no-id.json). Also, support for yaml was added: [yaml example](./../configs/lmx-mung-base.yaml).
+
 ## Class mapping
 
 Makes it possible to map class IDs to class names and the other way. Class ID has to be a number, other variables have to be strings. Three formats are available:

@@ -1,0 +1,93 @@
+# These classes are essential for output compatible and comparable
+# with MusicXMLs produced using LMX (Linearized MusicXML).
+# The only difference: ties are left out.
+
+class_mapping:
+    # Noteheads
+    - "noteheadBlack"
+    - "noteheadBlackSmall"
+    - "noteheadHalf"
+    - "noteheadHalfSmall"
+    - "noteheadWhole"
+    - "noteheadWholeSmall"
+
+    # Rests
+    - "rest16th"
+    - "rest32nd"
+    - "rest8th"
+    - "restHalf"
+    - "restHbar"
+    - "restLonga"
+    - "restQuarter"
+    - "restWhole"
+
+    # Notehead attachments (and flags and tremolos)
+    - "stem"
+    - "beam"
+    - "legerLine"
+    - "augmentationDot"
+    - [
+          [
+              "flag16thDown",
+              "flag16thUp",
+              "flag32ndDown",
+              "flag32ndUp",
+              "flag64thDown",
+              "flag64thUp",
+              "flag8thDown",
+              "flag8thUp",
+          ],
+          "flag",
+      ]
+    - [["tremolo1", "tremolo2", "tremolo3", "tremolo4", "tremolo5"], "tremolo"]
+    - "tremoloBeam"
+
+    # Accidentals
+    - "accidentalDoubleFlat"
+    - "accidentalDoubleSharp"
+    - "accidentalFlat"
+    - "accidentalNatural"
+    - "accidentalSharp"
+
+    # Key signatures
+    - "keySignature"
+
+    # Time signatures
+    - "timeSignature"
+    - "timeSig0"
+    - "timeSig1"
+    - "timeSig2"
+    - "timeSig3"
+    - "timeSig4"
+    - "timeSig5"
+    - "timeSig6"
+    - "timeSig7"
+    - "timeSig8"
+    - "timeSig9"
+    - "timeSigCommon"
+    - "timeSigCutCommon"
+    - "timeSigEquals"
+    - "timeSigFractionalSlash"
+    - "timeSigPlus"
+    - "timeSigSlash"
+    - "mensuralProlationCombiningDot"
+
+    # Tuplets
+    - "tuplet"
+    - "tuplet0"
+    - "tuplet1"
+    - "tuplet2"
+    - "tuplet3"
+    - "tuplet4"
+    - "tuplet5"
+    - "tuplet6"
+    - "tuplet7"
+    - "tuplet8"
+    - "tuplet9"
+    - "tupletColon"
+
+    # Other
+    - "repeat1Bar"
+
+window_size: [640, 640]
+overlap_ratio: 0.25
