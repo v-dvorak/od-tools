@@ -1,5 +1,4 @@
 import shutil
-import re
 from pathlib import Path
 from tqdm import tqdm
 from argparse import ArgumentParser
