@@ -1,4 +1,21 @@
 from prettytable import PrettyTable, TableStyle
+from typing import TypeAlias
+from collections.abc import Iterator
+
+CLASS_RECORD_T: TypeAlias = str | list[str] | list[list[str] | str]
+CLASS_MAPPING_T: TypeAlias = dict[str, CLASS_RECORD_T] | list[CLASS_RECORD_T]
+
+
+def _iter_class_mapping(
+    class_mapping: CLASS_MAPPING_T,
+) -> Iterator[tuple[int, CLASS_RECORD_T]]:
+    if isinstance(class_mapping, dict):
+        for i, c in enumerate(class_mapping):
+            yield i, c
+    else:
+        for i in range(len(class_mapping)):
+            c = class_mapping[i]
+            yield i, c
 
 
 def get_mapping_and_names_from_config(
@@ -27,18 +44,18 @@ def get_mapping_and_names_from_config(
         table.align["Output name"] = "l"
         table.align["ID"] = "c"
 
-    for class_id in range(len(class_mapping)):
-        dato = class_mapping[str(class_id)]
-        if isinstance(dato, list):
-            if isinstance(dato[0], list):
+    for class_id, class_record in _iter_class_mapping(class_mapping):  # in range():
+        # dato = class_mapping[str(class_id)]
+        if isinstance(class_record, list):
+            if isinstance(class_record[0], list):
                 # format: "class_id" -> [ [ "class1", "class2", ... ] , "output_name" ]
-                group, output_name = dato[0], dato[1]
+                group, output_name = class_record[0], class_record[1]
             else:
                 # format: "class_id" -> ["class1", "class2", ... ]
-                group, output_name = dato, dato[0]
+                group, output_name = class_record, class_record[0]
         else:
             # format: "class_id" -> "class1"
-            group, output_name = [dato], dato
+            group, output_name = [class_record], class_record
 
         for name in group:
             class_id_reference_table[name] = class_id

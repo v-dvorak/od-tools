@@ -1,2 +1,3 @@
 from .mapping_and_names_from_config import get_mapping_and_names_from_config
 from .get_image import get_image_path
+from .load_config import load_config

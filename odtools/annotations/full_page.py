@@ -129,6 +129,7 @@ class FullPage:
         class_output_names: list[str],
         input_format: Format,
         an_type: AnnotationType = AnnotationType.GROUND_TRUTH,
+        with_confidence: bool = False,
     ) -> FullPage:
         """
         Loads a single page of annotations from given file in specified format.
@@ -150,6 +151,7 @@ class FullPage:
             class_reference_table,
             class_output_names,
             an_type=an_type,
+            with_confidence=with_confidence,
         )
 
     def save_to_file(

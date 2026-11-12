@@ -1,5 +1,4 @@
 import argparse
-import json
 from pathlib import Path
 
 from . import utils
@@ -7,7 +6,7 @@ from .conversions import formatter
 from .conversions.formats import Format
 from .stats import plots
 from .stats.stat_job import StatJob
-from .val import eval_job
+from .val import coco_eval_job, eval_job
 
 
 def main():
@@ -215,6 +214,90 @@ def main():
 
     # endregion
 
+    # region COCO EVALUATION OF PREDICTIONS ARGUMENTS
+    eval_parser = subparsers.add_parser(
+        "eval", help="Evaluate predictions against labels using COCO metrics."
+    )
+    eval_parser.add_argument(
+        "pred_dir", help="Path to directory with predicted annotations."
+    )
+    eval_parser.add_argument(
+        "label_dir", help="Path to directory with label (ground truth) annotations."
+    )
+
+    eval_parser.add_argument(
+        "-p",
+        "--pred_format",
+        default=Format.MUNG.value,
+        choices=Format.input_formats(),
+        help="Format of predicted annotations.",
+    )
+    eval_parser.add_argument(
+        "-l",
+        "--label_format",
+        default=Format.MUNG.value,
+        choices=Format.input_formats(),
+        help="Format of label annotations.",
+    )
+    eval_parser.add_argument(
+        "-o",
+        "--output_dir",
+        type=str,
+        default=None,
+        help="Where results are saved, defaults to eval/<pred_dir name>.",
+    )
+    eval_parser.add_argument(
+        "--image_format", default="jpg", help="Input image format."
+    )
+
+    eval_parser.add_argument(
+        "-r",
+        "--rescale",
+        action="store_true",
+        help="Try rescaling the predictions, scale 1.0 is always included.",
+    )
+    eval_parser.add_argument(
+        "--scale_start",
+        type=float,
+        default=0.9,
+        help="First scale tried when rescaling.",
+    )
+    eval_parser.add_argument(
+        "--scale_end",
+        type=float,
+        default=1.1,
+        help="Last scale tried when rescaling.",
+    )
+    eval_parser.add_argument(
+        "--scale_step",
+        type=float,
+        default=0.05,
+        help="Fineness of the rescaling, step between tried scales.",
+    )
+    eval_parser.add_argument(
+        "--scale_gt",
+        action="store_true",
+        help="Rescale the ground truth instead of the predictions.",
+    )
+    eval_parser.add_argument(
+        "-c",
+        "--confidence_threshold",
+        type=float,
+        default=0.0,
+        help="Predictions below this confidence are not evaluated.",
+    )
+
+    # global arguments
+    eval_parser.add_argument(
+        "-v", "--verbose", action="store_true", help="Make script verbose"
+    )
+    eval_parser.add_argument(
+        "--config",
+        default=None,
+        help='Path to config, see "default.config" for example.',
+    )
+    # endregion
+
     # region CONFIG CHECK ARGUMENTS
     conf_parser = subparsers.add_parser("confcheck")
     conf_parser.add_argument("config_path", help="Path to config.")
@@ -228,10 +311,7 @@ def main():
 
     # CONFIG VERBOSE CHECK
     if args.command == "confcheck":
-        with open(args.config_path, "r", encoding="utf8") as f:
-            loaded_config = json.load(f)
-
-        utils.get_mapping_and_names_from_config(loaded_config, verbose=True)
+        utils.load_config(args.config_path, verbose=True)
         return 0
 
     # DATASET TRAIN/TEST SPLIT (without any augmentation or image splitting)
@@ -256,15 +336,8 @@ def main():
 
     # CONFIG LOADING
     # later methods need the config loaded
-    if args.config is None:
-        with open("configs/default.json", "rt") as f:
-            loaded_config = json.load(f)
-    else:
-        with open(args.config, "r", encoding="utf8") as f:
-            loaded_config = json.load(f)
-
-    class_id_mapping, class_output_names = utils.get_mapping_and_names_from_config(
-        loaded_config
+    class_id_mapping, class_output_names, window_size, overlap_ratio = (
+        utils.load_config(args.config)
     )
 
     # DATASET FORMATTING
@@ -304,11 +377,8 @@ def main():
             resize=args.resize,
             image_format=args.image_format,
             # image splitting settings
-            window_size=(
-                loaded_config["window_size"][0],
-                loaded_config["window_size"][1],
-            ),
-            overlap_ratio=loaded_config["overlap_ratio"],
+            window_size=window_size,
+            overlap_ratio=overlap_ratio,
             image_splitting=args.image_splitting,
             # augmentation
             aug_ratios=args.augmentation,
@@ -352,6 +422,25 @@ def main():
             output_dir=Path(args.output_dir) if args.output_dir is not None else None,
             summarize=args.sum,
             count=args.count,
+            verbose=args.verbose,
+        )
+    # COCO EVALUATION OF PREDICTIONS
+    elif args.command == "eval":
+        coco_eval_job.run_coco_eval(
+            Path(args.pred_dir),
+            Path(args.label_dir),
+            class_reference_table=class_id_mapping,
+            class_output_names=class_output_names,
+            pred_format=Format(args.pred_format.lower()),
+            label_format=Format(args.label_format.lower()),
+            output_dir=Path(args.output_dir) if args.output_dir is not None else None,
+            image_format=args.image_format,
+            rescale=args.rescale,
+            scale_start=args.scale_start,
+            scale_end=args.scale_end,
+            scale_step=args.scale_step,
+            scale_gt=args.scale_gt,
+            confidence_threshold=args.confidence_threshold,
             verbose=args.verbose,
         )
 

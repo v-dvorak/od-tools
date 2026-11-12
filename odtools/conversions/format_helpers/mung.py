@@ -35,6 +35,7 @@ class MuNGHelper(_HelperBase):
             class_reference_table,
             class_output_names,
             an_type=an_type,
+            with_confidence=with_confidence,
         )
 
     @staticmethod
@@ -44,6 +45,7 @@ class MuNGHelper(_HelperBase):
         class_reference_table: dict[str, int],
         class_output_names: list[str],
         an_type: AnnotationType = AnnotationType.GROUND_TRUTH,
+        with_confidence: bool = False,
     ) -> "FullPage":
         from ...annotations.full_page import FullPage
 
@@ -54,8 +56,11 @@ class MuNGHelper(_HelperBase):
         for node in nodes:
             if node.class_name in class_reference_table:
                 annots.append(
-                    Annotation.from_mung_node(
-                        class_reference_table[node.class_name], node, an_type=an_type
+                    MuNGHelper.from_mung_node(
+                        class_reference_table[node.class_name],
+                        node,
+                        an_type=an_type,
+                        with_confidence=with_confidence,
                     )
                 )
 
@@ -64,6 +69,32 @@ class MuNGHelper(_HelperBase):
             image_size, annots, class_output_names
         )
         return full_page
+
+    @staticmethod
+    def from_mung_node(
+        class_id: int,
+        node: Node,
+        an_type: AnnotationType = AnnotationType.GROUND_TRUTH,
+        with_confidence: bool = False,
+    ) -> Annotation:
+        """
+        Creates a new Annotation object from Mung Node.
+
+        :param class_id: class id
+        :param node: Mung Node
+        :return: new Annotation object
+        """
+        return Annotation(
+            class_id,
+            node.left,
+            node.top,
+            node.width,
+            node.height,
+            mask=node.mask,
+            class_name=node.class_name,
+            an_type=an_type,
+            confidence=node.data.get("confidence", 1.0),
+        )
 
     @staticmethod
     def to_file(

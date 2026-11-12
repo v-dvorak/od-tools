@@ -1,8 +1,6 @@
 from typing import Self
 import numpy as np
 
-from mung.io import Node
-
 from .annotation_type import AnnotationType
 from ..conversions.bounding_box import BoundingBox, Direction
 
@@ -103,31 +101,6 @@ class Annotation:
 
     def set_class_name(self, class_name: str):
         self.class_name = class_name
-
-    @classmethod
-    def from_mung_node(
-        cls,
-        class_id: int,
-        node: Node,
-        an_type: AnnotationType = AnnotationType.GROUND_TRUTH,
-    ) -> Self:
-        """
-        Creates a new Annotation object from Mung Node.
-
-        :param class_id: class id
-        :param node: Mung Node
-        :return: new Annotation object
-        """
-        return cls(
-            class_id,
-            node.left,
-            node.top,
-            node.width,
-            node.height,
-            mask=node.mask,
-            class_name=node.class_name,
-            an_type=an_type,
-        )
 
     @staticmethod
     def bounding_box_from_segmentation(

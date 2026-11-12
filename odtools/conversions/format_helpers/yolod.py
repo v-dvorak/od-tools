@@ -42,6 +42,7 @@ class YOLODetectionHelper(_HelperBase):
                         image_height,
                         name,
                         an_type=an_type,
+                        with_confidence=with_confidence,
                     )
                 )
 
@@ -56,6 +57,7 @@ class YOLODetectionHelper(_HelperBase):
         image_height: int,
         class_name: str,
         an_type: AnnotationType,
+        with_confidence: bool = False,
     ) -> Annotation:
         """
         From YOLO detection output_format to `Annotation`.
@@ -73,6 +75,10 @@ class YOLODetectionHelper(_HelperBase):
         center_y = float(parts[2])
         width = float(parts[3])
         height = float(parts[4])
+        if with_confidence:
+            confidence = float(parts[5])
+        else:
+            confidence = 1.0
 
         # Convert normalized coordinates to pixel values
         left = (center_x * image_width) - (width * image_width) / 2
@@ -89,6 +95,7 @@ class YOLODetectionHelper(_HelperBase):
             None,
             class_name,
             an_type=an_type,
+            confidence=confidence,
         )
 
     @staticmethod
