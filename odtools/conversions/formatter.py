@@ -324,6 +324,10 @@ def format_musicorpus_dataset(
     transcription under the same file names (`image.jpg`,
     `transcription.mung`, ...).
 
+    Splits that end up with no usable pages (empty in the splits file, or
+    with all of their pages missing) are skipped entirely: no subdirectory
+    is created for them and the YOLO config does not reference them.
+
     :param output_dir: path to final dataset, one subdirectory per split
     :param source_dir: path to the Musicorpus dataset folder
         (the one containing `musicorpus.json`)
@@ -378,6 +382,8 @@ def format_musicorpus_dataset(
             f"with splits: {', '.join(split_names)}"
         )
 
+    processed_splits: list[str] = []
+
     with tempfile.TemporaryDirectory() as staging:
         staging_images = Path(staging) / "images"
         staging_annots = Path(staging) / "annotations"
@@ -424,6 +430,13 @@ def format_musicorpus_dataset(
                     / f"{page.name}.{input_format.to_annotation_extension()}",
                 )
 
+            if not any(staging_images.iterdir()):
+                print(
+                    f"Warning: split '{split_name}' contains no usable pages, "
+                    "skipping"
+                )
+                continue
+
             format_dataset(
                 output_dir / split_name,
                 staging_images,
@@ -446,6 +459,7 @@ def format_musicorpus_dataset(
                 verbose=verbose,
                 create_yolo_config=False,
             )
+            processed_splits.append(split_name)
 
     # a single YOLO config in the dataset root,
     # pointing at the directories of the respective splits
@@ -453,9 +467,13 @@ def format_musicorpus_dataset(
         output_format == Format.YOLO_DETECTION
         or output_format == Format.YOLO_SEGMENTATION
     ):
-        defined = set(split_names)
+        if not processed_splits:
+            print("Warning: no pages were formatted, not creating a YOLO config")
+            return
 
-        train_split = "train" if "train" in defined else split_names[0]
+        defined = set(processed_splits)
+
+        train_split = "train" if "train" in defined else processed_splits[0]
         val_split = "validation" if "validation" in defined else train_split
         test_split = "test" if "test" in defined else None
 

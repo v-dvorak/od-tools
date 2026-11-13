@@ -6,7 +6,7 @@ from .conversions import formatter
 from .conversions.formats import Format
 from .stats import plots
 from .stats.stat_job import StatJob
-from .val import coco_eval_job, eval_job
+from .val import coco_eval_job
 
 
 def main():
@@ -171,68 +171,6 @@ def main():
     stats_parser.add_argument(
         "--sum", action="store_true", help='Adds "All" category to stats.'
     )
-    # endregion
-
-    # region MODEL VALIDATION ARGUMENTS
-    val_parser = subparsers.add_parser("val")
-
-    val_parser.add_argument("model_path", type=str, help="Path to model.")
-    val_parser.add_argument("image_dir", help="Path to images.")
-    val_parser.add_argument("annot_dir", help="Path to annotations.")
-
-    val_parser.add_argument(
-        "-i",
-        "--input_format",
-        default=Format.MUNG.value,
-        choices=Format.input_formats(),
-    )
-    val_parser.add_argument(
-        "-m",
-        "--model_type",
-        default="yolod",
-        choices=["yolod", "yolos"],
-        help="Type of model.",
-    )
-
-    val_parser.add_argument(
-        "-o",
-        "--output_dir",
-        type=str,
-        default=None,
-        help="Path to output directory, if not specified, plot will be shown.",
-    )
-
-    val_parser.add_argument("--image_format", default="jpg", help="Input image format.")
-
-    val_parser.add_argument(
-        "--overlap", type=float, default=0.25, help="Overlap ratio for image splits."
-    )
-    val_parser.add_argument(
-        "-c", "--count", type=int, help="How many images the model will be tested on."
-    )
-    val_parser.add_argument(
-        "-s", "--seed", type=int, default=42, help="Seed for dataset shuffling."
-    )
-    val_parser.add_argument(
-        "--sum", action="store_true", help='Adds "All" category to evaluation.'
-    )
-    val_parser.add_argument(
-        "--iou",
-        type=float,
-        default=0.25,
-        help="Threshold to consider two annotations overlapping while resolving predictions.",
-    )
-
-    # global arguments
-    val_parser.add_argument(
-        "-v", "--verbose", action="store_true", help="Make script verbose"
-    )
-    val_parser.add_argument(
-        "--config",
-        default=None,
-        help='Path to config, see "default.config" for example.',
-    )
-
     # endregion
 
     # region COCO EVALUATION OF PREDICTIONS ARGUMENTS
@@ -460,25 +398,6 @@ def main():
             # others
             output_dir=Path(args.output_dir) if args.output_dir is not None else None,
             summarize=args.sum,
-            verbose=args.verbose,
-        )
-    # MODEL VALIDATION
-    elif args.command == "val":
-        eval_job.run_f1_scores_vs_iou(
-            # input paths
-            Path(args.model_path),
-            Path(args.image_dir),
-            Path(args.annot_dir),
-            # formatting
-            Format(args.input_format.lower()),
-            eval_job.ModelType.from_string(args.model_type),
-            class_output_names,
-            iou_threshold=args.iou,
-            overlap=args.overlap,
-            # optional graph saving
-            output_dir=Path(args.output_dir) if args.output_dir is not None else None,
-            summarize=args.sum,
-            count=args.count,
             verbose=args.verbose,
         )
     # COCO EVALUATION OF PREDICTIONS

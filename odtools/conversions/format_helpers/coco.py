@@ -3,6 +3,8 @@ from json import JSONEncoder
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import numpy as np
+
 from ...annotations import Annotation, AnnotationType
 from .base import _HelperBase
 from ..formats import Format
@@ -102,9 +104,16 @@ class COCOFullPageEncoder(JSONEncoder):
 class COCOAnnotationEncoder(JSONEncoder):
     def default(self, o):
         if isinstance(o, Annotation):
+            mask = o.mask
+            if mask is None or isinstance(mask, np.ndarray):
+                # masks loaded from MuNG are (height, width) binary arrays
+                # with no polygon representation, and annotations without
+                # a mask have none either: fall back to the bbox corners
+                mask = Annotation.segmentation_from_bounding_box(o.bbox)
+
             # flatten
             segm = []
-            for x, y in o.mask:  # type: ignore
+            for x, y in mask:  # type: ignore
                 segm.append(x)
                 segm.append(y)
 
