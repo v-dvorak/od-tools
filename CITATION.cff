@@ -1,0 +1,20 @@
+cff-version: 1.2.0
+message: "If you use this software in your research, please cite it using the metadata from this file."
+title: Object Detection Tools (ODT)
+type: software
+authors:
+  - family-names: "Dvořák"
+    given-names: "Vojtěch"
+repository-code: "https://github.com/v-dvorak/od-tools"
+preferred-citation:
+  type: thesis
+  thesis-type: "Bachelor's thesis"
+  title: "Fast Optical Music Recognition Using the YOLO Platform"
+  authors:
+    - family-names: "Dvořák"
+      given-names: "Vojtěch"
+  institution: "Charles University, Faculty of Mathematics and Physics"
+  department: "Institute of Formal and Applied Linguistics"
+  location: "Prague"
+  year: 2025
+  url: "http://hdl.handle.net/20.500.11956/200867"

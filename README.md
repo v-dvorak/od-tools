@@ -1,20 +1,64 @@
 # Object Detection Tools (ODT)
 
-ODT is a Python library and framework designed for handling annotations used as both inputs and outputs in object detection models. It provides a streamlined way to work with detection data, making it easier to preprocess, analyze, and utilize annotations in OD workflows.
+ODT is a Python library and command-line tool for working with object detection annotations in optical music recognition (OMR). It covers the parts of an OMR experiment pipeline that sit around the model itself:
 
-For usage details, check out [TonIC](https://github.com/v-dvorak/tonic).
+- converting annotations between formats (MuNG, COCO, YOLO, semantic segmentation),
+- splitting large scans into fixed-size tiles for training and inference,
+- stitching tile predictions back into full-page annotations.
 
-## Core features
+It was developed as infrastructure for the [TonIC](https://github.com/v-dvorak/tonic) pipeline and for experiments on the [Musicorpus](https://github.com/OmniOMR/musicorpus) dataset. Written in Python ≥ 3.11.
 
-### Conversions between annotation formats
+## Installation
 
-- Supported formats:
-    - [MuNG](https://github.com/OMR-Research/mung)
-    - [COCO](https://cocodataset.org/#home)
-    - [YOLO detection](https://docs.ultralytics.com/datasets/detect/) (YOLOd)
-    - [YOLO segmentation](https://docs.ultralytics.com/datasets/segment/) (YOLOs)
-    - Semantic Segmentation (SemSeg)
-- Supported conversions:
+```bash
+pip install -e .
+```
+
+For development install `pytest`, `ruff`, `mypy` (`pip install -e ".[dev]"`).
+
+## Command-line usage
+
+All functionality is available through `python -m odtools <command>`:
+
+| Command | Purpose |
+|-|-|
+| `form` | Convert a dataset between annotation formats, optionally resizing images, splitting them into tiles, and applying zoom augmentation. |
+| `split` | Split a dataset into train/test directories (no other processing). |
+| `stats` | Compute and plot dataset statistics (class frequencies, bounding box heatmaps). |
+| `eval` | Evaluate stored predictions against ground truth using COCO metrics, with optional bounding box rescaling. |
+| `confcheck` | Validate a config file. |
+
+Run `python -m odtools <command> --help` for the full list of arguments.
+
+Most commands take a `--config` file that maps class IDs to class names and sets tile size and overlap. The format is described in [configs/README.md](configs/README.md); see the files in [configs/](configs/) for examples (JSON and YAML).
+
+### Example: formatting a Musicorpus dataset
+
+Datasets in the Musicorpus format are converted with the `form` job. Pass the dataset root as `image_dir` and add the `--musicorpus` flag; every split the dataset defines (train, validation, test and any additional splits) is processed into its own subdirectory of the output:
+
+```bash
+python -m odtools form datasets/my-converted-dataset path-to/musicorpus-source-dataset \
+    --musicorpus \
+    -i mung \
+    -o yolod \
+    --config my-conversion-config.json
+```
+
+An alternative splits file can be selected with `--splits_variant`. Image splitting (slicing images into tiles of set size with set overlap) can be selected with `--image_splitting`.
+
+## Library usage
+
+### Annotation conversions
+
+Supported formats:
+
+- [MuNG](https://github.com/OMR-Research/mung)
+- [COCO](https://cocodataset.org/#home)
+- [YOLO detection](https://docs.ultralytics.com/datasets/detect/) (YOLOd)
+- [YOLO segmentation](https://docs.ultralytics.com/datasets/segment/) (YOLOs)
+- Semantic segmentation (SemSeg) [What is semantic segmentation?](https://roboflow.com/blog/what-is-semantic-segmentation)
+
+Supported conversions:
 
 | From \ To | MuNG | COCO | YOLOd | YOLOs | SemSeg |
 |-|-|-|-|-|-|
@@ -28,80 +72,42 @@ For usage details, check out [TonIC](https://github.com/v-dvorak/tonic).
 >
 > ✖️ - Semantic segmentation does not encode instances, it is not possible to convert it to instance-based formats.
 
-### Image splitting with overlaps with annotations adjusted accordingly
+### Image splitting and stitching
 
-When a model has a fixed input resolution, objects that are too small in the original image may be lost due to downscaling and compression during preprocessing. This can negatively impact detection performance.
-
-That's where image splitting and stitching comes in. The **ODT** library allows the user to specify input tile size, overlap ratio between tiles (to which the input image is split), based on these parameters, predictions are made for each tile separately and detected annotations are automatically merged and resolved as if the splitting never happened.
+When a model has a fixed input resolution, objects that are small relative to the page (noteheads in particular) may become undetectable after downscaling. ODT splits images into overlapping tiles, runs detection per tile, and merges the results back into a single annotation set for the full page - the merging removes detections cut off at tile edges and deduplicates overlapping detections via IoU.
 
 ![](docs/splitviz/unique-viz.jpg)
 
-### Easy-to-setup pipeline
+## Tests and Formatting
 
-Loaded models, transformed images, and split settings are encapsulated in an `InferenceJob`, which is passed to a method that returns the finalized predictions:
+First install development dependencies `pip install -e ".[dev]"`.
 
-```python
-import cv2
-from odtools.Inference import InferenceJob, SplitSettings, run_multiple_prediction_jobs
-
-job = InferenceJob(
-    image=loaded_image,
-    model_wrapper=notehead_detector,
-    # retrieve only full and empty noteheads
-    wanted_ids=[0, 1],
-    split_settings=SplitSettings(
-    width=640,
-    height=640,
-    overlap_ratio=0.10,
-    iou_threshold=0.25,
-    edge_offset_ratio=0.04
-    )
-)
-
-result = run_multiple_prediction_jobs([job])
+```bash
+python -m pytest
+python -m ruff format
 ```
 
-This job processes an image using a loaded model (`notehead_detector`). The image is divided into `640 × 640` pixel tiles with a `10%` overlap (`64 px`) between neighboring tiles. `wanted_ids` are used to tell the method to not bother with conversion of annotations that won't be used later.
+## Acknowledgment
 
-When merging detected annotations:
+This package was developed and first used for WoRMS 2024 paper by Dvorak et al., [Staff Layout Analysis using the YOLO Platform](https://arxiv.org/pdf/2411.15741#page=19). The repository has undergone multiple significant changes since then.
 
-- Detections too close to the edge (within `4%` of the tile’s side length) are removed to avoid partially detected objects interfering when removing duplicates.
-- Annotations with an IoU greater than `0.25` are considered duplicates and are filtered out.
+## Citation
 
-Example of output of multiple models merged and resolved. In this case two models were used:
+If you use this software in your research in this current version, please cite this:
 
-- Layout detector without splitting
-- Notehead detector with image splitting, noteheads are just too small to be detected after compressing the image to `640 * 640` px
-
-![](docs/analysis-showcase.png)
-
-### Dataset visualization
-
-- Average number of annotations per page (with stddev):
-
-![](docs/graphs/annot_counts.png)
-
-- Annotation bounding box heatmaps:
-
-![](docs/graphs/combined.png)
-
-### Easy-to-implement model wrappers
-
-**ODT** is designed primarily for use with YOLO models. However, it can be extended to support other architectures, such as Fast R-CNN or U-Net. To integrate a different model, users simply need to implement a custom wrapper class that inherits from the abstract class [`IModelWrapper`](odtools/Inference/ModelWrappers/ModelWrapper.py) and define its two methods: `predict_single` and `predict_multiple`.
-
-## References
-
-### Object Detection Metrics
-
-The evaluation module is based on the **Object Detection Metrics** by Rafael Padilla. Published as:
-
-> Padilla, Rafael and Passos, Wesley L. and Dias, Thadeu L. B. and Netto, Sergio L. and da Silva, Eduardo A. B. A Comparative Analysis of Object Detection Metrics with a Companion Open-Source Toolkit. Journal Electronics, 2021. [GitHub](https://github.com/rafaelpadilla/review_object_detection_metrics), [DOI](https://doi.org/10.3390/electronics10030279)
-
-### Images
-
-> ROLLE, Johann Heinrich, Karl Friedrich Wilhelm HERROSEE a Eduard ZACHARIÄ. Gedor, oder das Erwachen zum bessern Leben: von Herrosee, Prediger in Berlin. Leipzig: Auf Kosten der Wittwe des Autors, und in Commision bey Schwickert, 1787, p. 2. Available online at: [https://www.digitalniknihovna.cz/mzk/uuid/uuid:2d5f652c-1df0-474c-ae23-3fb699afe808](https://www.digitalniknihovna.cz/mzk/uuid/uuid:2d5f652c-1df0-474c-ae23-3fb699afe808)
-
-> BÉRIOT, Charles Auguste de. Sonate pour deux pianos, op. 61. Paris: Hamelle, [1890?], p. 28. Available online at: [https://www.digitalniknihovna.cz/mzk/uuid/uuid:2e117f2e-4c19-4bc3-ba6b-5531ca623e22](https://www.digitalniknihovna.cz/mzk/uuid/uuid:2e117f2e-4c19-4bc3-ba6b-5531ca623e22)
+```bibtex
+@mastersthesis{dvorak2025fast,
+  author = {Dvořák, Vojtěch},
+  title = {Fast Optical Music Recognition Using the YOLO Platform},
+  school = {Charles University, Faculty of Mathematics and Physics},
+  year = {2025},
+  address = {Prague},
+  type = {Bachelor's thesis},
+  department = {Institute of Formal and Applied Linguistics},
+  advisor = {Mayer, Jiří},
+  url = {http://hdl.handle.net/20.500.11956/200867}
+}
+```
 
 ## Contact
 
