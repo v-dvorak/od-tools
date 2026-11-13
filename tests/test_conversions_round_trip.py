@@ -1,3 +1,5 @@
+import json
+
 import numpy as np
 import pytest
 from PIL import Image
@@ -80,7 +82,7 @@ class TestAnnotationIdentity:
         page = _make_page()
         for annot in page.all_annotations():
             b = annot.bbox
-            annot.mask = [
+            annot.mask = [  # type: ignore
                 (b.left, b.top),
                 (b.right, b.top),
                 (b.right, b.bottom),
@@ -90,7 +92,7 @@ class TestAnnotationIdentity:
         page.save_to_file(tmp_path, "page", Format.COCO)
         loaded = FullPage.load_from_file(
             tmp_path / "page.json",
-            None,
+            None,  # type: ignore
             {"class_a": 0, "class_b": 1},
             ["class_a", "class_b"],
             Format.COCO,
@@ -190,7 +192,7 @@ class TestCOCORoundTrip:
         # COCO output needs segmentation masks
         for annot in page.all_annotations():
             b = annot.bbox
-            annot.mask = [
+            annot.mask = [  # type: ignore
                 (b.left, b.top),
                 (b.right, b.top),
                 (b.right, b.bottom),
@@ -202,7 +204,7 @@ class TestCOCORoundTrip:
 
         loaded = FullPage.load_from_file(
             tmp_path / "page.json",
-            None,
+            None,  # type: ignore
             {"class_a": 0, "class_b": 1},
             ["class_a", "class_b"],
             Format.COCO,
@@ -210,6 +212,32 @@ class TestCOCORoundTrip:
 
         assert loaded.size == IMAGE_SIZE
         assert _boxes(page) == _boxes(loaded)
+
+
+class TestCOCOSegmentationFallback:
+    def test_none_mask_falls_back_to_bbox_polygon(self, tmp_path):
+        # annotations without a mask used to crash the COCO encoder
+        page = _make_page()
+        page.save_to_file(tmp_path, "page", Format.COCO)
+
+        data = json.loads((tmp_path / "page.json").read_text())
+        annot = data["class_a"][0]
+        # bbox (10, 10, 20, 30) -> corner polygon
+        assert annot["segmentation"] == [[10, 10, 30, 10, 30, 40, 10, 40]]
+
+    def test_binary_mask_falls_back_to_bbox_polygon(self, tmp_path):
+        # MuNG loads masks as (height, width) binary arrays,
+        # which have no polygon representation
+        page = _make_page()
+        for annot in page.all_annotations():
+            b = annot.bbox
+            annot.mask = np.ones((b.height, b.width), dtype=np.uint8)
+
+        page.save_to_file(tmp_path, "page", Format.COCO)
+
+        data = json.loads((tmp_path / "page.json").read_text())
+        annot = data["class_a"][0]
+        assert annot["segmentation"] == [[10, 10, 30, 10, 30, 40, 10, 40]]
 
 
 class TestMuNGRoundTrip:
