@@ -35,11 +35,11 @@ Issues = "https://github.com/v-dvorak/od-tools/issues"
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "ruff>=0.9", "mypy>=2.4.0"]
 
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-
 [tool.hatch.build]
 include = ["/odtools"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
 
 [tool.ruff.lint]
 ignore = ["I001"]

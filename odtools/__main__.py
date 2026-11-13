@@ -16,8 +16,16 @@ def main():
     # region DATASET FORMATTING AND SPLITTING ARGUMENTS
     form_parser = subparsers.add_parser("form")
     form_parser.add_argument("output", help="Transformed dataset destination.")
-    form_parser.add_argument("image_dir", help="Path to images.")
-    form_parser.add_argument("annot_dir", help="Path to annotations.")
+    form_parser.add_argument(
+        "image_dir",
+        help="Path to images, or to a Musicorpus dataset if --musicorpus is used.",
+    )
+    form_parser.add_argument(
+        "annot_dir",
+        nargs="?",
+        default=None,
+        help="Path to annotations, not needed with --musicorpus.",
+    )
 
     form_parser.add_argument(
         "-i",
@@ -82,6 +90,19 @@ def main():
         type=int,
         default=None,
         help="Number of samples to output, if None, all will be used",
+    )
+
+    # musicorpus arguments
+    form_parser.add_argument(
+        "--musicorpus",
+        action="store_true",
+        help="Treat image_dir as a Musicorpus dataset folder and process "
+        "every split it defines into its own subdirectory of output.",
+    )
+    form_parser.add_argument(
+        "--splits_variant",
+        default=None,
+        help="Use an alternative Musicorpus splits file (splits.<variant>.json).",
     )
     # endregion
 
@@ -360,6 +381,42 @@ def main():
 
             if args.verbose:
                 print(f"Augmentation ratios: {args.augmentation}")
+
+        if args.musicorpus:
+            if args.annot_dir is not None:
+                form_parser.error("annot_dir is not needed with --musicorpus")
+
+            formatter.format_musicorpus_dataset(
+                # directories
+                Path(args.output),
+                Path(args.image_dir),
+                # class ids etc.
+                class_reference_table=class_id_mapping,
+                class_output_names=class_output_names,
+                # formatting
+                input_format=input_f,
+                output_format=output_f,
+                splits_variant=args.splits_variant,
+                split_ratio=args.split,
+                split_config=args.split_config,
+                resize=args.resize,
+                image_format=args.image_format,
+                # image splitting settings
+                window_size=window_size,
+                overlap_ratio=overlap_ratio,
+                image_splitting=args.image_splitting,
+                # augmentation
+                aug_ratios=args.augmentation,
+                # others
+                seed=args.seed,
+                verbose=args.verbose,
+                cut_to_fit=args.cut_to_fit,
+                n=args.number_of_samples,
+            )
+            return 0
+
+        if args.annot_dir is None:
+            form_parser.error("annot_dir is required unless --musicorpus is used")
 
         formatter.format_dataset(
             # directories

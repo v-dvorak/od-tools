@@ -133,9 +133,7 @@ class TestYOLODetectionRoundTrip:
 
     def test_with_confidence(self, tmp_path):
         page = _make_page()
-        page.save_to_file(
-            tmp_path, "page", Format.YOLO_DETECTION, with_confidence=True
-        )
+        page.save_to_file(tmp_path, "page", Format.YOLO_DETECTION, with_confidence=True)
 
         lines = (tmp_path / "page.txt").read_text().splitlines()
         for line in lines:

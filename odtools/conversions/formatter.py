@@ -1,4 +1,5 @@
 import shutil
+import tempfile
 from pathlib import Path
 import yaml
 from tqdm import tqdm
@@ -118,6 +119,7 @@ def format_dataset(
     cut_to_fit: bool = False,
     n: int | None = None,
     verbose: bool = False,
+    create_yolo_config: bool = True,
 ) -> None:
     """
     Finds all images and subpages inside given files
@@ -146,6 +148,9 @@ def format_dataset(
     :param aug_ratios: list of augmentation ratios applied to images in case of image splitting
 
     :param verbose: make script verbose
+    :param create_yolo_config: whether to create a YOLO training config
+        for this dataset directory, set to False when the config is created
+        by the caller for multiple datasets at once
     """
     if not image_splitting and aug_ratios is not None:
         raise NotImplementedError("Cannot augment data without image splitting")
@@ -192,7 +197,7 @@ def format_dataset(
                 resize=resize,
             )
 
-        if (
+        if create_yolo_config and (
             output_format == Format.YOLO_DETECTION
             or output_format == Format.YOLO_SEGMENTATION
         ):
@@ -267,7 +272,7 @@ def format_dataset(
                 resize=resize,
             )
 
-        if (
+        if create_yolo_config and (
             output_format == Format.YOLO_DETECTION
             or output_format == Format.YOLO_SEGMENTATION
         ):
@@ -280,11 +285,217 @@ def format_dataset(
             )
 
 
+def format_musicorpus_dataset(
+    output_dir: Path,
+    source_dir: Path,
+    class_reference_table: dict[str, int],
+    class_output_names: list[str],
+    input_format: Format,
+    output_format: Format,
+    splits_variant: str | None = None,
+    image_format: str = "jpg",
+    split_ratio: float = 1.0,
+    split_config: Path | None = None,
+    resize: int | None = None,
+    seed: int = 42,
+    window_size: tuple[int, int] = (640, 640),
+    overlap_ratio: float = 0.25,
+    image_splitting: bool = False,
+    aug_ratios: list[float] | None = None,
+    cut_to_fit: bool = False,
+    n: int | None = None,
+    verbose: bool = False,
+) -> None:
+    """
+    Formats a Musicorpus dataset directly from its on-disk structure.
+
+    Every split defined by the dataset (e.g. train, validation, test and any
+    additional splits) is processed into its own subdirectory of `output_dir`,
+    so the result matches what `utils.collect_musicorpus_dataset` followed by
+    the per-split `form` calls used to produce:
+
+        output_dir/<split_name>/images/...
+        output_dir/<split_name>/labels/...
+        output_dir/config.yaml (for YOLO outputs, one config in the dataset
+        root, with train, val and test pointing at the respective splits)
+
+    Pages are collected into a temporary staging directory (as links) under
+    their page names, because every Musicorpus page stores its image and
+    transcription under the same file names (`image.jpg`,
+    `transcription.mung`, ...).
+
+    :param output_dir: path to final dataset, one subdirectory per split
+    :param source_dir: path to the Musicorpus dataset folder
+        (the one containing `musicorpus.json`)
+    :param splits_variant: name of an alternative splits file
+        (`splits.<variant>.json`), default splits.json is used if None
+
+    :param class_reference_table: dictionary, a function that assigns class id by class name
+    :param class_output_names: list of class names
+
+    :param input_format: annotation format to read, one of MUNG, DOLORES_COCO
+    :param output_format: defines output annot_format
+    :param image_format: format in which the images are saved
+
+    :param split_ratio: train/test split ratio inside each split
+    :param split_config: file with predefined train/test split
+    :param resize: resizes images so that the longer side is this many pixels long
+    :param seed: seed for dataset shuffling
+
+    :param window_size: size of the sliding window applied to image in case of image splitting
+    :param overlap_ratio: overlap ratio between two tiles in case of image splitting
+    :param image_splitting: whether to split images according to the split ratio and sliding window
+    :param aug_ratios: list of augmentation ratios applied to images in case of image splitting
+
+    :param verbose: make script verbose
+    """
+    try:
+        from musicorpus.dataset import Dataset, NotAMusicorpusDataset
+    except ImportError as e:
+        raise ImportError(
+            "The 'musicorpus' package is required to format Musicorpus datasets, "
+            "install it with: pip install git+https://github.com/OmniOMR/musicorpus"
+        ) from e
+
+    if input_format not in (Format.MUNG, Format.DOLORES_COCO):
+        raise ValueError(
+            f"Unsupported input format for Musicorpus datasets: {input_format}, "
+            "only MuNG (mung) and Dolores COCO (dolores) are supported."
+        )
+
+    try:
+        dataset = Dataset.load(source_dir)
+    except NotAMusicorpusDataset as e:
+        raise ValueError(
+            f"{source_dir} is not a Musicorpus dataset, "
+            "it does not contain a musicorpus.json file."
+        ) from e
+
+    split_names = list(dataset.splits(splits_variant).split_names())
+    if verbose:
+        print(
+            f"Formatting Musicorpus dataset {dataset.name} "
+            f"with splits: {', '.join(split_names)}"
+        )
+
+    with tempfile.TemporaryDirectory() as staging:
+        staging_images = Path(staging) / "images"
+        staging_annots = Path(staging) / "annotations"
+        staging_images.mkdir(parents=True)
+        staging_annots.mkdir(parents=True)
+
+        for split_name in split_names:
+            # clear staging from the previous split
+            for staged in staging_images.iterdir():
+                staged.unlink()
+            for staged in staging_annots.iterdir():
+                staged.unlink()
+
+            for page in dataset.split(split_name, splits_variant):
+                if not page.exists():
+                    print(
+                        f"Warning: page {page.name} of split '{split_name}' not found, skipping"
+                    )
+                    continue
+
+                image_path = page.image_path()
+                if image_path is None:
+                    print(f"Warning: page {page.name} has no image, skipping")
+                    continue
+
+                if input_format == Format.MUNG:
+                    annot_path = page.transcription_path("mung")
+                else:
+                    annot_path = page.coco_path
+                if annot_path is None:
+                    print(
+                        f"Warning: page {page.name} has no "
+                        f"{input_format.value} transcription, skipping"
+                    )
+                    continue
+
+                _link(
+                    image_path,
+                    staging_images / f"{page.name}.{image_format}",
+                )
+                _link(
+                    annot_path,
+                    staging_annots
+                    / f"{page.name}.{input_format.to_annotation_extension()}",
+                )
+
+            format_dataset(
+                output_dir / split_name,
+                staging_images,
+                staging_annots,
+                class_reference_table=class_reference_table,
+                class_output_names=class_output_names,
+                input_format=input_format,
+                output_format=output_format,
+                split_ratio=split_ratio,
+                split_config=split_config,
+                resize=resize,
+                image_format=image_format,
+                window_size=window_size,
+                overlap_ratio=overlap_ratio,
+                image_splitting=image_splitting,
+                aug_ratios=aug_ratios,
+                seed=seed,
+                cut_to_fit=cut_to_fit,
+                n=n,
+                verbose=verbose,
+                create_yolo_config=False,
+            )
+
+    # a single YOLO config in the dataset root,
+    # pointing at the directories of the respective splits
+    if (
+        output_format == Format.YOLO_DETECTION
+        or output_format == Format.YOLO_SEGMENTATION
+    ):
+        defined = set(split_names)
+
+        train_split = "train" if "train" in defined else split_names[0]
+        val_split = "validation" if "validation" in defined else train_split
+        test_split = "test" if "test" in defined else None
+
+        # when the data is further split inside each split,
+        # images live one level deeper (images/train, images/val)
+        inner_split = split_ratio != 1.0 or split_config is not None
+
+        def _train_images(split: str) -> Path:
+            images = output_dir / split / "images"
+            return images / "train" if inner_split else images
+
+        _create_yaml_config_for_yolo(
+            output_dir,
+            _train_images(train_split),
+            class_output_names,
+            verbose=verbose,
+            val_path=(
+                output_dir / val_split / "images" / "val"
+                if inner_split
+                else output_dir / val_split / "images"
+            ),
+            test_path=(_train_images(test_split) if test_split is not None else None),
+        )
+
+
+def _link(source: Path, target: Path) -> None:
+    """Links `source` under the name `target`, copying if linking is not possible."""
+    source = source.resolve()
+    try:
+        target.symlink_to(source)
+    except OSError:
+        shutil.copyfile(source, target)
+
+
 def _create_yaml_config_for_yolo(
     output_path: Path,
     train_path: Path,
     class_output_names: list[str],
     val_path: Path | None = None,
+    test_path: Path | None = None,
     config_name: str = "config",
     verbose: bool = False,
 ):
@@ -295,6 +506,7 @@ def _create_yaml_config_for_yolo(
     :param train_path: path to train directory
     :param class_output_names: names of classes
     :param val_path: path to validation directory, optional, if not provided, defaults to `train_path`
+    :param test_path: path to test directory, optional, if not provided, no test entry is created
     :param config_name: name of config file, default is "config"
     """
     if val_path is None:
@@ -310,6 +522,8 @@ def _create_yaml_config_for_yolo(
         "val": str(val_path.absolute().resolve()),
         "names": names,
     }
+    if test_path is not None:
+        data["test"] = str(test_path.absolute().resolve())
 
     with open(output_path / f"{config_name}.yaml", "w") as f:
         yaml.dump(data, f, sort_keys=False, indent=4)
