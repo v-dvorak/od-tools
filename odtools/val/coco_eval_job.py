@@ -6,7 +6,6 @@ from contextlib import redirect_stdout
 from pathlib import Path
 from typing import Any
 
-from faster_coco_eval import COCO, COCOeval_faster
 from prettytable import PrettyTable, TableStyle
 from tqdm import tqdm
 
@@ -504,6 +503,8 @@ def _run_evaluation(
 
     :return: tuple of COCO metrics and per-class metrics
     """
+    from faster_coco_eval import COCO, COCOeval_faster
+
     coco_gt = COCO(gt_data)
     coco_pred = coco_gt.loadRes(predictions)
 
